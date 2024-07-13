@@ -4,14 +4,18 @@ plugins {
 
 android {
     namespace 'kr.opencourse.godaijishou'
+    compileSdkVersion 33
+    buildToolsVersion "33.0.0"
 
     defaultConfig {
         applicationId "kr.opencourse.godaijishou"
         minSdkVersion 26
+        targetSdkVersion 33
         versionCode 1
         versionName "1.0"
 
         resValue "string", "xposed_description", "Go Daijishou - LG Second Launcher to Daijishou Redirector by Husband of Rebekah"
+        //resValue "string-array", "xposed_scope", "com.lge.secondlauncher"
     }
 
     buildTypes {

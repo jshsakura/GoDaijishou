@@ -7,7 +7,10 @@ import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
 import android.content.ComponentName;
 import android.content.Intent;
-import android.os.Bundle;
+import android.content.pm.PackageManager;
+import android.widget.Toast;
+import android.os.Handler;
+import android.os.Looper;
 
 public class MainModule implements IXposedHookLoadPackage {
     private static final String LG_LAUNCHER_PACKAGE = "com.lge.secondlauncher";
@@ -58,15 +61,45 @@ public class MainModule implements IXposedHookLoadPackage {
         if (className.startsWith(LG_LAUNCHER_PACKAGE)) {
             XposedBridge.log("MainModule: LG Second Launcher Activity detected in " + methodName);
 
-            // Daijishou 앱을 시작하는 인텐트를 생성하고 실행합니다.
-            Intent daijishouIntent = new Intent();
-            daijishouIntent.setComponent(new ComponentName(DAIJISHOU_PACKAGE, DAIJISHOU_MAIN_ACTIVITY));
-            daijishouIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            android.content.Context context = (android.content.Context) param.thisObject;
 
-            // 현재 컨텍스트를 사용하여 Daijishou 앱을 시작합니다.
-            ((android.content.Context) param.thisObject).startActivity(daijishouIntent);
+            // Daijishou 앱이 설치되어 있는지 확인
+            if (isPackageInstalled(DAIJISHOU_PACKAGE, context.getPackageManager())) {
+                // Daijishou 앱을 시작하는 인텐트를 생성하고 실행합니다.
+                Intent daijishouIntent = new Intent();
+                daijishouIntent.setComponent(new ComponentName(DAIJISHOU_PACKAGE, DAIJISHOU_MAIN_ACTIVITY));
+                daijishouIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
-            XposedBridge.log("MainModule: Launched Daijishou app from " + methodName);
+                try {
+                    context.startActivity(daijishouIntent);
+                    XposedBridge.log("MainModule: Launched Daijishou app from " + methodName);
+                } catch (Exception e) {
+                    XposedBridge.log("MainModule: Failed to launch Daijishou app");
+                    XposedBridge.log(e);
+                    showToast(context, "Failed to launch Daijishou. Please check if it's installed correctly.");
+                }
+            } else {
+                XposedBridge.log("MainModule: Daijishou app is not installed");
+                showToast(context, "Daijishou app is not installed. Please install it first.");
+            }
         }
+    }
+
+    private boolean isPackageInstalled(String packageName, PackageManager packageManager) {
+        try {
+            packageManager.getPackageInfo(packageName, 0);
+            return true;
+        } catch (PackageManager.NameNotFoundException e) {
+            return false;
+        }
+    }
+
+    private void showToast(final android.content.Context context, final String message) {
+        new Handler(Looper.getMainLooper()).post(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show();
+            }
+        });
     }
 }
