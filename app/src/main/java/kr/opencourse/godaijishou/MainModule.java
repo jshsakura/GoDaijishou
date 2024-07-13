@@ -13,75 +13,61 @@ import android.os.Handler;
 import android.os.Looper;
 
 public class MainModule implements IXposedHookLoadPackage {
+    private static final String TAG = "DaijishouLauncher";
     private static final String LG_LAUNCHER_PACKAGE = "com.lge.secondlauncher";
     private static final String DAIJISHOU_PACKAGE = "com.magneticchen.daijishou";
     private static final String DAIJISHOU_MAIN_ACTIVITY = DAIJISHOU_PACKAGE + ".activities.MainActivity";
 
     @Override
-    public void handleLoadPackage(final LoadPackageParam lpparam) throws Throwable {
-        XposedBridge.log("MainModule: handleLoadPackage called for " + lpparam.packageName);
-
+    public void handleLoadPackage(final LoadPackageParam lpparam) {
         if (!LG_LAUNCHER_PACKAGE.equals(lpparam.packageName)) {
-            XposedBridge.log("MainModule: Not the LG Second Launcher package, ignoring.");
             return;
         }
 
-        XposedBridge.log("MainModule: Attempting to hook LG Second Launcher");
-
         try {
-            Class<?> activityClass = XposedHelpers.findClass("android.app.Activity", lpparam.classLoader);
-
-            // onCreate 후킹
-            XposedBridge.hookAllMethods(activityClass, "onCreate", new XC_MethodHook() {
-                @Override
-                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                    handleActivityMethod(param, "onCreate");
-                }
-            });
-
-            // onResume 후킹
-            XposedBridge.hookAllMethods(activityClass, "onResume", new XC_MethodHook() {
-                @Override
-                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                    handleActivityMethod(param, "onResume");
-                }
-            });
-
-            XposedBridge.log("MainModule: Successfully hooked LG Second Launcher");
+            hookLauncherMethods(lpparam.classLoader);
         } catch (Throwable t) {
-            XposedBridge.log("MainModule: Failed to hook LG Second Launcher");
-            XposedBridge.log(t);
+            log("Failed to hook LG Second Launcher: " + t.getMessage());
         }
     }
 
-    private void handleActivityMethod(XC_MethodHook.MethodHookParam param, String methodName) {
-        String className = param.thisObject.getClass().getName();
-        XposedBridge.log("MainModule: " + methodName + " called for class: " + className);
+    private void hookLauncherMethods(ClassLoader classLoader) {
+        Class<?> activityClass = XposedHelpers.findClass("android.app.Activity", classLoader);
 
-        if (className.startsWith(LG_LAUNCHER_PACKAGE)) {
-            XposedBridge.log("MainModule: LG Second Launcher Activity detected in " + methodName);
-
-            android.content.Context context = (android.content.Context) param.thisObject;
-
-            // Daijishou 앱이 설치되어 있는지 확인
-            if (isPackageInstalled(DAIJISHOU_PACKAGE, context.getPackageManager())) {
-                // Daijishou 앱을 시작하는 인텐트를 생성하고 실행합니다.
-                Intent daijishouIntent = new Intent();
-                daijishouIntent.setComponent(new ComponentName(DAIJISHOU_PACKAGE, DAIJISHOU_MAIN_ACTIVITY));
-                daijishouIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-                try {
-                    context.startActivity(daijishouIntent);
-                    XposedBridge.log("MainModule: Launched Daijishou app from " + methodName);
-                } catch (Exception e) {
-                    XposedBridge.log("MainModule: Failed to launch Daijishou app");
-                    XposedBridge.log(e);
-                    showToast(context, "Failed to launch Daijishou. Please check if it's installed correctly.");
-                }
-            } else {
-                XposedBridge.log("MainModule: Daijishou app is not installed");
-                showToast(context, "Daijishou app is not installed. Please install it first.");
+        XposedHelpers.findAndHookMethod(activityClass, "onCreate", android.os.Bundle.class, new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) {
+                launchDaijishou((android.content.Context) param.thisObject);
             }
+        });
+
+        XposedHelpers.findAndHookMethod(activityClass, "onResume", new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) {
+                launchDaijishou((android.content.Context) param.thisObject);
+            }
+        });
+    }
+
+    private void launchDaijishou(android.content.Context context) {
+        if (!context.getClass().getName().startsWith(LG_LAUNCHER_PACKAGE)) {
+            return;
+        }
+
+        if (!isPackageInstalled(DAIJISHOU_PACKAGE, context.getPackageManager())) {
+            showToast(context, "Daijishou app is not installed. Please install it first.");
+            return;
+        }
+
+        Intent daijishouIntent = new Intent()
+                .setComponent(new ComponentName(DAIJISHOU_PACKAGE, DAIJISHOU_MAIN_ACTIVITY))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        try {
+            context.startActivity(daijishouIntent);
+        } catch (Exception e) {
+            log("Failed to launch Daijishou app: " + e.getMessage());
+            showToast(context, "Failed to launch Daijishou. Please check if it's installed correctly.");
         }
     }
 
@@ -95,11 +81,12 @@ public class MainModule implements IXposedHookLoadPackage {
     }
 
     private void showToast(final android.content.Context context, final String message) {
-        new Handler(Looper.getMainLooper()).post(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(context, message, Toast.LENGTH_LONG).show();
-            }
-        });
+        new Handler(Looper.getMainLooper()).post(() ->
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+        );
+    }
+
+    private void log(String message) {
+        XposedBridge.log(TAG + ": " + message);
     }
 }
