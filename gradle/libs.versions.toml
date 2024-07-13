@@ -1,14 +1,12 @@
 [versions]
-espressoCore = "3.6.1"
-appcompat = "1.6.1"
-gradle = "7.4.2"
-material = "1.10.0"
 xposed = "82"
 agp = "7.4.2" # 또는 사용 중인 Android Gradle Plugin 버전
 
 [libraries]
 android-gradle-plugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
+#noinspection SimilarGradleDependency
 xposed-api = { group = "de.robv.android.xposed", name = "api", version.ref = "xposed" }
+#noinspection SimilarGradleDependency
 xposed-api-sources = { group = "de.robv.android.xposed", name = "api", version.ref = "xposed" }
 
 [plugins]

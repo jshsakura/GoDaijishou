@@ -14,6 +14,6 @@ plugins {
     id 'com.android.library' version libs.versions.agp apply false
 }
 
-task clean(type: Delete) {
+clean(type: Delete) {
     delete rootProject.buildDir
 }
