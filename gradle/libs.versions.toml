@@ -1,18 +1,16 @@
 [versions]
-agp = "8.5.0"
-junit = "4.13.2"
-junitVersion = "1.2.1"
 espressoCore = "3.6.1"
 appcompat = "1.6.1"
+gradle = "7.4.2"
 material = "1.10.0"
+xposed = "82"
+agp = "7.4.2" # 또는 사용 중인 Android Gradle Plugin 버전
 
 [libraries]
-junit = { group = "junit", name = "junit", version.ref = "junit" }
-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
-material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+android-gradle-plugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
+xposed-api = { group = "de.robv.android.xposed", name = "api", version.ref = "xposed" }
+xposed-api-sources = { group = "de.robv.android.xposed", name = "api", version.ref = "xposed" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-
+android-library = { id = "com.android.library", version.ref = "agp" }

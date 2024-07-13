@@ -5,8 +5,13 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath "com.android.tools.build:gradle:7.0.4"
+        classpath libs.android.gradle.plugin
     }
+}
+
+plugins {
+    id 'com.android.application' version libs.versions.agp apply false
+    id 'com.android.library' version libs.versions.agp apply false
 }
 
 task clean(type: Delete) {

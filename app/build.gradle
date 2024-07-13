@@ -15,6 +15,7 @@ android {
         versionName "1.0"
 
         resValue "string", "xposed_description", "Go Daijishou - LG Second Launcher to Daijishou Redirector by Husband of Rebekah"
+        //resValue "string-array", "xposed_scope", "com.lge.secondlauncher"
     }
 
     buildTypes {
@@ -30,6 +31,6 @@ android {
 }
 
 dependencies {
-    compileOnly 'de.robv.android.xposed:api:82'
-    compileOnly 'de.robv.android.xposed:api:82:sources'
+    compileOnly(libs.xposed.api)
+    compileOnly(libs.xposed.api.sources)
 }
