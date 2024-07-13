@@ -1,4 +1,4 @@
-**🧙‍♂️ GoDaijishou Xposed Module Project.**
+**🧙‍♂️ Go Daijishou Xposed Module Project.**
 
 ### GoDaijishou 
 
