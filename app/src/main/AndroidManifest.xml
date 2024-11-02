@@ -3,7 +3,7 @@
     package="kr.opencourse.godaijishou">
 
     <application
-        android:label="GoDaijishou"
+        android:label="GoCustomLauncher"
         android:icon="@mipmap/ic_launcher">
 
         <meta-data

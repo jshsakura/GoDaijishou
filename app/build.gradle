@@ -14,7 +14,7 @@ android {
         versionCode 1
         versionName "1.0"
 
-        resValue "string", "xposed_description", "Go Daijishou - LG Second Launcher to Daijishou Redirector by Husband of Rebekah"
+        resValue "string", "xposed_description", "Go Custom Launcher - LG Second Launcher to Daijishou Redirector by Husband of Rebekah"
         //resValue "string-array", "xposed_scope", "com.lge.secondlauncher"
     }
 

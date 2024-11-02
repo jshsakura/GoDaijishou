@@ -15,5 +15,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "GoDaijishou"
+rootProject.name = "GoCustomLauncher"
 include ':app'

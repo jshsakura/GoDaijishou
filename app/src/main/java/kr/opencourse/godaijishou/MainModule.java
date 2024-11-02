@@ -13,10 +13,10 @@ import android.os.Handler;
 import android.os.Looper;
 
 public class MainModule implements IXposedHookLoadPackage {
-    private static final String TAG = "DaijishouLauncher";
+    private static final String TAG = "Custom Target Launcher";
     private static final String LG_LAUNCHER_PACKAGE = "com.lge.secondlauncher";
-    private static final String DAIJISHOU_PACKAGE = "com.magneticchen.daijishou";
-    private static final String DAIJISHOU_MAIN_ACTIVITY = DAIJISHOU_PACKAGE + ".activities.MainActivity";
+    private static final String TARGET_PACKAGE = "org.es_de.frontend";
+    private static final String TARGET_MAIN_ACTIVITY = TARGET_PACKAGE + ".MainActivity";
 
     @Override
     public void handleLoadPackage(final LoadPackageParam lpparam) {
@@ -54,20 +54,20 @@ public class MainModule implements IXposedHookLoadPackage {
             return;
         }
 
-        if (!isPackageInstalled(DAIJISHOU_PACKAGE, context.getPackageManager())) {
-            showToast(context, "Daijishou app is not installed. Please install it first.");
+        if (!isPackageInstalled(TARGET_PACKAGE, context.getPackageManager())) {
+            showToast(context, "Custom Launcher app is not installed. Please install it first.");
             return;
         }
 
         Intent daijishouIntent = new Intent()
-                .setComponent(new ComponentName(DAIJISHOU_PACKAGE, DAIJISHOU_MAIN_ACTIVITY))
+                .setComponent(new ComponentName(TARGET_PACKAGE, TARGET_MAIN_ACTIVITY))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
         try {
             context.startActivity(daijishouIntent);
         } catch (Exception e) {
-            log("Failed to launch Daijishou app: " + e.getMessage());
-            showToast(context, "Failed to launch Daijishou. Please check if it's installed correctly.");
+            log("Failed to launch Custom Launcher app: " + e.getMessage());
+            showToast(context, "Failed to launch Custom Launcher. Please check if it's installed correctly.");
         }
     }
 

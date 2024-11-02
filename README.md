@@ -1,6 +1,6 @@
-**🧙‍♂️ Go Daijishou Xposed Module Project.**
+**🧙‍♂️ Go Custom Launcher Xposed Module Project.**
 
-### GoDaijishou 
+### GoCustomLauncher 
 
 이 Xposed 모듈은 루팅된 LG Wing 스마트폰의 세컨드 런처 화면의 홈을 다이지쇼로 대체합니다.
 
