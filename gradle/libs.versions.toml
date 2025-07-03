@@ -1,6 +1,6 @@
 [versions]
 xposed = "82"
-agp = "7.4.2" # 또는 사용 중인 Android Gradle Plugin 버전
+agp = "8.10.1" # 또는 사용 중인 Android Gradle Plugin 버전
 
 [libraries]
 android-gradle-plugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
