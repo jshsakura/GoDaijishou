@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="?android:attr/colorBackground"
+    tools:context=".SelectorActivity">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="32dp"
+        android:text="@string/selector_title"
+        android:textAppearance="@style/TextAppearance.AppCompat.Headline" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_daijishou"
+        android:layout_width="280dp"
+        android:layout_height="60dp"
+        android:layout_marginBottom="16dp"
+        android:text="@string/launcher_daijishou"
+        android:textColor="@android:color/white"
+        app:backgroundTint="@color/launcher_daijishou_color"
+        app:cornerRadius="16dp"
+        app:icon="@drawable/ic_gamepad"
+        app:iconTint="@android:color/white" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_esde"
+        android:layout_width="280dp"
+        android:layout_height="60dp"
+        android:layout_marginBottom="16dp"
+        android:text="@string/launcher_esde"
+        android:textColor="@android:color/white"
+        app:backgroundTint="@color/launcher_esde_color"
+        app:cornerRadius="16dp"
+        app:icon="@drawable/ic_gamepad"
+        app:iconTint="@android:color/white" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_pegasus"
+        android:layout_width="280dp"
+        android:layout_height="60dp"
+        android:text="@string/launcher_pegasus"
+        android:textColor="@android:color/white"
+        app:backgroundTint="@color/launcher_pegasus_color"
+        app:cornerRadius="16dp"
+        app:icon="@drawable/ic_gamepad"
+        app:iconTint="@android:color/white" />
+
+    <View
+        android:layout_width="280dp"
+        android:layout_height="1dp"
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="8dp"
+        android:background="?android:attr/listDivider" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_stock"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="280dp"
+        android:layout_height="60dp"
+        android:text="@string/launcher_stock"
+        app:cornerRadius="16dp"
+        app:icon="@drawable/ic_home" />
+
+</LinearLayout>

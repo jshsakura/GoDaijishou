@@ -3,72 +3,75 @@ package kr.opencourse.godaijishou;
 import android.app.Activity;
 import android.app.ActivityOptions;
 import android.content.ComponentName;
+import android.content.Context; // Context import
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
+import android.text.TextUtils; // TextUtils import
+import android.view.Display;
 import android.widget.Toast;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XSharedPreferences; // XSharedPreferences import
+import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
 
-/**
- * Xposed 모듈 (최종 수정본)
- * LG 세컨드 런처가 실행되는 순간을 가로채 Daijishou를 실행하고,
- * 원본 런처는 즉시 스스로를 종료하여 '밖으로 나가는' 문제를 원천 차단.
- */
 public class MainModule implements IXposedHookLoadPackage {
 
     private static final String TARGET_LAUNCHER_PACKAGE = "com.lge.secondlauncher";
-    private static final String DAIJISHOU_PACKAGE = "com.magneticchen.daijishou";
-    private static final String DAIJISHOU_MAIN_ACTIVITY = DAIJISHOU_PACKAGE + ".activities.MainActivity";
     private static final int SECOND_SCREEN_DISPLAY_ID = 4;
+    private static final String TAG = "GodaijishouRedirector";
 
-    private static boolean mIsNotifiedAboutMissingApp = false;
+    // Provider를 찾기 위한 주소(Uri)
+    private static final Uri SETTINGS_URI = Uri.parse("content://kr.opencourse.godaijishou.provider/settings");
 
     @Override
     public void handleLoadPackage(final LoadPackageParam lpparam) throws Throwable {
+        if (!TARGET_LAUNCHER_PACKAGE.equals(lpparam.packageName)) return;
 
-        // 오직 LG 세컨드 런처만 정확히 타겟팅
-        if (!TARGET_LAUNCHER_PACKAGE.equals(lpparam.packageName)) {
-            return;
-        }
-
-        // 복잡한 상태 플래그 없이, onCreate 메서드만 후킹하여 단순하고 확실하게 처리
         XposedHelpers.findAndHookMethod(Activity.class, "onCreate", Bundle.class, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-
                 final Activity launcherActivity = (Activity) param.thisObject;
+                Display display = launcherActivity.getWindowManager().getDefaultDisplay();
 
-                // 이 액티비티가 세컨드 스크린에서 실행되는지 확인
-                if (launcherActivity.getDisplay() == null || launcherActivity.getDisplay().getDisplayId() != SECOND_SCREEN_DISPLAY_ID) {
-                    return;
-                }
+                if (display == null || display.getDisplayId() != SECOND_SCREEN_DISPLAY_ID) return;
 
-                // Daijishou 설치 여부 확인
-                if (!isPackageInstalled(DAIJISHOU_PACKAGE, launcherActivity.getPackageManager())) {
-                    if (!mIsNotifiedAboutMissingApp) {
-                        Toast.makeText(launcherActivity, "Daijishou 앱이 설치되지 않았습니다.", Toast.LENGTH_LONG).show();
-                        mIsNotifiedAboutMissingApp = true;
+                final Context appContext = launcherActivity.getApplicationContext();
+                String targetPackage = null;
+                String targetActivity = null;
+
+                // --- ContentProvider를 통해 설정 값 가져오기 ---
+                Cursor cursor = null;
+                try {
+                    cursor = appContext.getContentResolver().query(SETTINGS_URI, null, null, null, null);
+                    if (cursor != null && cursor.moveToFirst()) {
+                        targetPackage = cursor.getString(cursor.getColumnIndexOrThrow("launcher_package"));
+                        targetActivity = cursor.getString(cursor.getColumnIndexOrThrow("launcher_activity"));
                     }
-                    // Daijishou가 없으면 런처를 종료하지 않고 그대로 실행되도록 둠
-                    return;
+                } catch (Exception e) {
+                    XposedBridge.log("Error querying ContentProvider: " + e.getMessage());
+                } finally {
+                    if (cursor != null) cursor.close();
                 }
+                // ---------------------------------------------------
 
-                // Daijishou 실행 로직
-                Intent daijishouIntent = new Intent()
-                        .setComponent(new ComponentName(DAIJISHOU_PACKAGE, DAIJISHOU_MAIN_ACTIVITY))
+                if (TextUtils.isEmpty(targetPackage)) return;
+
+                if (!isPackageInstalled(targetPackage, appContext.getPackageManager())) return;
+
+                Intent launcherIntent = new Intent().setComponent(new ComponentName(targetPackage, targetActivity))
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
 
-                ActivityOptions options = ActivityOptions.makeBasic();
-                options.setLaunchDisplayId(SECOND_SCREEN_DISPLAY_ID);
+                ActivityOptions options = ActivityOptions.makeBasic().setLaunchDisplayId(SECOND_SCREEN_DISPLAY_ID);
 
                 try {
-                    launcherActivity.startActivity(daijishouIntent, options.toBundle());
+                    launcherActivity.startActivity(launcherIntent, options.toBundle());
                 } finally {
-                    // 핵심: Daijishou 실행 성공 여부와 관계없이, 원본 런처는 즉시 종료
                     launcherActivity.finish();
                 }
             }
@@ -82,5 +85,9 @@ public class MainModule implements IXposedHookLoadPackage {
         } catch (PackageManager.NameNotFoundException e) {
             return false;
         }
+    }
+
+    private void log(String message) {
+        XposedBridge.log(TAG + ": " + message);
     }
 }

@@ -1,10 +1,12 @@
 [versions]
+material = "1.12.0"
 xposed = "82"
 agp = "8.10.1" # 또는 사용 중인 Android Gradle Plugin 버전
 
 [libraries]
 android-gradle-plugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 #noinspection SimilarGradleDependency
+material = { module = "com.google.android.material:material", version.ref = "material" }
 xposed-api = { group = "de.robv.android.xposed", name = "api", version.ref = "xposed" }
 #noinspection SimilarGradleDependency
 xposed-api-sources = { group = "de.robv.android.xposed", name = "api", version.ref = "xposed" }

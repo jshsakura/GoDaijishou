@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="32dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:text="@string/main_title"
+        android:textAppearance="@style/TextAppearance.AppCompat.Headline" />
+
+    <TextView
+        android:id="@+id/tv_current_setting"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="48dp"
+        android:gravity="center"
+        android:textAppearance="@style/TextAppearance.AppCompat.Body1"
+        android:textColor="?android:attr/textColorSecondary"
+        tools:text="@string/main_no_launcher_set" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_select_launcher"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="280dp"
+        android:layout_height="60dp"
+        android:text="@string/main_set_launcher_button"
+        app:cornerRadius="16dp" 
+		app:icon="@drawable/ic_themes"/>
+
+	<TextView
+		android:id="@+id/tv_info_reboot_setting"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_marginTop="16dp"
+		android:gravity="center"
+		android:textAppearance="@style/TextAppearance.AppCompat.Body1"
+		android:textColor="?android:attr/textColorSecondary"
+		app:icon="@drawable/ic_bomb"
+		tools:text="@string/main_info_reboot_setting" />
+		
+    <!--<com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_apply"
+        android:layout_width="280dp"
+        android:layout_height="60dp"
+        android:layout_marginTop="16dp"
+        android:text="@string/main_apply_button"
+        app:backgroundTint="?attr/colorPrimary"
+        app:cornerRadius="16dp"
+		app:icon="@drawable/ic_bomb"/>-->
+
+</LinearLayout>

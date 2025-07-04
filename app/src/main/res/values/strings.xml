@@ -1,3 +1,30 @@
 <resources>
-    <string name="app_name" translatable="false">GoDaijishou</string>
+    <string name="app_name">GoDaijishou Settings</string>
+
+    <!-- Selector Activity -->
+    <string name="selector_title">Select a default launcher</string>
+    <string name="launcher_daijishou">Daijishou</string>
+    <string name="launcher_esde">ES-DE</string>
+    <string name="launcher_pegasus">Pegasus</string>
+
+    <!-- Main Activity (Settings) -->
+    <string name="main_title">Alternative Launcher Settings</string>
+    <string name="main_set_launcher_button">Set Default Launcher</string>
+    <string name="main_reset_button_clear">Reset Settings</string>
+    <string name="main_current_launcher_prefix">Current default launcher: </string>
+    <string name="main_no_launcher_set">No alternate launcher is currently set.\nPlease use the button below to set a default launcher.</string>
+    <string name="main_info_reboot_setting">A reboot is required after setup.</string>
+
+    <!-- Toast Messages -->
+    <string name="toast_settings_reset">Settings have been reset.</string>
+    <string name="toast_app_not_installed">%s app is not installed.</string>
+    <string name="toast_set_as_default">Set %s as the default launcher.</string>
+
+    <string name="default_app_display_name">selected app</string>
+    <string name="toast_app_launch_failed">App launch failed. Please try again or check the app.</string>
+    <string name="main_no_launcher_set_toast">No default launcher is set.\nPlease set one using the [Go Daijishou] app on the main screen.</string>
+
+    <string name="main_apply_button">Apply &amp; Reboot</string>
+    <string name="launcher_stock">LG Default</string>
+    <string name="main_reboot_permission_denied">Reboot permission denied</string>
 </resources>

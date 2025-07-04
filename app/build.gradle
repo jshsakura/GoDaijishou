@@ -4,13 +4,15 @@ plugins {
 
 android {
     namespace 'kr.opencourse.godaijishou'
-    compileSdkVersion 33
+    // 1. 컴파일 SDK 버전을 34로 올립니다.
+    compileSdkVersion 34
     buildToolsVersion "33.0.0"
 
     defaultConfig {
         applicationId "kr.opencourse.godaijishou"
         minSdkVersion 26
-        targetSdkVersion 33
+        // 2. 타겟 SDK 버전도 34로 맞춰줍니다.
+        targetSdkVersion 34
         versionCode 1
         versionName "1.0"
 
@@ -31,6 +33,9 @@ android {
 }
 
 dependencies {
+    implementation libs.material
+
+    // 기존 Xposed API 의존성
     compileOnly(libs.xposed.api)
     compileOnly(libs.xposed.api.sources)
 }
