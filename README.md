@@ -1,13 +1,13 @@
 <div align="center">
-  <img src="https://github.com/jshsakura/GoDaijishou/blob/master/app/sampledata/icon.jpg?raw=true" width="200" style="border-radius: 20px;"/>
+  <img src="https://github.com/jshsakura/GoDaijishou/blob/master/app/sampledata/gocat.png?raw=true" width="180" style="border-radius: 20px;"/>
 </div>
 
 
 **🧙‍♂️ Go Daijishou Xposed Module Project.**
 <div align="center">
-    <img src="https://github.com/jshsakura/GoDaijishou/blob/master/app/sampledata/preview1.JPEG?raw=true" style="border-radius: 5px;"/>
-    <img src="https://github.com/jshsakura/GoDaijishou/blob/master/app/sampledata/preview2.JPEG?raw=true" style="border-radius: 5px;"/>
-    <img src="https://github.com/jshsakura/GoDaijishou/blob/master/app/sampledata/preview3.JPEG?raw=true" style="border-radius: 5px;"/>
+    <img src="https://github.com/jshsakura/GoDaijishou/blob/master/app/sampledata/preview1.JPEG?raw=true""/>
+    <img src="https://github.com/jshsakura/GoDaijishou/blob/master/app/sampledata/preview2.JPEG?raw=true""/>
+    <img src="https://github.com/jshsakura/GoDaijishou/blob/master/app/sampledata/preview3.JPEG?raw=true""/>
 </div>
 이 Xposed 모듈은 루팅된 LG Wing 스마트폰의 세컨드 런처 화면의 홈을 다이지쇼로 대체합니다.
 
