@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="md_theme_primary">#cba6f7</color>
+    <color name="md_theme_onPrimary">#000000</color>
+    <color name="md_theme_primaryContainer">#45475a</color>
+    <color name="md_theme_onPrimaryContainer">#cdd6f4</color>
+    <color name="md_theme_secondary">#89b4fa</color>
+    <color name="md_theme_onSecondary">#000000</color>
+    <color name="md_theme_secondaryContainer">#313244</color>
+    <color name="md_theme_onSecondaryContainer">#cdd6f4</color>
+    <color name="md_theme_tertiary">#f38ba8</color>
+    <color name="md_theme_onTertiary">#000000</color>
+    <color name="md_theme_tertiaryContainer">#45475a</color>
+    <color name="md_theme_onTertiaryContainer">#cdd6f4</color>
+    <color name="md_theme_error">#f38ba8</color>
+    <color name="md_theme_onError">#000000</color>
+    <color name="md_theme_errorContainer">#45475a</color>
+    <color name="md_theme_onErrorContainer">#cdd6f4</color>
+    <color name="md_theme_background">#1e1e2e</color>
+    <color name="md_theme_onBackground">#cdd6f4</color>
+    <color name="md_theme_surface">#1e1e2e</color>
+    <color name="md_theme_onSurface">#cdd6f4</color>
+    <color name="md_theme_surfaceVariant">#45475a</color>
+    <color name="md_theme_onSurfaceVariant">#bac2de</color>
+    <color name="md_theme_outline">#9399b2</color>
+    <color name="md_theme_shadow">#000000</color>
+    <color name="md_theme_inverseSurface">#cdd6f4</color>
+    <color name="md_theme_inverseOnSurface">#1e1e2e</color>
+    <color name="md_theme_inversePrimary">#89b4fa</color>
+    <color name="launcher_daijishou_color">#cba6f7</color> <!-- Catppuccin Mauve -->
+    <color name="launcher_esde_color">#f38ba8</color> <!-- Catppuccin Red -->
+    <color name="launcher_pegasus_color">#fab387</color> <!-- Catppuccin Peach -->
+    <color name="background_latte">#1e1e2e</color>
+</resources>
+
+
+

@@ -7,7 +7,7 @@
     android:gravity="center"
     android:orientation="vertical"
     android:padding="24dp"
-    android:background="?android:attr/colorBackground"
+    android:background="@color/background_latte"
     tools:context=".SelectorActivity">
 
     <TextView
@@ -25,6 +25,7 @@
         android:text="@string/launcher_daijishou"
         android:textColor="@android:color/white"
         app:backgroundTint="@color/launcher_daijishou_color"
+        app:backgroundTintMode="src_atop"
         app:cornerRadius="16dp"
         app:icon="@drawable/ic_gamepad"
         app:iconTint="@android:color/white" />
@@ -37,8 +38,9 @@
         android:text="@string/launcher_esde"
         android:textColor="@android:color/white"
         app:backgroundTint="@color/launcher_esde_color"
+        app:backgroundTintMode="src_atop"
         app:cornerRadius="16dp"
-        app:icon="@drawable/ic_gamepad"
+        app:icon="@drawable/ic_esde"
         app:iconTint="@android:color/white" />
 
     <com.google.android.material.button.MaterialButton
@@ -48,8 +50,9 @@
         android:text="@string/launcher_pegasus"
         android:textColor="@android:color/white"
         app:backgroundTint="@color/launcher_pegasus_color"
+        app:backgroundTintMode="src_atop"
         app:cornerRadius="16dp"
-        app:icon="@drawable/ic_gamepad"
+        app:icon="@drawable/ic_pegasus"
         app:iconTint="@android:color/white" />
 
     <View

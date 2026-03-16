@@ -30,4 +30,5 @@
     <color name="launcher_daijishou_color">#673AB7</color> <!-- 보라색 -->
     <color name="launcher_esde_color">#F44336</color> <!-- 빨강색 -->
     <color name="launcher_pegasus_color">#FF9800</color> <!-- 주황색 -->
+    <color name="background_latte">#795548</color> <!-- 캣푸치노 프라페색 -->
 </resources>

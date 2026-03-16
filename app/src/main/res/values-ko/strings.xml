@@ -1,0 +1,30 @@
+<resources>
+    <string name="app_name">GoDaijishou 설정</string>
+
+    <!-- Selector Activity -->
+    <string name="selector_title">기본 런처 선택</string>
+    <string name="launcher_daijishou">다이지쇼</string>
+    <string name="launcher_esde">ES-DE</string>
+    <string name="launcher_pegasus">페가수스</string>
+
+    <!-- Main Activity (Settings) -->
+    <string name="main_title">대체 런처 설정</string>
+    <string name="main_set_launcher_button">기본 런처 설정</string>
+    <string name="main_reset_button_clear">설정 초기화</string>
+    <string name="main_current_launcher_prefix">현재 기본 런처: </string>
+    <string name="main_no_launcher_set">대체 런처가 설정되지 않았습니다.\n아래 버튼을 사용하여 기본 런처를 설정하세요.</string>
+    <string name="main_info_reboot_setting">설정 후 재부팅이 필요합니다.</string>
+
+    <!-- Toast Messages -->
+    <string name="toast_settings_reset">설정이 초기화되었습니다.</string>
+    <string name="toast_app_not_installed">%s 앱이 설치되지 않았습니다.</string>
+    <string name="toast_set_as_default">%s을(를) 기본 런처로 설정했습니다.</string>
+
+    <string name="default_app_display_name">선택된 앱</string>
+    <string name="toast_app_launch_failed">앱 실행에 실패했습니다. 다시 시도하거나 앱을 확인하세요.</string>
+    <string name="main_no_launcher_set_toast">기본 런처가 설정되지 않았습니다.\n메인 화면의 [Go Daijishou] 앱을 사용하여 설정하세요.</string>
+
+    <string name="main_apply_button">적용 및 재부팅</string>
+    <string name="launcher_stock">LG 기본값</string>
+    <string name="main_reboot_permission_denied">재부팅 권한이 거부되었습니다</string>
+</resources>

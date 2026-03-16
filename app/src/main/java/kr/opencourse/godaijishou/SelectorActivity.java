@@ -10,12 +10,10 @@ import android.widget.Toast;
 
 public class SelectorActivity extends Activity {
 
+    // 패키지명만 저장 (Activity 경로는 getLaunchIntentForPackage로 자동 해결)
     private static final String DAIJISHOU_PACKAGE = "com.magneticchen.daijishou";
-    private static final String DAIJISHOU_MAIN_ACTIVITY = DAIJISHOU_PACKAGE + ".activities.MainActivity";
     private static final String ESDE_PACKAGE = "org.es_de.frontend";
-    private static final String ESDE_MAIN_ACTIVITY = ESDE_PACKAGE + ".MainActivity";
     private static final String PEGASUS_PACKAGE = "org.pegasus_frontend.android";
-    private static final String PEGASUS_MAIN_ACTIVITY = PEGASUS_PACKAGE + ".MainActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,13 +25,13 @@ public class SelectorActivity extends Activity {
         Button pegasusButton = findViewById(R.id.btn_pegasus);
         Button stockButton = findViewById(R.id.btn_stock);
 
-        daijishouButton.setOnClickListener(v -> selectAndFinish(getString(R.string.launcher_daijishou), DAIJISHOU_PACKAGE, DAIJISHOU_MAIN_ACTIVITY));
-        esdeButton.setOnClickListener(v -> selectAndFinish(getString(R.string.launcher_esde), ESDE_PACKAGE, ESDE_MAIN_ACTIVITY));
-        pegasusButton.setOnClickListener(v -> selectAndFinish(getString(R.string.launcher_pegasus), PEGASUS_PACKAGE, PEGASUS_MAIN_ACTIVITY));
-        stockButton.setOnClickListener(v -> selectAndFinish(getString(R.string.launcher_stock), null, null));
+        daijishouButton.setOnClickListener(v -> selectAndFinish(getString(R.string.launcher_daijishou), DAIJISHOU_PACKAGE));
+        esdeButton.setOnClickListener(v -> selectAndFinish(getString(R.string.launcher_esde), ESDE_PACKAGE));
+        pegasusButton.setOnClickListener(v -> selectAndFinish(getString(R.string.launcher_pegasus), PEGASUS_PACKAGE));
+        stockButton.setOnClickListener(v -> selectAndFinish(getString(R.string.launcher_stock), null));
     }
 
-    private void selectAndFinish(String appName, String packageName, String activityName) {
+    private void selectAndFinish(String appName, String packageName) {
         if (packageName != null && !isPackageInstalled(packageName, getPackageManager())) {
             Toast.makeText(this, getString(R.string.toast_app_not_installed, appName), Toast.LENGTH_SHORT).show();
             return;
@@ -44,8 +42,9 @@ public class SelectorActivity extends Activity {
 
         if (packageName != null) {
             editor.putString(AppPreferences.KEY_LAUNCHER_PACKAGE, packageName);
-            editor.putString(AppPreferences.KEY_LAUNCHER_ACTIVITY, activityName);
             editor.putString(AppPreferences.KEY_LAUNCHER_NAME, appName);
+            // launcher_activity는 더 이상 저장하지 않음 (getLaunchIntentForPackage 사용)
+            editor.remove(AppPreferences.KEY_LAUNCHER_ACTIVITY);
         } else {
             editor.clear();
         }
@@ -53,7 +52,6 @@ public class SelectorActivity extends Activity {
 
         Toast.makeText(this, getString(R.string.toast_set_as_default, appName), Toast.LENGTH_SHORT).show();
 
-        // 결과를 설정하고 액티비티를 종료
         setResult(Activity.RESULT_OK);
         finish();
     }
