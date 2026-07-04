@@ -2,13 +2,6 @@ plugins {
     id 'com.android.application'
 }
 
-// 서명 정보는 VCS에 올리지 않는다. keystore.properties 가 있으면 릴리즈를 서명한다.
-def keystorePropsFile = rootProject.file("keystore.properties")
-def keystoreProps = new Properties()
-if (keystorePropsFile.exists()) {
-    keystoreProps.load(new FileInputStream(keystorePropsFile))
-}
-
 android {
     namespace 'kr.opencourse.godaijishou'
     // 1. 컴파일 SDK 버전을 34로 올립니다.
@@ -27,24 +20,13 @@ android {
         //resValue "string-array", "xposed_scope", "com.lge.secondlauncher"
     }
 
-    signingConfigs {
-        release {
-            if (keystorePropsFile.exists()) {
-                storeFile file(keystoreProps['storeFile'])
-                storePassword keystoreProps['storePassword']
-                keyAlias keystoreProps['keyAlias']
-                keyPassword keystoreProps['keyPassword']
-            }
-        }
-    }
-
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            if (keystorePropsFile.exists()) {
-                signingConfig signingConfigs.release
-            }
+            // 개인용 모듈이라 별도 릴리즈 키스토어를 관리하지 않고 디버그 키로 서명한다.
+            // (안드로이드는 미서명 APK 설치를 거부하므로 서명 자체는 필수)
+            signingConfig signingConfigs.debug
         }
     }
     compileOptions {
