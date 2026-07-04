@@ -88,11 +88,16 @@ public class MainModule implements IXposedHookLoadPackage {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
                 launcherIntent.addCategory(Intent.CATEGORY_LAUNCHER);
             }
-            launcherIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            // CLEAR_TASK + finish()를 쓰면 세컨드 스크린의 '홈'(LG 런처)이 사라진다.
+            // 보조 디스플레이는 기본 화면과 달리 홈 폴백이 자동 복구되지 않으므로,
+            // RetroArch 등에서 돌아올 때 표시할 홈이 없어 검정화면이 된다.
+            // → LG 세컨드 런처를 살려두고 그 위에 대상 런처만 올린다.
+            //   (REORDER_TO_FRONT: 이미 떠 있는 인스턴스를 앞으로, 실행 중 앱 태스크는 건드리지 않음)
+            launcherIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
 
             ActivityOptions options = ActivityOptions.makeBasic().setLaunchDisplayId(SECOND_SCREEN_DISPLAY_ID);
             launcherActivity.startActivity(launcherIntent, options.toBundle());
-            launcherActivity.finish();
+            // finish() 제거: 세컨드 홈을 폴백용으로 유지해 복귀 시 검정화면을 방지
         } catch (Exception e) {
             showToast(appContext, targetPackage + " 실행 실패. 기본 런처 사용.");
         }
