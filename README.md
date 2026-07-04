@@ -5,6 +5,11 @@
 
   **루팅된 LG Wing의 세컨드 스크린 홈을 원하는 런처로 바꿔주는 Xposed 모듈**
 
+  [![Latest Release](https://img.shields.io/github/v/release/jshsakura/GoDaijishou?label=%EC%B5%9C%EC%8B%A0%20%EB%A6%B4%EB%A6%AC%EC%8A%A4&color=success)](https://github.com/jshsakura/GoDaijishou/releases/latest)
+  [![Downloads](https://img.shields.io/github/downloads/jshsakura/GoDaijishou/total?label=%EB%8B%A4%EC%9A%B4%EB%A1%9C%EB%93%9C)](https://github.com/jshsakura/GoDaijishou/releases)
+
+  **[📦 최신 APK 다운로드](https://github.com/jshsakura/GoDaijishou/releases/latest)**
+
   <img src="https://github.com/jshsakura/GoDaijishou/blob/master/app/sampledata/preview1.JPEG?raw=true"/>
   <img src="https://github.com/jshsakura/GoDaijishou/blob/master/app/sampledata/preview2.JPEG?raw=true"/>
   <img src="https://github.com/jshsakura/GoDaijishou/blob/master/app/sampledata/preview3.JPEG?raw=true"/>
