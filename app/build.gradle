@@ -2,28 +2,49 @@ plugins {
     id 'com.android.application'
 }
 
+// 서명 정보는 VCS에 올리지 않는다. keystore.properties 가 있으면 릴리즈를 서명한다.
+def keystorePropsFile = rootProject.file("keystore.properties")
+def keystoreProps = new Properties()
+if (keystorePropsFile.exists()) {
+    keystoreProps.load(new FileInputStream(keystorePropsFile))
+}
+
 android {
     namespace 'kr.opencourse.godaijishou'
     // 1. 컴파일 SDK 버전을 34로 올립니다.
     compileSdkVersion 34
-    buildToolsVersion "33.0.0"
+    buildToolsVersion "34.0.0"
 
     defaultConfig {
         applicationId "kr.opencourse.godaijishou"
         minSdkVersion 26
         // 2. 타겟 SDK 버전도 34로 맞춰줍니다.
         targetSdkVersion 34
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.1"
 
         resValue "string", "xposed_description", "Go Daijishou - LG Second Launcher to Daijishou Redirector by Husband of Rebekah"
         //resValue "string-array", "xposed_scope", "com.lge.secondlauncher"
+    }
+
+    signingConfigs {
+        release {
+            if (keystorePropsFile.exists()) {
+                storeFile file(keystoreProps['storeFile'])
+                storePassword keystoreProps['storePassword']
+                keyAlias keystoreProps['keyAlias']
+                keyPassword keystoreProps['keyPassword']
+            }
+        }
     }
 
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (keystorePropsFile.exists()) {
+                signingConfig signingConfigs.release
+            }
         }
     }
     compileOptions {

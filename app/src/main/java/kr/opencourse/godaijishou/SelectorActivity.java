@@ -50,6 +50,9 @@ public class SelectorActivity extends Activity {
         }
         editor.apply();
 
+        // 후킹된 런처 프로세스의 캐시(ContentObserver)가 즉시 갱신되도록 알림
+        getContentResolver().notifyChange(SettingsProvider.CONTENT_URI, null);
+
         Toast.makeText(this, getString(R.string.toast_set_as_default, appName), Toast.LENGTH_SHORT).show();
 
         setResult(Activity.RESULT_OK);
