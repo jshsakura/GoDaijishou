@@ -6,12 +6,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.ContentObserver;
 import android.database.Cursor;
+import android.graphics.PixelFormat;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
 import android.view.Display;
+import android.view.Window;
 import android.widget.Toast;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
@@ -23,6 +25,11 @@ public class MainModule implements IXposedHookLoadPackage {
 
     private static final String TARGET_LAUNCHER_PACKAGE = "com.lge.secondlauncher";
     private static final int SECOND_SCREEN_DISPLAY_ID = 4;
+
+    // [실험적] RetroArch 검정화면 복구 대상 패키지 (공식/64비트/32비트 배포판)
+    private static final String[] RETROARCH_PACKAGES = {
+            "com.retroarch", "com.retroarch.aarch64", "com.retroarch.ra32"
+    };
 
     // Provider를 찾기 위한 주소(Uri)
     private static final Uri SETTINGS_URI = Uri.parse("content://kr.opencourse.godaijishou.provider/settings");
@@ -44,6 +51,13 @@ public class MainModule implements IXposedHookLoadPackage {
 
     @Override
     public void handleLoadPackage(final LoadPackageParam lpparam) throws Throwable {
+        for (String pkg : RETROARCH_PACKAGES) {
+            if (pkg.equals(lpparam.packageName)) {
+                hookRetroArchSurfaceRecovery();
+                return;
+            }
+        }
+
         if (!TARGET_LAUNCHER_PACKAGE.equals(lpparam.packageName)) return;
 
         // 런처 '이동' 지점은 onResume 하나면 충분하다(최초 실행·뒤로가기 복귀 모두 커버).
@@ -51,6 +65,59 @@ public class MainModule implements IXposedHookLoadPackage {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
                 maybeRedirect((Activity) param.thisObject);
+            }
+        });
+    }
+
+    // ─── [실험적] RetroArch 세컨드 스크린 복귀 시 검정화면 복구 ───
+    // 증상: 세컨드 스크린의 RetroArch를 벗어났다 돌아오면 소리만 나고 화면이 검게 남음.
+    //       (렌더링 스레드는 살아있지만 EGL 서피스가 죽은 서피스에 연결된 상태)
+    // 접근: RetroArch는 NativeActivity 기반이라 서피스를 윈도우에서 직접 받는다
+    //       (Window.takeSurface). 윈도우 포맷을 바꾸면 WindowManager가 서피스를
+    //       파기·재생성하면서 네이티브 쪽에 surfaceDestroyed→surfaceCreated가
+    //       다시 전달되고, 그 경로에서 EGL 서피스를 새로 잡게 된다.
+    // 범위: 세컨드 스크린(디스플레이 4)에서, 백그라운드에 다녀온(onStop 경유)
+    //       복귀에만 동작. 최초 실행이나 메인 화면 사용에는 관여하지 않는다.
+
+    private static volatile boolean surfaceFormatToggle = false;
+
+    private void hookRetroArchSurfaceRecovery() {
+        // onStop을 거쳤는지 표식을 남겨 '백그라운드 복귀'만 골라낸다.
+        XposedHelpers.findAndHookMethod(Activity.class, "onStop", new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) {
+                XposedHelpers.setAdditionalInstanceField(param.thisObject, "gdj_wasStopped", Boolean.TRUE);
+            }
+        });
+
+        XposedHelpers.findAndHookMethod(Activity.class, "onResume", new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) {
+                final Activity activity = (Activity) param.thisObject;
+
+                Object wasStopped = XposedHelpers.getAdditionalInstanceField(activity, "gdj_wasStopped");
+                if (!Boolean.TRUE.equals(wasStopped)) return;
+                XposedHelpers.setAdditionalInstanceField(activity, "gdj_wasStopped", Boolean.FALSE);
+
+                Display display = activity.getWindowManager().getDefaultDisplay();
+                if (display == null || display.getDisplayId() != SECOND_SCREEN_DISPLAY_ID) return;
+
+                // 정상 resume 경로가 끝난 뒤에 서피스를 재생성해야 네이티브 쪽이
+                // 준비된 상태에서 콜백을 받는다. 약간의 지연 후 실행.
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    try {
+                        if (activity.isFinishing() || activity.isDestroyed()) return;
+                        Window window = activity.getWindow();
+                        if (window == null) return;
+                        // 같은 포맷으로는 재생성이 일어나지 않으므로 32비트 포맷
+                        // 두 가지를 번갈아 지정해 매 복귀마다 강제 재생성한다.
+                        surfaceFormatToggle = !surfaceFormatToggle;
+                        window.setFormat(surfaceFormatToggle
+                                ? PixelFormat.RGBA_8888 : PixelFormat.TRANSLUCENT);
+                    } catch (Throwable ignored) {
+                        // 실험적 기능: 어떤 실패도 RetroArch 동작에 영향을 주지 않는다.
+                    }
+                }, 300);
             }
         });
     }
