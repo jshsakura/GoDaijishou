@@ -37,8 +37,9 @@ LG Wing의 두 번째 런처인 `com.lge.secondlauncher`의 홈 화면 동작을
 - 🎯 **런처 선택 UI** — 설정 앱에서 세컨드 스크린 홈으로 쓸 런처를 골라 저장. 변경 사항은 `ContentObserver`로 **즉시 반영**됩니다.
 - 🪶 **초경량 후킹** — `onResume` 한 지점만 후킹하고, 대부분의 콜백은 디스플레이 체크 후 즉시 반환. 설정값은 캐시되어 **생명주기마다 크로스-프로세스 쿼리가 없음** → 상시 부하 ≈ 0.
 - 🔥 **발열 방지** — 런처끼리 튕겨내는 오실레이션 루프를 감지하면 쿨다운을 자동으로 늘리는 백오프로 CPU 폭주·발열을 차단합니다.
-- 🖥️ **검정화면 수정** — 게임(RetroArch 등) 실행 중 세컨드 스크린으로 복귀할 때 생기던 검정화면(소리만 나던) 문제를 해결. 세컨드 홈을 폴백용으로 유지하고, 복귀 시 레트로아크의 렌더링 서피스를 강제 재생성합니다.
-- 🎮 **게임 전환 수정** *(v1.3, 선택)* — RetroArch 1.16.0 이후 프론트엔드에서 게임 실행 중 다른 게임을 고르면 이전 게임이 다시 뜨거나 검정화면이 되는 [알려진 문제](https://github.com/TapiocaFox/Daijishou/issues/703)를 모듈이 대신 처리합니다. 새 게임 인텐트를 받으면 기존 RetroArch 프로세스를 내리고 항상 **새 프로세스로 새 게임을 실행**합니다. LSPosed 스코프에 RetroArch를 체크해야 동작하며, 원치 않으면 체크 해제로 끌 수 있습니다.
+- 🖥️ **검정화면 수정** *(v1.3)* — 게임(RetroArch 등) 실행 중 세컨드 스크린으로 복귀할 때 생기던 검정화면(소리만 나던) 문제를 해결. 세컨드 홈을 폴백용으로 유지하고, 복귀 시 레트로아크의 렌더링 서피스를 강제 재생성합니다. LSPosed 스코프에 RetroArch를 체크해야 동작합니다.
+
+> ⚠️ **알려진 한계**: RetroArch가 실행 중인 상태에서 프론트엔드로 다른 게임을 고르면 이전 게임이 다시 뜨거나 화면이 깨질 수 있습니다. RetroArch 1.16.0 이후 프론트엔드의 kill-before-launch가 깨진 [알려진 문제](https://github.com/TapiocaFox/Daijishou/issues/703)로, 모듈이 아닌 프론트엔드/RetroArch에서 해결돼야 하는 부분입니다. 게임을 바꿀 때는 RetroArch를 종료(또는 강제 종료)한 뒤 선택하세요.
 
 ## 요구 사항
 
@@ -69,8 +70,8 @@ LG Wing의 두 번째 런처인 `com.lge.secondlauncher`의 홈 화면 동작을
 - Pick your second-screen launcher from the settings app (applied instantly via `ContentObserver`)
 - Ultra-light hooking: lifecycle-event hooks only, cached settings, near-zero idle overhead — no logging
 - Heat protection via exponential backoff against redirect oscillation
-- Fixed the black-screen-on-return issue when coming back to a running game on the second screen (keeps the fallback home + forces surface recreation on resume)
-- *(v1.3, optional)* Works around the [known RetroArch ≥1.17 issue](https://github.com/TapiocaFox/Daijishou/issues/703) where launching another game over a running one shows the previous game or a black screen — the module relaunches RetroArch in a fresh process for every new game intent. Enable by adding RetroArch to the LSPosed scope.
+- *(v1.3)* Fixed the black-screen-on-return issue when coming back to a running game on the second screen: keeps the fallback home and forces surface recreation on resume. Enable by adding RetroArch to the LSPosed scope.
+- Known limitation: launching another game over a *running* RetroArch may bring back the previous game — a [known RetroArch ≥1.17 issue](https://github.com/TapiocaFox/Daijishou/issues/703) that belongs to the frontend/RetroArch side; quit RetroArch before switching games.
 
 **Requirements**: rooted LG Wing, LSPosed (or a compatible Xposed framework), and the target launcher installed.
 

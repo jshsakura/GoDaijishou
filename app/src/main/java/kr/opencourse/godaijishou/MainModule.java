@@ -2,8 +2,6 @@ package kr.opencourse.godaijishou;
 
 import android.app.Activity;
 import android.app.ActivityOptions;
-import android.app.AlarmManager;
-import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.database.ContentObserver;
@@ -103,55 +101,11 @@ public class MainModule implements IXposedHookLoadPackage {
             }
         });
 
-        // 게임 실행 중 프론트엔드에서 다른 게임을 고르면, 살아있는 인스턴스가
-        // onNewIntent로 새 게임을 받고도 이전 콘텐츠를 그대로 보여준다.
-        // (RetroArch 1.16.0 이후 프론트엔드의 kill-before-launch가 깨진
-        //  알려진 문제: Daijishou #703)
-        // → 새 콘텐츠 인텐트는 기존 인스턴스가 처리하지 못하게 막고,
-        //   같은 인텐트를 AlarmManager에 예약해둔 뒤 프로세스를 내린다.
-        //   (알람은 시스템에 남으므로 800ms 뒤 항상 '새 프로세스'로 게임이 뜬다.
-        //    새 프로세스는 onCreate 경로로 인텐트를 받으므로 루프는 생기지 않는다)
-        XposedHelpers.findAndHookMethod(Activity.class, "onNewIntent", Intent.class,
-                new XC_MethodHook() {
-            @Override
-            protected void beforeHookedMethod(MethodHookParam param) {
-                Activity activity = (Activity) param.thisObject;
-                Intent intent = (Intent) param.args[0];
-                if (intent == null || !intent.hasExtra("ROM")) return; // 콘텐츠 실행 인텐트만
-                try {
-                    Intent relaunch = new Intent(intent);
-                    relaunch.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                    ActivityOptions opts = ActivityOptions.makeBasic();
-                    int displayId = displayIdOf(activity);
-                    if (displayId >= 0) opts.setLaunchDisplayId(displayId);
-                    PendingIntent pi = PendingIntent.getActivity(
-                            activity.getApplicationContext(), 0, relaunch,
-                            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE,
-                            opts.toBundle());
-                    AlarmManager am = (AlarmManager) activity.getSystemService(Context.ALARM_SERVICE);
-                    am.setExact(AlarmManager.RTC, System.currentTimeMillis() + 800, pi);
-                } catch (Throwable t) {
-                    // 재실행 예약에 실패하면 차단하지 않고 기존 동작으로 둔다.
-                    return;
-                }
-                param.setResult(null);
-                System.exit(0);
-            }
-        });
-
-        // 게임(액티비티)을 정상 종료하면 프로세스도 함께 내린다.
-        // 서피스가 죽은 프로세스가 백그라운드에 살아남았다가 다음 게임 실행 때
-        // 재사용되며 검정화면·이전 게임 재실행 증상을 일으키는 것을 차단.
-        // (isFinishing == 사용자가 콘텐츠를 닫고 나간 경우라 SRAM 저장은 이미 끝난 뒤)
-        XposedHelpers.findAndHookMethod(Activity.class, "onDestroy", new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) {
-                Activity activity = (Activity) param.thisObject;
-                if (!activity.isFinishing()) return; // 회전 등 재생성이면 유지
-                // 종료 브로드캐스트 등 마무리 작업이 끝날 시간을 준 뒤 프로세스 종료
-                new Handler(Looper.getMainLooper()).postDelayed(() -> System.exit(0), 500);
-            }
-        });
+        // 참고: 프로세스 강제 종료류(게임 전환 시 재실행, 종료 시 프로세스 정리)는
+        //       시도했다가 제외했다. RetroArch 1.16.0 이후 프론트엔드의
+        //       kill-before-launch가 깨진 알려진 문제(Daijishou #703)는 프론트엔드가
+        //       선택 시점에 죽여줘야 하는 영역이라, 모듈에서의 우회는 전환 타이밍만
+        //       어색해진다.
     }
 
     private static int displayIdOf(Activity activity) {
