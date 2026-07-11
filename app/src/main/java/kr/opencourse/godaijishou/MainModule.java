@@ -71,7 +71,7 @@ public class MainModule implements IXposedHookLoadPackage {
         });
     }
 
-    // ─── [실험적] RetroArch 세컨드 스크린 복귀 시 검정화면 복구 ───
+    // ─── RetroArch 세컨드 스크린 검정화면 복구 ───
     // 증상: 세컨드 스크린의 RetroArch를 벗어났다 돌아오면 소리만 나고 화면이 검게 남음.
     //       (렌더링 스레드는 살아있지만 EGL 서피스가 죽은 서피스에 연결된 상태)
     // 접근: RetroArch는 NativeActivity 기반이라 서피스를 윈도우에서 직접 받는다
@@ -80,8 +80,6 @@ public class MainModule implements IXposedHookLoadPackage {
     //       다시 전달되고, 그 경로에서 EGL 서피스를 새로 잡게 된다.
     // 트리거: 세컨드 스크린(디스플레이 4)에서 onResume 또는 윈도우 포커스 획득.
     //        (화면 간 전환은 onStop 없이 포커스만 오가는 경우가 있어 둘 다 잡는다)
-    // 진단: 테스트 빌드 동안 XposedBridge.log로 이벤트를 남긴다.
-    //       LSPosed 앱 → 로그에서 "GDJ:" 프리픽스로 확인.
 
     private static volatile boolean surfaceFormatToggle = false;
     private static volatile long lastRecoveryTime = 0;
@@ -91,10 +89,7 @@ public class MainModule implements IXposedHookLoadPackage {
         XposedHelpers.findAndHookMethod(Activity.class, "onResume", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
-                Activity activity = (Activity) param.thisObject;
-                de.robv.android.xposed.XposedBridge.log("GDJ: onResume display="
-                        + displayIdOf(activity) + " " + activity.getClass().getSimpleName());
-                maybeRecoverSurface(activity, "onResume");
+                maybeRecoverSurface((Activity) param.thisObject);
             }
         });
 
@@ -102,20 +97,20 @@ public class MainModule implements IXposedHookLoadPackage {
                 boolean.class, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
-                Activity activity = (Activity) param.thisObject;
-                boolean hasFocus = (Boolean) param.args[0];
-                de.robv.android.xposed.XposedBridge.log("GDJ: focus=" + hasFocus
-                        + " display=" + displayIdOf(activity));
-                if (hasFocus) maybeRecoverSurface(activity, "focusGained");
+                if ((Boolean) param.args[0]) {
+                    maybeRecoverSurface((Activity) param.thisObject);
+                }
             }
         });
 
-        // 게임 실행 중 다이지쇼에서 다른 게임을 고르면, 살아있는(그러나 서피스가
-        // 상한) 인스턴스가 onNewIntent로 새 게임을 받고도 이전 콘텐츠를 그대로
-        // 보여준다. → 새 콘텐츠 인텐트는 상한 인스턴스가 처리하지 못하게 막고,
-        // 같은 인텐트를 AlarmManager에 예약해둔 뒤 프로세스를 내린다.
-        // (알람은 시스템에 남으므로 800ms 뒤 항상 '새 프로세스'로 게임이 뜬다.
-        //  새 프로세스는 onCreate 경로로 인텐트를 받으므로 루프는 생기지 않는다)
+        // 게임 실행 중 프론트엔드에서 다른 게임을 고르면, 살아있는 인스턴스가
+        // onNewIntent로 새 게임을 받고도 이전 콘텐츠를 그대로 보여준다.
+        // (RetroArch 1.16.0 이후 프론트엔드의 kill-before-launch가 깨진
+        //  알려진 문제: Daijishou #703)
+        // → 새 콘텐츠 인텐트는 기존 인스턴스가 처리하지 못하게 막고,
+        //   같은 인텐트를 AlarmManager에 예약해둔 뒤 프로세스를 내린다.
+        //   (알람은 시스템에 남으므로 800ms 뒤 항상 '새 프로세스'로 게임이 뜬다.
+        //    새 프로세스는 onCreate 경로로 인텐트를 받으므로 루프는 생기지 않는다)
         XposedHelpers.findAndHookMethod(Activity.class, "onNewIntent", Intent.class,
                 new XC_MethodHook() {
             @Override
@@ -137,10 +132,8 @@ public class MainModule implements IXposedHookLoadPackage {
                     am.setExact(AlarmManager.RTC, System.currentTimeMillis() + 800, pi);
                 } catch (Throwable t) {
                     // 재실행 예약에 실패하면 차단하지 않고 기존 동작으로 둔다.
-                    de.robv.android.xposed.XposedBridge.log("GDJ: relaunch schedule failed: " + t);
                     return;
                 }
-                de.robv.android.xposed.XposedBridge.log("GDJ: onNewIntent(ROM) → fresh relaunch");
                 param.setResult(null);
                 System.exit(0);
             }
@@ -155,7 +148,6 @@ public class MainModule implements IXposedHookLoadPackage {
             protected void afterHookedMethod(MethodHookParam param) {
                 Activity activity = (Activity) param.thisObject;
                 if (!activity.isFinishing()) return; // 회전 등 재생성이면 유지
-                de.robv.android.xposed.XposedBridge.log("GDJ: onDestroy(finishing) → exit process");
                 // 종료 브로드캐스트 등 마무리 작업이 끝날 시간을 준 뒤 프로세스 종료
                 new Handler(Looper.getMainLooper()).postDelayed(() -> System.exit(0), 500);
             }
@@ -171,7 +163,7 @@ public class MainModule implements IXposedHookLoadPackage {
         }
     }
 
-    private void maybeRecoverSurface(final Activity activity, final String trigger) {
+    private void maybeRecoverSurface(final Activity activity) {
         if (displayIdOf(activity) != SECOND_SCREEN_DISPLAY_ID) return;
 
         long now = System.currentTimeMillis();
@@ -188,14 +180,10 @@ public class MainModule implements IXposedHookLoadPackage {
                 // 같은 포맷으로는 재생성이 일어나지 않으므로 32비트 포맷
                 // 두 가지를 번갈아 지정해 매번 강제 재생성한다.
                 surfaceFormatToggle = !surfaceFormatToggle;
-                int format = surfaceFormatToggle
-                        ? PixelFormat.RGBA_8888 : PixelFormat.TRANSLUCENT;
-                window.setFormat(format);
-                de.robv.android.xposed.XposedBridge.log("GDJ: setFormat(" + format
-                        + ") by " + trigger);
-            } catch (Throwable t) {
-                // 실험적 기능: 어떤 실패도 RetroArch 동작에 영향을 주지 않는다.
-                de.robv.android.xposed.XposedBridge.log("GDJ: recovery failed: " + t);
+                window.setFormat(surfaceFormatToggle
+                        ? PixelFormat.RGBA_8888 : PixelFormat.TRANSLUCENT);
+            } catch (Throwable ignored) {
+                // 어떤 실패도 RetroArch 동작에 영향을 주지 않는다.
             }
         }, 300);
     }

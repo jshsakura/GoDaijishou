@@ -37,7 +37,8 @@ LG Wing의 두 번째 런처인 `com.lge.secondlauncher`의 홈 화면 동작을
 - 🎯 **런처 선택 UI** — 설정 앱에서 세컨드 스크린 홈으로 쓸 런처를 골라 저장. 변경 사항은 `ContentObserver`로 **즉시 반영**됩니다.
 - 🪶 **초경량 후킹** — `onResume` 한 지점만 후킹하고, 대부분의 콜백은 디스플레이 체크 후 즉시 반환. 설정값은 캐시되어 **생명주기마다 크로스-프로세스 쿼리가 없음** → 상시 부하 ≈ 0.
 - 🔥 **발열 방지** — 런처끼리 튕겨내는 오실레이션 루프를 감지하면 쿨다운을 자동으로 늘리는 백오프로 CPU 폭주·발열을 차단합니다.
-- 🖥️ **검정화면 수정** — 게임(RetroArch 등) 실행 중 세컨드 스크린으로 복귀할 때 생기던 검정화면(소리만 나던) 문제를 해결. 세컨드 홈을 폴백용으로 유지하도록 개선했습니다.
+- 🖥️ **검정화면 수정** — 게임(RetroArch 등) 실행 중 세컨드 스크린으로 복귀할 때 생기던 검정화면(소리만 나던) 문제를 해결. 세컨드 홈을 폴백용으로 유지하고, 복귀 시 레트로아크의 렌더링 서피스를 강제 재생성합니다.
+- 🎮 **게임 전환 수정** *(v1.3, 선택)* — RetroArch 1.16.0 이후 프론트엔드에서 게임 실행 중 다른 게임을 고르면 이전 게임이 다시 뜨거나 검정화면이 되는 [알려진 문제](https://github.com/TapiocaFox/Daijishou/issues/703)를 모듈이 대신 처리합니다. 새 게임 인텐트를 받으면 기존 RetroArch 프로세스를 내리고 항상 **새 프로세스로 새 게임을 실행**합니다. LSPosed 스코프에 RetroArch를 체크해야 동작하며, 원치 않으면 체크 해제로 끌 수 있습니다.
 
 ## 요구 사항
 
@@ -49,6 +50,7 @@ LG Wing의 두 번째 런처인 `com.lge.secondlauncher`의 홈 화면 동작을
 
 1. 최신 [릴리즈](https://github.com/jshsakura/GoDaijishou/releases)에서 APK 설치
 2. **LSPosed**에서 모듈 활성화 → 적용 대상(Scope)에 `com.lge.secondlauncher` 선택
+   - RetroArch 검정화면·게임 전환 수정을 쓰려면 `com.retroarch`(또는 `.aarch64`/`.ra32`)도 함께 체크
 3. **재부팅** *(Xposed 모듈은 대상 프로세스 시작 시 로드되므로 필수)*
 4. `GoDaijishou 설정` 앱을 열어 원하는 런처 선택
 5. 세컨드 스크린 홈이 선택한 런처로 바뀝니다
@@ -65,12 +67,13 @@ LG Wing의 두 번째 런처인 `com.lge.secondlauncher`의 홈 화면 동작을
 
 **Highlights**
 - Pick your second-screen launcher from the settings app (applied instantly via `ContentObserver`)
-- Ultra-light hooking: a single `onResume` hook with cached settings and near-zero idle overhead
+- Ultra-light hooking: lifecycle-event hooks only, cached settings, near-zero idle overhead — no logging
 - Heat protection via exponential backoff against redirect oscillation
-- Fixed the black-screen-on-return issue when coming back to a running game on the second screen
+- Fixed the black-screen-on-return issue when coming back to a running game on the second screen (keeps the fallback home + forces surface recreation on resume)
+- *(v1.3, optional)* Works around the [known RetroArch ≥1.17 issue](https://github.com/TapiocaFox/Daijishou/issues/703) where launching another game over a running one shows the previous game or a black screen — the module relaunches RetroArch in a fresh process for every new game intent. Enable by adding RetroArch to the LSPosed scope.
 
 **Requirements**: rooted LG Wing, LSPosed (or a compatible Xposed framework), and the target launcher installed.
 
-**Install**: install the APK → enable the module in LSPosed with the scope `com.lge.secondlauncher` → reboot → open *GoDaijishou Settings* and pick a launcher.
+**Install**: install the APK → enable the module in LSPosed with the scope `com.lge.secondlauncher` (optionally add `com.retroarch` / `.aarch64` / `.ra32` for the RetroArch fixes) → reboot → open *GoDaijishou Settings* and pick a launcher.
 
 It uses the Xposed framework to achieve system-level behavior changes without modifying the original system files.

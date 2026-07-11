@@ -2,7 +2,7 @@
 <resources>
     <string-array name="xposed_scope">
         <item>com.lge.secondlauncher</item>
-        <!-- [실험적] 세컨드 스크린 복귀 시 RetroArch 검정화면 복구용 -->
+        <!-- RetroArch 세컨드 스크린 검정화면 복구 + 게임 전환 수정용 (선택) -->
         <item>com.retroarch</item>
         <item>com.retroarch.aarch64</item>
         <item>com.retroarch.ra32</item>
