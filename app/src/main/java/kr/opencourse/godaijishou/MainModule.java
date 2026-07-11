@@ -76,50 +76,90 @@ public class MainModule implements IXposedHookLoadPackage {
     //       (Window.takeSurface). 윈도우 포맷을 바꾸면 WindowManager가 서피스를
     //       파기·재생성하면서 네이티브 쪽에 surfaceDestroyed→surfaceCreated가
     //       다시 전달되고, 그 경로에서 EGL 서피스를 새로 잡게 된다.
-    // 범위: 세컨드 스크린(디스플레이 4)에서, 백그라운드에 다녀온(onStop 경유)
-    //       복귀에만 동작. 최초 실행이나 메인 화면 사용에는 관여하지 않는다.
+    // 트리거: 세컨드 스크린(디스플레이 4)에서 onResume 또는 윈도우 포커스 획득.
+    //        (화면 간 전환은 onStop 없이 포커스만 오가는 경우가 있어 둘 다 잡는다)
+    // 진단: 테스트 빌드 동안 XposedBridge.log로 이벤트를 남긴다.
+    //       LSPosed 앱 → 로그에서 "GDJ:" 프리픽스로 확인.
 
     private static volatile boolean surfaceFormatToggle = false;
+    private static volatile long lastRecoveryTime = 0;
+    private static final long RECOVERY_DEDUP_MS = 1000; // resume+포커스 중복 발동 방지
 
     private void hookRetroArchSurfaceRecovery() {
-        // onStop을 거쳤는지 표식을 남겨 '백그라운드 복귀'만 골라낸다.
-        XposedHelpers.findAndHookMethod(Activity.class, "onStop", new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) {
-                XposedHelpers.setAdditionalInstanceField(param.thisObject, "gdj_wasStopped", Boolean.TRUE);
-            }
-        });
-
         XposedHelpers.findAndHookMethod(Activity.class, "onResume", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
-                final Activity activity = (Activity) param.thisObject;
-
-                Object wasStopped = XposedHelpers.getAdditionalInstanceField(activity, "gdj_wasStopped");
-                if (!Boolean.TRUE.equals(wasStopped)) return;
-                XposedHelpers.setAdditionalInstanceField(activity, "gdj_wasStopped", Boolean.FALSE);
-
-                Display display = activity.getWindowManager().getDefaultDisplay();
-                if (display == null || display.getDisplayId() != SECOND_SCREEN_DISPLAY_ID) return;
-
-                // 정상 resume 경로가 끝난 뒤에 서피스를 재생성해야 네이티브 쪽이
-                // 준비된 상태에서 콜백을 받는다. 약간의 지연 후 실행.
-                new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                    try {
-                        if (activity.isFinishing() || activity.isDestroyed()) return;
-                        Window window = activity.getWindow();
-                        if (window == null) return;
-                        // 같은 포맷으로는 재생성이 일어나지 않으므로 32비트 포맷
-                        // 두 가지를 번갈아 지정해 매 복귀마다 강제 재생성한다.
-                        surfaceFormatToggle = !surfaceFormatToggle;
-                        window.setFormat(surfaceFormatToggle
-                                ? PixelFormat.RGBA_8888 : PixelFormat.TRANSLUCENT);
-                    } catch (Throwable ignored) {
-                        // 실험적 기능: 어떤 실패도 RetroArch 동작에 영향을 주지 않는다.
-                    }
-                }, 300);
+                Activity activity = (Activity) param.thisObject;
+                de.robv.android.xposed.XposedBridge.log("GDJ: onResume display="
+                        + displayIdOf(activity) + " " + activity.getClass().getSimpleName());
+                maybeRecoverSurface(activity, "onResume");
             }
         });
+
+        XposedHelpers.findAndHookMethod(Activity.class, "onWindowFocusChanged",
+                boolean.class, new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) {
+                Activity activity = (Activity) param.thisObject;
+                boolean hasFocus = (Boolean) param.args[0];
+                de.robv.android.xposed.XposedBridge.log("GDJ: focus=" + hasFocus
+                        + " display=" + displayIdOf(activity));
+                if (hasFocus) maybeRecoverSurface(activity, "focusGained");
+            }
+        });
+
+        // 게임(액티비티)을 정상 종료하면 프로세스도 함께 내린다.
+        // 서피스가 죽은 프로세스가 백그라운드에 살아남았다가 다음 게임 실행 때
+        // 재사용되며 검정화면·이전 게임 재실행 증상을 일으키는 것을 차단.
+        // (isFinishing == 사용자가 콘텐츠를 닫고 나간 경우라 SRAM 저장은 이미 끝난 뒤)
+        XposedHelpers.findAndHookMethod(Activity.class, "onDestroy", new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) {
+                Activity activity = (Activity) param.thisObject;
+                if (!activity.isFinishing()) return; // 회전 등 재생성이면 유지
+                de.robv.android.xposed.XposedBridge.log("GDJ: onDestroy(finishing) → exit process");
+                // 종료 브로드캐스트 등 마무리 작업이 끝날 시간을 준 뒤 프로세스 종료
+                new Handler(Looper.getMainLooper()).postDelayed(() -> System.exit(0), 500);
+            }
+        });
+    }
+
+    private static int displayIdOf(Activity activity) {
+        try {
+            Display display = activity.getWindowManager().getDefaultDisplay();
+            return display != null ? display.getDisplayId() : -1;
+        } catch (Throwable t) {
+            return -1;
+        }
+    }
+
+    private void maybeRecoverSurface(final Activity activity, final String trigger) {
+        if (displayIdOf(activity) != SECOND_SCREEN_DISPLAY_ID) return;
+
+        long now = System.currentTimeMillis();
+        if (now - lastRecoveryTime < RECOVERY_DEDUP_MS) return;
+        lastRecoveryTime = now;
+
+        // 정상 resume 경로가 끝난 뒤에 서피스를 재생성해야 네이티브 쪽이
+        // 준비된 상태에서 콜백을 받는다. 약간의 지연 후 실행.
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            try {
+                if (activity.isFinishing() || activity.isDestroyed()) return;
+                Window window = activity.getWindow();
+                if (window == null) return;
+                // 같은 포맷으로는 재생성이 일어나지 않으므로 32비트 포맷
+                // 두 가지를 번갈아 지정해 매번 강제 재생성한다.
+                surfaceFormatToggle = !surfaceFormatToggle;
+                int format = surfaceFormatToggle
+                        ? PixelFormat.RGBA_8888 : PixelFormat.TRANSLUCENT;
+                window.setFormat(format);
+                de.robv.android.xposed.XposedBridge.log("GDJ: setFormat(" + format
+                        + ") by " + trigger);
+            } catch (Throwable t) {
+                // 실험적 기능: 어떤 실패도 RetroArch 동작에 영향을 주지 않는다.
+                de.robv.android.xposed.XposedBridge.log("GDJ: recovery failed: " + t);
+            }
+        }, 300);
     }
 
     private void maybeRedirect(Activity launcherActivity) {
