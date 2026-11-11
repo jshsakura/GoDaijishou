@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launcher choice row: yellow check on the right when selected -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Ft.Row">
+
+    <ImageView
+        android:id="@+id/choice_icon"
+        style="@style/Ft.RowIcon"
+        android:importantForAccessibility="no" />
+
+    <LinearLayout style="@style/Ft.RowText">
+
+        <TextView
+            android:id="@+id/choice_title"
+            style="@style/Ft.RowTitle" />
+
+        <TextView
+            android:id="@+id/choice_desc"
+            style="@style/Ft.RowDesc" />
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/choice_check"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_marginStart="8dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_ft_check"
+        app:tint="@color/ft_butter"
+        xmlns:app="http://schemas.android.com/apk/res-auto" />
+</LinearLayout>

@@ -1,22 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- 다른 앱의 설치 여부를 쿼리하기 위한 권한을 추가합니다. -->
+    <!-- Lets this app (same signing key only) ask the system_server hook for privileged actions -->
+    <permission
+        android:name="kr.opencourse.godaijishou.permission.SYSTEM_ACTION"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="kr.opencourse.godaijishou.permission.SYSTEM_ACTION" />
+
+    <!-- Package visibility for checking other apps -->
     <queries>
         <package android:name="com.magneticchen.daijishou" />
         <package android:name="org.es_de.frontend" />
         <package android:name="org.pegasus_frontend.android" />
+        <!-- For the Open LSPosed button -->
+        <package android:name="org.lsposed.manager" />
+        <!-- Host of the parasitic LSPosed manager -->
+        <package android:name="com.android.shell" />
     </queries>
 
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/App.Theme.Godaijishou">
 
-        <!-- Xposed 모듈 정보 -->
+        <!-- Xposed module info -->
         <meta-data
             android:name="xposedmodule"
             android:value="true" />
@@ -30,7 +40,7 @@
             android:name="xposedscope"
             android:resource="@array/xposed_scope" />
 
-        <!-- 설정 화면 (앱 서랍에 아이콘으로 표시됨) -->
+        <!-- Settings screen (shown in the app drawer) -->
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -40,17 +50,22 @@
             </intent-filter>
         </activity>
 
-        <!-- 런처 선택 화면 (내부적으로만 사용됨) -->
-        <activity
-            android:name=".SelectorActivity"
-            android:excludeFromRecents="true"
-            android:theme="@style/App.Theme.Godaijishou"
-            android:exported="true" />
-
         <provider
             android:name=".SettingsProvider"
             android:authorities="kr.opencourse.godaijishou.provider"
             android:exported="true" />
+
+        <!-- Second screen power menu, launched by the system_server hook (system uid may start it) -->
+        <activity
+            android:name=".PowerMenuActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:noHistory="true"
+            android:showWhenLocked="true"
+            android:taskAffinity="kr.opencourse.godaijishou.powermenu"
+            android:theme="@style/App.Theme.Godaijishou.PowerMenu" />
+
 
     </application>
 </manifest>

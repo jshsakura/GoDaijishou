@@ -1,30 +1,58 @@
 <resources>
-    <string name="app_name">GoDaijishou 설정</string>
+    <string name="app_name">GoDaijishou</string>
 
     <!-- Selector Activity -->
-    <string name="selector_title">기본 런처 선택</string>
     <string name="launcher_daijishou">다이지쇼</string>
     <string name="launcher_esde">ES-DE</string>
     <string name="launcher_pegasus">페가수스</string>
-
-    <!-- Main Activity (Settings) -->
-    <string name="main_title">대체 런처 설정</string>
-    <string name="main_set_launcher_button">기본 런처 설정</string>
-    <string name="main_reset_button_clear">설정 초기화</string>
-    <string name="main_current_launcher_prefix">현재 기본 런처: </string>
-    <string name="main_no_launcher_set">대체 런처가 설정되지 않았습니다.\n아래 버튼을 사용하여 기본 런처를 설정하세요.</string>
-    <string name="main_info_reboot_setting">설정 후 재부팅이 필요합니다.</string>
-
     <!-- Toast Messages -->
-    <string name="toast_settings_reset">설정이 초기화되었습니다.</string>
     <string name="toast_app_not_installed">%s 앱이 설치되지 않았습니다.</string>
-    <string name="toast_set_as_default">%s을(를) 기본 런처로 설정했습니다.</string>
 
-    <string name="default_app_display_name">선택된 앱</string>
-    <string name="toast_app_launch_failed">앱 실행에 실패했습니다. 다시 시도하거나 앱을 확인하세요.</string>
-    <string name="main_no_launcher_set_toast">기본 런처가 설정되지 않았습니다.\n메인 화면의 [Go Daijishou] 앱을 사용하여 설정하세요.</string>
-
-    <string name="main_apply_button">적용 및 재부팅</string>
     <string name="launcher_stock">LG 기본값</string>
     <string name="main_reboot_permission_denied">재부팅 권한이 거부되었습니다</string>
+
+    <!-- Bottom screen only mode (black top screen) -->
+    <string name="main_no_top_screen_switch">상단 화면 없음</string>
+    <string name="main_no_top_screen_desc">하단 화면만 쓰는 윙용입니다. 상단 패널을 늘 끄고, 모든 창·대화상자·볼륨 바·안내 메시지를 하단 화면에 띄웁니다.</string>
+    <string name="main_top_blackout_switch">하단 화면 전용 모드 (상단 검은 화면)</string>
+    <string name="main_top_blackout_desc">스위블이 열려 있는 동안 상단 패널 전원을 끄고, 상단에 뜨던 창은 하단 화면으로 보냅니다(시스템 프레임워크 필요).</string>
+    <string name="main_volume_overlay_switch">볼륨 표시</string>
+    <string name="main_volume_overlay_desc">지금 쓰는 화면 오른쪽 가장자리에 얇은 세로 볼륨 바를 시스템이 직접 그립니다(추가 권한 없음). 입력을 가로채지 않습니다.</string>
+
+    <!-- Rotation forcing (formerly GoRotation90) -->
+    <string name="main_force_rotation_switch">자동회전 토글로 회전 강제</string>
+    <string name="main_force_rotation_desc">자동회전을 끄면 가로(90°), 켜면 세로로 고정됩니다. 스위치는 바로 적용되고, 처음 한 번만 LSPosed에서 \"시스템 프레임워크\"를 체크하고 재부팅하면 됩니다.</string>
+
+    <!-- Settings screen (freetv style) -->
+    <string name="app_title">GoDaijishou</string>
+    <string name="app_subtitle">LG Wing 세컨드 스크린 도우미</string>
+    <string name="group_screen">화면</string>
+    <string name="group_module">모듈</string>
+    <string name="row_launcher_title">세컨드 스크린 홈</string>
+    <string name="launcher_stock_desc">LG 세컨드 런처를 그대로 사용</string>
+    <string name="launcher_installed">설치됨</string>
+    <string name="launcher_not_installed">설치 안 됨</string>
+    <string name="row_lsposed_title">LSPosed 열기</string>
+    <string name="row_lsposed_desc">모듈 활성화와 적용 대상(스코프) 설정</string>
+    <string name="row_reboot_title">재부팅</string>
+    <string name="row_reboot_desc">모듈을 켜거나 스코프를 바꾼 뒤에만 필요합니다. 위 스위치들은 바로 적용됩니다.</string>
+    <string name="row_usb_debug_title">USB 디버깅 연결 유지</string>
+    <string name="row_usb_debug_desc">재부팅하면 윙이 adb를 끄고 USB를 파일 전송으로만 올립니다. USB 디버깅을 계속 켜 둡니다. 파일 전송도 그대로 됩니다.</string>
+    <string name="notice_reboot_title">재부팅이 필요해요</string>
+    <string name="notice_reboot_desc">시스템 프레임워크 기능(회전 강제, 하단 전원 메뉴)이 켜져 있지만 이번 부팅에서 훅이 로드되지 않았습니다. LSPosed에서 \"시스템 프레임워크\"를 체크한 뒤 재부팅하세요.</string>
+    <string name="reboot_confirm_title">지금 재부팅할까요?</string>
+    <string name="reboot_confirm_msg">기기를 지금 다시 시작합니다.</string>
+    <string name="cancel">취소</string>
+    <string name="toast_lsposed_open_failed">LSPosed를 열지 못했습니다. 알림창의 LSPosed 알림을 눌러 주세요.</string>
+    <string name="toast_system_hook_needed">시스템 프레임워크 훅이 필요합니다. LSPosed에서 체크하고 한 번 재부팅하세요.</string>
+
+
+    <!-- Second screen power menu -->
+    <string name="main_power_menu_switch">하단 전원 메뉴</string>
+    <string name="main_power_menu_desc">스위블이 열려 있을 때 전원키를 길게 누르면 하단 화면에 전원 메뉴가 뜹니다. 메뉴가 두 번 뜨지 않도록 Classic PowerMenu는 꺼주세요.</string>
+    <string name="power_off">전원 끄기</string>
+    <string name="power_restart">다시 시작</string>
+    <string name="power_recovery">리커버리</string>
+    <string name="power_screenshot">스크린샷</string>
+    <string name="toast_screenshot_saved">스크린샷을 저장했습니다</string>
 </resources>

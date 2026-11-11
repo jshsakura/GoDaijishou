@@ -8,6 +8,8 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
+import android.os.Binder;
+import android.os.Process;
 
 import androidx.annotation.NonNull;
 
@@ -15,7 +17,7 @@ import java.util.Objects;
 
 public class SettingsProvider extends ContentProvider {
 
-    // 다른 앱에서 이 Provider를 찾기 위한 고유 주소(Authority)
+    // Authority other processes (the hooks) use to find this provider
     private static final String AUTHORITY = "kr.opencourse.godaijishou.provider";
     public static final Uri CONTENT_URI = Uri.parse("content://" + AUTHORITY + "/settings");
 
@@ -26,22 +28,39 @@ public class SettingsProvider extends ContentProvider {
 
     @Override
     public Cursor query(@NonNull Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
-        SharedPreferences prefs = Objects.requireNonNull(getContext()).getSharedPreferences(AppPreferences.PREF_FILE_NAME, Context.MODE_PRIVATE);
+        Context context = Objects.requireNonNull(getContext());
+        // The system_server hook (RotationHook) reads settings here on every boot.
+        // Recording that lets the settings screen tell, at no extra cost, whether
+        // the hook is loaded in this boot (used for the reboot notice).
+        if (Binder.getCallingUid() == Process.SYSTEM_UID) {
+            AppPreferences.markSystemHookSeen(context);
+        }
+        SharedPreferences prefs = context.getSharedPreferences(AppPreferences.PREF_FILE_NAME, Context.MODE_PRIVATE);
 
-        // SharedPreferences에서 설정값 읽기
         String targetPackage = prefs.getString(AppPreferences.KEY_LAUNCHER_PACKAGE, null);
         String targetActivity = prefs.getString(AppPreferences.KEY_LAUNCHER_ACTIVITY, null);
+        String forceRotation = prefs.getBoolean(AppPreferences.KEY_FORCE_ROTATION, false) ? "1" : "0";
+        String powerMenu = prefs.getBoolean(AppPreferences.KEY_POWER_MENU_SECOND_SCREEN, false) ? "1" : "0";
+        String topOff = prefs.getBoolean(AppPreferences.KEY_TOP_SCREEN_OFF, false) ? "1" : "0";
+        String volume = prefs.getBoolean(AppPreferences.KEY_VOLUME_OVERLAY, false) ? "1" : "0";
+        String noTop = prefs.getBoolean(AppPreferences.KEY_NO_TOP_SCREEN, false) ? "1" : "0";
+        String usbPin = prefs.getBoolean(AppPreferences.KEY_USB_DEBUG_PIN, false) ? "1" : "0";
 
-        // Cursor에 담아서 결과 반환
         MatrixCursor cursor = new MatrixCursor(new String[]{
                 AppPreferences.KEY_LAUNCHER_PACKAGE,
-                AppPreferences.KEY_LAUNCHER_ACTIVITY
+                AppPreferences.KEY_LAUNCHER_ACTIVITY,
+                AppPreferences.KEY_FORCE_ROTATION,
+                AppPreferences.KEY_POWER_MENU_SECOND_SCREEN,
+                AppPreferences.KEY_TOP_SCREEN_OFF,
+                AppPreferences.KEY_NO_TOP_SCREEN,
+                AppPreferences.KEY_USB_DEBUG_PIN,
+                AppPreferences.KEY_VOLUME_OVERLAY
         });
-        cursor.addRow(new Object[]{targetPackage, targetActivity});
+        cursor.addRow(new Object[]{targetPackage, targetActivity, forceRotation, powerMenu, topOff, noTop, usbPin, volume});
         return cursor;
     }
 
-    // 아래 메서드들은 이 예제에서 필요 없으므로 비워둡니다.
+    // Read-only provider: the methods below are unused.
     @Override
     public String getType(@NonNull Uri uri) { return null; }
     @Override

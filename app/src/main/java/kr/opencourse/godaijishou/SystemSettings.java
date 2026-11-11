@@ -1,0 +1,192 @@
+package kr.opencourse.godaijishou;
+
+import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.database.ContentObserver;
+import android.database.Cursor;
+import android.hardware.display.DisplayManager;
+import android.view.Display;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Process;
+import android.provider.Settings;
+
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+/**
+ * Module settings cache shared by the system_server hooks (rotation, power menu).
+ *
+ * - Hooks only read the volatile flags below (no IPC, no allocation).
+ * - Values are read from the app's provider on a background thread, once at startup
+ *   and again only when the provider notifies a change.
+ * - The provider cannot be read before the first user unlock, so it is read once more
+ *   on USER_UNLOCKED / BOOT_COMPLETED. No polling.
+ */
+final class SystemSettings {
+
+    /** Whether the top display should be treated as unusable right now. */
+    static boolean topUnavailable() {
+        return noTopScreen || (topScreenOff && secondScreenOn);
+    }
+
+    static volatile boolean forceRotation = false;
+    static volatile boolean powerMenuOnSecondScreen = false;
+    // "Bottom screen only": power the top panel off while the swivel is open.
+    static volatile boolean topScreenOff = false;
+    // "No top screen": top panel always off, every launch goes to the second screen.
+    static volatile boolean noTopScreen = false;
+    // Keep adb enabled across reboots.
+    static volatile boolean usbDebugPinned = false;
+    // Volume overlay drawn by system_server.
+    static volatile boolean volumeOverlay = false;
+    // Swivel state, kept current by a display listener so hooks never query DisplayManager
+    // (the rotation hooks run under the WindowManager lock).
+    static volatile boolean secondScreenOn = false;
+
+    private static volatile boolean initialized = false;
+    private static ContentResolver resolver;
+    private static Handler handler;
+    private static Context systemContext;
+    private static final List<Runnable> listeners = new CopyOnWriteArrayList<>();
+
+    private SystemSettings() {
+    }
+
+    /** Idempotent; safe to call from any hook. */
+    static synchronized void init(Context context) {
+        if (initialized) return;
+        initialized = true;
+        try {
+            systemContext = context;
+            resolver = context.getContentResolver();
+            HandlerThread thread = new HandlerThread("GoDaijishou-settings", Process.THREAD_PRIORITY_BACKGROUND);
+            thread.start();
+            handler = new Handler(thread.getLooper());
+
+            // Privileged actions requested by the app (power, screenshot, LSPosed).
+            SystemActions.register(context, handler);
+            // Volume overlay (drawn here, so the app needs no overlay permission).
+            SystemVolumeOverlay.install(context, handler);
+            // USB debugging pin: re-enable adb whenever it gets turned off.
+            addListener(() -> SystemActions.enforceUsbDebug(context));
+            resolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.ADB_ENABLED), false,
+                    new ContentObserver(handler) {
+                        @Override
+                        public void onChange(boolean selfChange) {
+                            SystemActions.enforceUsbDebug(context);
+                        }
+                    });
+
+            resolver.registerContentObserver(SettingsProvider.CONTENT_URI, false,
+                    new ContentObserver(handler) {
+                        @Override
+                        public void onChange(boolean selfChange) {
+                            reload();
+                        }
+                    });
+
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(Intent.ACTION_USER_UNLOCKED);
+            filter.addAction(Intent.ACTION_BOOT_COMPLETED);
+            context.registerReceiver(new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context c, Intent intent) {
+                    reload();
+                }
+            }, filter, null, handler);
+
+            DisplayManager dm = context.getSystemService(DisplayManager.class);
+            // Top panel power follows settings, the swivel state and display 0 state changes.
+            addListener(() -> TopPanel.apply(dm));
+            dm.registerDisplayListener(new DisplayManager.DisplayListener() {
+                @Override
+                public void onDisplayAdded(int displayId) {
+                    if (displayId == MainModule.SECOND_SCREEN_DISPLAY_ID) updateSecondScreen(dm);
+                }
+
+                @Override
+                public void onDisplayRemoved(int displayId) {
+                    if (displayId == MainModule.SECOND_SCREEN_DISPLAY_ID) updateSecondScreen(dm);
+                }
+
+                @Override
+                public void onDisplayChanged(int displayId) {
+                    if (displayId == MainModule.SECOND_SCREEN_DISPLAY_ID) updateSecondScreen(dm);
+                    else if (displayId == Display.DEFAULT_DISPLAY) TopPanel.apply(dm);
+                }
+            }, handler);
+
+            handler.post(() -> updateSecondScreen(dm));
+            handler.post(SystemSettings::reload);
+        } catch (Throwable ignored) {
+            // Init failed: every feature stays disabled and system behavior is untouched.
+        }
+    }
+
+    /** Background handler for hook work that must stay off the caller's thread. */
+    static Handler handler() {
+        return handler;
+    }
+
+    static Context context() {
+        return systemContext;
+    }
+
+    static ContentResolver resolver() {
+        return resolver;
+    }
+
+    /** Runs on the settings thread after any setting or the swivel state changed. */
+    static void addListener(Runnable listener) {
+        listeners.add(listener);
+    }
+
+    private static void updateSecondScreen(DisplayManager dm) {
+        Display display = dm.getDisplay(MainModule.SECOND_SCREEN_DISPLAY_ID);
+        boolean on = display != null && display.getState() == Display.STATE_ON;
+        if (on != secondScreenOn) {
+            secondScreenOn = on;
+            for (Runnable l : listeners) l.run();
+        }
+    }
+
+    private static void reload() {
+        Cursor cursor = null;
+        try {
+            cursor = resolver.query(SettingsProvider.CONTENT_URI, null, null, null, null);
+            if (cursor == null || !cursor.moveToFirst()) return; // keep current values
+            boolean rotation = readFlag(cursor, AppPreferences.KEY_FORCE_ROTATION);
+            boolean powerMenu = readFlag(cursor, AppPreferences.KEY_POWER_MENU_SECOND_SCREEN);
+            boolean topOff = readFlag(cursor, AppPreferences.KEY_TOP_SCREEN_OFF);
+            boolean noTop = readFlag(cursor, AppPreferences.KEY_NO_TOP_SCREEN);
+            boolean usbPin = readFlag(cursor, AppPreferences.KEY_USB_DEBUG_PIN);
+            boolean volume = readFlag(cursor, AppPreferences.KEY_VOLUME_OVERLAY);
+            boolean changed = rotation != forceRotation || powerMenu != powerMenuOnSecondScreen
+                    || topOff != topScreenOff || noTop != noTopScreen
+                    || usbPin != usbDebugPinned || volume != volumeOverlay;
+            forceRotation = rotation;
+            powerMenuOnSecondScreen = powerMenu;
+            topScreenOff = topOff;
+            noTopScreen = noTop;
+            usbDebugPinned = usbPin;
+            volumeOverlay = volume;
+            if (changed) {
+                for (Runnable l : listeners) l.run();
+            }
+        } catch (Throwable ignored) {
+            // Provider not readable yet (e.g. before unlock): keep current values.
+        } finally {
+            if (cursor != null) cursor.close();
+        }
+    }
+
+    private static boolean readFlag(Cursor cursor, String column) {
+        int idx = cursor.getColumnIndex(column);
+        return idx >= 0 && "1".equals(cursor.getString(idx));
+    }
+}

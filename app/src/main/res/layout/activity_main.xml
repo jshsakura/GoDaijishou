@@ -1,59 +1,352 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- freetv settings style: title bar + group titles + rounded card rows -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_latte"
-    android:gravity="center"
-    android:orientation="vertical"
-    android:padding="32dp">
+    android:background="@color/ft_ground"
+    android:fillViewport="true">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp"
-        android:text="@string/main_title"
-        android:textAppearance="@style/TextAppearance.AppCompat.Headline" />
+        android:orientation="vertical"
+        android:paddingStart="18dp"
+        android:paddingTop="14dp"
+        android:paddingEnd="18dp"
+        android:paddingBottom="24dp">
 
-    <TextView
-        android:id="@+id/tv_current_setting"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="48dp"
-        android:gravity="center"
-        android:textAppearance="@style/TextAppearance.AppCompat.Body1"
-        android:textColor="?android:attr/textColorSecondary"
-        tools:text="@string/main_no_launcher_set" />
+        <!-- Title bar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btn_select_launcher"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        android:layout_width="280dp"
-        android:layout_height="60dp"
-        android:text="@string/main_set_launcher_button"
-        app:cornerRadius="16dp" 
-		app:icon="@drawable/ic_themes"/>
+            <!-- Logo: Baloo 2 ExtraBold typeface + yellow trailing dot, both set in code -->
+            <TextView
+                android:id="@+id/tv_logo"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:includeFontPadding="false"
+                android:paddingTop="3dp"
+                android:text="@string/app_title"
+                android:textColor="@color/ft_ink"
+                android:textSize="28sp" />
 
-	<TextView
-		android:id="@+id/tv_info_reboot_setting"
-		android:layout_width="wrap_content"
-		android:layout_height="wrap_content"
-		android:layout_marginTop="16dp"
-		android:gravity="center"
-		android:textAppearance="@style/TextAppearance.AppCompat.Body1"
-		android:textColor="?android:attr/textColorSecondary"
-		app:icon="@drawable/ic_bomb"
-		tools:text="@string/main_info_reboot_setting" />
-		
-    <!--<com.google.android.material.button.MaterialButton
-        android:id="@+id/btn_apply"
-        android:layout_width="280dp"
-        android:layout_height="60dp"
-        android:layout_marginTop="16dp"
-        android:text="@string/main_apply_button"
-        app:backgroundTint="?attr/colorPrimary"
-        app:cornerRadius="16dp"
-		app:icon="@drawable/ic_bomb"/>-->
+            <TextView
+                android:id="@+id/tv_version"
+                android:layout_width="wrap_content"
+                android:layout_height="28dp"
+                android:background="@drawable/bg_ft_pill"
+                android:gravity="center"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:textColor="@color/ft_secondary"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
-</LinearLayout>
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="2dp"
+            android:text="@string/app_subtitle"
+            android:textColor="@color/ft_secondary"
+            android:textSize="13sp" />
+
+        <!-- Reboot notice (shown only when needed) -->
+        <LinearLayout
+            android:id="@+id/notice_reboot"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_ft_notice"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/notice_reboot_title"
+                android:textColor="@color/ft_butter"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:lineSpacingMultiplier="1.2"
+                android:text="@string/notice_reboot_desc"
+                android:textColor="@color/ft_ink"
+                android:textSize="13sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_notice_lsposed"
+                    style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="@string/row_lsposed_title"
+                    android:textColor="@color/ft_ink"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="@color/ft_surface"
+                    android:letterSpacing="0"
+                    android:textAllCaps="false"
+                    app:cornerRadius="14dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_notice_reboot"
+                    style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="@string/row_reboot_title"
+                    android:textColor="@color/ft_on_butter"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    app:backgroundTint="@color/ft_butter"
+                    android:letterSpacing="0"
+                    android:textAllCaps="false"
+                    app:cornerRadius="14dp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Launcher -->
+        <TextView
+            style="@style/Ft.Group"
+            android:text="@string/row_launcher_title" />
+
+        <!-- Launcher rows are added by MainActivity -->
+        <LinearLayout
+            android:id="@+id/launcher_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <!-- Screen -->
+        <TextView
+            style="@style/Ft.Group"
+            android:text="@string/group_screen" />
+
+        <LinearLayout
+            android:id="@+id/row_no_top_screen"
+            style="@style/Ft.Row">
+
+            <ImageView
+                style="@style/Ft.RowIcon"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_ft_screen_bottom" />
+
+            <LinearLayout style="@style/Ft.RowText">
+
+                <TextView
+                    style="@style/Ft.RowTitle"
+                    android:text="@string/main_no_top_screen_switch" />
+
+                <TextView
+                    style="@style/Ft.RowDesc"
+                    android:text="@string/main_no_top_screen_desc" />
+            </LinearLayout>
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_no_top_screen"
+                style="@style/Ft.Switch" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/row_top_blackout"
+            style="@style/Ft.Row">
+
+            <ImageView
+                style="@style/Ft.RowIcon"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_ft_moon" />
+
+            <LinearLayout style="@style/Ft.RowText">
+
+                <TextView
+                    style="@style/Ft.RowTitle"
+                    android:text="@string/main_top_blackout_switch" />
+
+                <TextView
+                    style="@style/Ft.RowDesc"
+                    android:text="@string/main_top_blackout_desc" />
+            </LinearLayout>
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_top_blackout"
+                style="@style/Ft.Switch" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/row_volume_overlay"
+            style="@style/Ft.Row">
+
+            <ImageView
+                style="@style/Ft.RowIcon"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_ft_volume" />
+
+            <LinearLayout style="@style/Ft.RowText">
+
+                <TextView
+                    style="@style/Ft.RowTitle"
+                    android:text="@string/main_volume_overlay_switch" />
+
+                <TextView
+                    style="@style/Ft.RowDesc"
+                    android:text="@string/main_volume_overlay_desc" />
+            </LinearLayout>
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_volume_overlay"
+                style="@style/Ft.Switch" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/row_force_rotation"
+            style="@style/Ft.Row">
+
+            <ImageView
+                style="@style/Ft.RowIcon"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_ft_rotate" />
+
+            <LinearLayout style="@style/Ft.RowText">
+
+                <TextView
+                    style="@style/Ft.RowTitle"
+                    android:text="@string/main_force_rotation_switch" />
+
+                <TextView
+                    style="@style/Ft.RowDesc"
+                    android:text="@string/main_force_rotation_desc" />
+            </LinearLayout>
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_force_rotation"
+                style="@style/Ft.Switch" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/row_power_menu"
+            style="@style/Ft.Row">
+
+            <ImageView
+                style="@style/Ft.RowIcon"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_ft_power" />
+
+            <LinearLayout style="@style/Ft.RowText">
+
+                <TextView
+                    style="@style/Ft.RowTitle"
+                    android:text="@string/main_power_menu_switch" />
+
+                <TextView
+                    style="@style/Ft.RowDesc"
+                    android:text="@string/main_power_menu_desc" />
+            </LinearLayout>
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_power_menu"
+                style="@style/Ft.Switch" />
+        </LinearLayout>
+
+        <!-- Module -->
+        <TextView
+            style="@style/Ft.Group"
+            android:text="@string/group_module" />
+
+        <LinearLayout
+            android:id="@+id/row_lsposed"
+            style="@style/Ft.Row">
+
+            <ImageView
+                style="@style/Ft.RowIcon"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_ft_puzzle" />
+
+            <LinearLayout style="@style/Ft.RowText">
+
+                <TextView
+                    style="@style/Ft.RowTitle"
+                    android:text="@string/row_lsposed_title" />
+
+                <TextView
+                    style="@style/Ft.RowDesc"
+                    android:text="@string/row_lsposed_desc" />
+            </LinearLayout>
+
+            <ImageView
+                style="@style/Ft.Chevron"
+                android:importantForAccessibility="no" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/row_usb_debug"
+            style="@style/Ft.Row">
+
+            <ImageView
+                style="@style/Ft.RowIcon"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_ft_usb" />
+
+            <LinearLayout style="@style/Ft.RowText">
+
+                <TextView
+                    style="@style/Ft.RowTitle"
+                    android:text="@string/row_usb_debug_title" />
+
+                <TextView
+                    style="@style/Ft.RowDesc"
+                    android:text="@string/row_usb_debug_desc" />
+            </LinearLayout>
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_usb_debug"
+                style="@style/Ft.Switch" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/row_reboot"
+            style="@style/Ft.Row">
+
+            <ImageView
+                style="@style/Ft.RowIcon"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_ft_power" />
+
+            <LinearLayout style="@style/Ft.RowText">
+
+                <TextView
+                    style="@style/Ft.RowTitle"
+                    android:text="@string/row_reboot_title" />
+
+                <TextView
+                    style="@style/Ft.RowDesc"
+                    android:text="@string/row_reboot_desc" />
+            </LinearLayout>
+
+            <ImageView
+                style="@style/Ft.Chevron"
+                android:importantForAccessibility="no" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

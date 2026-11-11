@@ -2,7 +2,9 @@
 <resources>
     <string-array name="xposed_scope">
         <item>com.lge.secondlauncher</item>
-        <!-- RetroArch 세컨드 스크린 검정화면 복구용 (선택) -->
+        <!-- System framework, for rotation forcing (optional) -->
+        <item>android</item>
+        <!-- RetroArch second screen black screen recovery (optional) -->
         <item>com.retroarch</item>
         <item>com.retroarch.aarch64</item>
         <item>com.retroarch.ra32</item>

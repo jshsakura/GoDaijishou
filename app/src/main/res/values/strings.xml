@@ -1,30 +1,58 @@
 <resources>
-    <string name="app_name">GoDaijishou Settings</string>
+    <string name="app_name">GoDaijishou</string>
 
     <!-- Selector Activity -->
-    <string name="selector_title">Select a default launcher</string>
     <string name="launcher_daijishou">Daijishou</string>
     <string name="launcher_esde">ES-DE</string>
     <string name="launcher_pegasus">Pegasus</string>
-
-    <!-- Main Activity (Settings) -->
-    <string name="main_title">Alternative Launcher Settings</string>
-    <string name="main_set_launcher_button">Set Default Launcher</string>
-    <string name="main_reset_button_clear">Reset Settings</string>
-    <string name="main_current_launcher_prefix">Current default launcher: </string>
-    <string name="main_no_launcher_set">No alternate launcher is currently set.\nPlease use the button below to set a default launcher.</string>
-    <string name="main_info_reboot_setting">A reboot is required after setup.</string>
-
     <!-- Toast Messages -->
-    <string name="toast_settings_reset">Settings have been reset.</string>
     <string name="toast_app_not_installed">%s app is not installed.</string>
-    <string name="toast_set_as_default">Set %s as the default launcher.</string>
 
-    <string name="default_app_display_name">selected app</string>
-    <string name="toast_app_launch_failed">App launch failed. Please try again or check the app.</string>
-    <string name="main_no_launcher_set_toast">No default launcher is set.\nPlease set one using the [Go Daijishou] app on the main screen.</string>
-
-    <string name="main_apply_button">Apply &amp; Reboot</string>
     <string name="launcher_stock">LG Default</string>
     <string name="main_reboot_permission_denied">Reboot permission denied</string>
+
+    <!-- Bottom screen only mode (black top screen) -->
+    <string name="main_no_top_screen_switch">No top screen</string>
+    <string name="main_no_top_screen_desc">For a Wing with only the bottom screen. The top panel stays off and every window, dialog, volume bar and message opens on the bottom screen.</string>
+    <string name="main_top_blackout_switch">Bottom screen only (black top screen)</string>
+    <string name="main_top_blackout_desc">While the swivel is open, the top panel is powered off and anything that would open there appears on the bottom screen instead (needs System Framework).</string>
+    <string name="main_volume_overlay_switch">Volume overlay</string>
+    <string name="main_volume_overlay_desc">A slim vertical volume bar on the right edge of the screen in use, drawn by the system (no extra permission). Never takes input.</string>
+
+    <!-- Rotation forcing (formerly GoRotation90) -->
+    <string name="main_force_rotation_switch">Use auto-rotate toggle as rotation switch</string>
+    <string name="main_force_rotation_desc">Auto-rotate OFF locks landscape (90°), ON locks portrait. The switch applies instantly; the first time only, check \"System Framework\" in LSPosed and reboot.</string>
+
+    <!-- Settings screen (freetv style) -->
+    <string name="app_title">GoDaijishou</string>
+    <string name="app_subtitle">LG Wing second screen helper</string>
+    <string name="group_screen">Screen</string>
+    <string name="group_module">Module</string>
+    <string name="row_launcher_title">Second screen home</string>
+    <string name="launcher_stock_desc">Keep the stock LG second launcher</string>
+    <string name="launcher_installed">Installed</string>
+    <string name="launcher_not_installed">Not installed</string>
+    <string name="row_lsposed_title">Open LSPosed</string>
+    <string name="row_lsposed_desc">Enable the module and choose its scope</string>
+    <string name="row_reboot_title">Reboot</string>
+    <string name="row_reboot_desc">Needed only after enabling the module or changing its scope. Switches above apply instantly.</string>
+    <string name="row_usb_debug_title">Keep USB debugging connected</string>
+    <string name="row_usb_debug_desc">After a reboot the Wing drops adb and leaves USB as file transfer only. This keeps USB debugging on; file transfer keeps working.</string>
+    <string name="notice_reboot_title">Reboot required</string>
+    <string name="notice_reboot_desc">A System Framework feature (rotation forcing / second screen power menu) is on, but its hook is not loaded in this boot. Check \"System Framework\" in LSPosed, then reboot.</string>
+    <string name="reboot_confirm_title">Reboot now?</string>
+    <string name="reboot_confirm_msg">The device will restart now.</string>
+    <string name="cancel">Cancel</string>
+    <string name="toast_lsposed_open_failed">Could not open LSPosed. Tap the LSPosed notification instead.</string>
+    <string name="toast_system_hook_needed">Needs the System Framework hook: check it in LSPosed and reboot once.</string>
+
+
+    <!-- Second screen power menu -->
+    <string name="main_power_menu_switch">Power menu on the bottom screen</string>
+    <string name="main_power_menu_desc">While the swivel is open, holding the power key opens the power menu on the bottom screen. Turn off Classic PowerMenu to avoid two menus.</string>
+    <string name="power_off">Power off</string>
+    <string name="power_restart">Restart</string>
+    <string name="power_recovery">Recovery</string>
+    <string name="power_screenshot">Screenshot</string>
+    <string name="toast_screenshot_saved">Screenshot saved</string>
 </resources>

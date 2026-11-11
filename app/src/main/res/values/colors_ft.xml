@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Same palette as the freetv dark theme -->
+<resources>
+    <color name="ft_ground">#121216</color>
+    <color name="ft_surface">#222228</color>
+    <color name="ft_ink">#ECECF0</color>
+    <color name="ft_secondary">#A0A0AA</color>
+    <color name="ft_line">#383840</color>
+    <color name="ft_butter">#FFC23D</color>
+    <color name="ft_on_butter">#16161A</color>
+    <color name="ft_cream">#483C1E</color>
+    <color name="ft_good">#3FBF83</color>
+    <color name="ft_error">#F0685C</color>
+    <color name="ft_on_error">#16161A</color>
+    <color name="ft_pending">#E8A030</color>
+    <color name="ft_red_tint">#502626</color>
+    <color name="ft_green_tint">#1E3E2E</color>
+    <color name="ft_scrim">#B3000000</color>
+    <color name="ft_press">#1FFFFFFF</color>
+</resources>
