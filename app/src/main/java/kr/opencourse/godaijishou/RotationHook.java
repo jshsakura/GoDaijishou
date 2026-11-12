@@ -15,6 +15,8 @@ import de.robv.android.xposed.XposedHelpers;
  * When enabled in settings, the auto-rotate toggle acts as a rotation trigger:
  *   auto-rotate OFF -> locked to landscape (ROTATION_90)
  *   auto-rotate ON  -> locked to portrait (ROTATION_0)
+ * Main display: while the swivel is closed, apps that fix their own orientation keep it.
+ * Second screen: always, whatever the app requests.
  *
  * The rotation hooks run while WindowManager's global lock is held, so they only read
  * a volatile flag (no IPC, no allocation) and return immediately when disabled.
@@ -36,6 +38,11 @@ final class RotationHook {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
                         if (!setupDone) ensureSetup(param.thisObject);
+                        // Second screen: the toggle decides, whatever the app asks for.
+                        if (SystemSettings.forceRotation && isSecondScreen(param.thisObject)) {
+                            param.setResult(forcedRotation());
+                            return;
+                        }
                         if (!shouldForce(param.thisObject)) return;
                         // Respect windows that lock their own orientation (camera, lock screen,
                         // portrait-only apps); force only free-orientation ones, like the OS would.
@@ -52,7 +59,8 @@ final class RotationHook {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
                         if (!setupDone) ensureSetup(param.thisObject);
-                        if (!shouldForce(param.thisObject)) return;
+                        boolean second = SystemSettings.forceRotation && isSecondScreen(param.thisObject);
+                        if (!second && !shouldForce(param.thisObject)) return;
                         try {
                             XposedHelpers.setIntField(param.thisObject, "mUserRotation", forcedRotation());
                         } catch (Throwable ignored) {
@@ -68,6 +76,19 @@ final class RotationHook {
         if (!SystemSettings.forceRotation || SystemSettings.secondScreenOn) return false;
         try {
             return XposedHelpers.getBooleanField(displayRotation, "isDefaultDisplay");
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    // Apps on the second screen ask for their own orientation (LG's touchpad asks for
+    // landscape, photo viewers follow the sensor). With forcing on, the second screen follows
+    // the auto-rotate toggle like the main one, so one setting decides for every screen.
+    private static boolean isSecondScreen(Object displayRotation) {
+        try {
+            Object displayContent = XposedHelpers.getObjectField(displayRotation, "mDisplayContent");
+            return (int) XposedHelpers.callMethod(displayContent, "getDisplayId")
+                    == MainModule.SECOND_SCREEN_DISPLAY_ID;
         } catch (Throwable t) {
             return false;
         }

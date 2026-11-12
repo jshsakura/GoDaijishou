@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Destructive power menu tile (power off): red tint, yellow outline on gamepad focus -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/ft_press">
+    <item>
+        <selector>
+            <item android:state_focused="true">
+                <shape android:shape="rectangle">
+                    <corners android:radius="16dp" />
+                    <solid android:color="@color/ft_red_tint" />
+                    <stroke android:width="2dp" android:color="@color/ft_butter" />
+                </shape>
+            </item>
+            <item>
+                <shape android:shape="rectangle">
+                    <corners android:radius="16dp" />
+                    <solid android:color="@color/ft_red_tint" />
+                </shape>
+            </item>
+        </selector>
+    </item>
+</ripple>

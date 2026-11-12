@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Second screen power menu: one glass row of round actions over a blurred backdrop -->
+<!-- Second screen power menu: one solid FT card with a row of square tiles over a dim scrim -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/power_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -12,68 +13,66 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:background="@drawable/bg_ft_glass"
+        android:background="@drawable/bg_ft_card"
         android:clickable="true"
         android:orientation="horizontal"
-        android:paddingStart="10dp"
-        android:paddingTop="12dp"
-        android:paddingEnd="10dp"
-        android:paddingBottom="12dp">
+        android:padding="10dp">
 
         <LinearLayout
             android:id="@+id/btn_power_off"
-            style="@style/Ft.GlassItem">
+            style="@style/Ft.Tile"
+            android:background="@drawable/bg_ft_tile_danger">
 
             <ImageView
-                style="@style/Ft.GlassIcon"
+                style="@style/Ft.TileIcon"
                 android:importantForAccessibility="no"
-                android:src="@drawable/ic_ft_power" />
+                android:src="@drawable/ic_ft_power"
+                app:tint="@color/ft_error" />
 
             <TextView
-                style="@style/Ft.GlassLabel"
+                style="@style/Ft.TileLabel"
                 android:text="@string/power_off" />
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/btn_restart"
-            style="@style/Ft.GlassItem">
+            style="@style/Ft.Tile">
 
             <ImageView
-                style="@style/Ft.GlassIcon"
+                style="@style/Ft.TileIcon"
                 android:importantForAccessibility="no"
                 android:src="@drawable/ic_ft_restart" />
 
             <TextView
-                style="@style/Ft.GlassLabel"
+                style="@style/Ft.TileLabel"
                 android:text="@string/power_restart" />
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/btn_screenshot"
-            style="@style/Ft.GlassItem">
+            style="@style/Ft.Tile">
 
             <ImageView
-                style="@style/Ft.GlassIcon"
+                style="@style/Ft.TileIcon"
                 android:importantForAccessibility="no"
                 android:src="@drawable/ic_ft_camera" />
 
             <TextView
-                style="@style/Ft.GlassLabel"
+                style="@style/Ft.TileLabel"
                 android:text="@string/power_screenshot" />
         </LinearLayout>
 
-
         <LinearLayout
             android:id="@+id/btn_recovery"
-            style="@style/Ft.GlassItem">
+            style="@style/Ft.Tile">
 
             <ImageView
-                style="@style/Ft.GlassIcon"
+                style="@style/Ft.TileIcon"
                 android:importantForAccessibility="no"
                 android:src="@drawable/ic_ft_wrench" />
 
             <TextView
-                style="@style/Ft.GlassLabel"
+                style="@style/Ft.TileLabel"
                 android:text="@string/power_recovery" />
         </LinearLayout>
     </LinearLayout>

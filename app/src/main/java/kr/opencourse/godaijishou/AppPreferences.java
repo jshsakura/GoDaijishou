@@ -24,6 +24,10 @@ public class AppPreferences {
     public static final String KEY_NO_TOP_SCREEN = "no_top_screen";
     // Volume overlay drawn by the system_server hook.
     public static final String KEY_VOLUME_OVERLAY = "volume_overlay";
+    // Status label on the second screen (system_server hook). Key kept from the battery strip.
+    public static final String KEY_BATTERY_STRIP = "battery_strip";
+    // Hide the status label while the second screen's top app is fullscreen (system_server hook).
+    public static final String KEY_LABEL_HIDE_FULLSCREEN = "label_hide_fullscreen";
     // Keep USB debugging (adb) on across reboots (system_server hook).
     public static final String KEY_USB_DEBUG_PIN = "usb_debug_pin";
 

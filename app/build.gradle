@@ -20,6 +20,19 @@ android {
         //resValue "string-array", "xposed_scope", "com.lge.secondlauncher"
     }
 
+    // 집/회사 어디서 빌드하든 같은 키로 서명되도록 keystore/debug.keystore 를 쓴다 (gitignore, 없으면 기본 ~/.android 키).
+    def sharedDebugKeystore = rootProject.file("keystore/debug.keystore")
+    signingConfigs {
+        debug {
+            if (sharedDebugKeystore.exists()) {
+                storeFile sharedDebugKeystore
+                storePassword "android"
+                keyAlias "androiddebugkey"
+                keyPassword "android"
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false

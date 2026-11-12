@@ -44,6 +44,8 @@ public class MainActivity extends AppCompatActivity {
     private SwitchMaterial forceRotationSwitch;
     private SwitchMaterial powerMenuSwitch;
     private SwitchMaterial volumeOverlaySwitch;
+    private SwitchMaterial batteryStripSwitch;
+    private SwitchMaterial labelHideFullscreenSwitch;
     private SwitchMaterial noTopScreenSwitch;
     private SwitchMaterial usbDebugSwitch;
     private View rebootNotice;
@@ -96,6 +98,11 @@ public class MainActivity extends AppCompatActivity {
         bindSystemHookSwitch(R.id.row_top_blackout, topBlackoutSwitch, AppPreferences.KEY_TOP_SCREEN_OFF);
         volumeOverlaySwitch = findViewById(R.id.switch_volume_overlay);
         bindSystemHookSwitch(R.id.row_volume_overlay, volumeOverlaySwitch, AppPreferences.KEY_VOLUME_OVERLAY);
+        batteryStripSwitch = findViewById(R.id.switch_battery_strip);
+        bindSystemHookSwitch(R.id.row_battery_strip, batteryStripSwitch, AppPreferences.KEY_BATTERY_STRIP);
+        labelHideFullscreenSwitch = findViewById(R.id.switch_label_hide_fullscreen);
+        bindSystemHookSwitch(R.id.row_label_hide_fullscreen, labelHideFullscreenSwitch,
+                AppPreferences.KEY_LABEL_HIDE_FULLSCREEN);
         noTopScreenSwitch = findViewById(R.id.switch_no_top_screen);
         bindSystemHookSwitch(R.id.row_no_top_screen, noTopScreenSwitch, AppPreferences.KEY_NO_TOP_SCREEN);
         bindSystemHookSwitch(R.id.row_force_rotation, forceRotationSwitch, AppPreferences.KEY_FORCE_ROTATION);
@@ -137,7 +144,8 @@ public class MainActivity extends AppCompatActivity {
     private void updateRebootNotice() {
         boolean needsSystemHook = forceRotationSwitch.isChecked() || powerMenuSwitch.isChecked()
                 || noTopScreenSwitch.isChecked() || topBlackoutSwitch.isChecked()
-                || volumeOverlaySwitch.isChecked() || usbDebugSwitch.isChecked();
+                || volumeOverlaySwitch.isChecked() || batteryStripSwitch.isChecked()
+                || usbDebugSwitch.isChecked();
         boolean needReboot = needsSystemHook && !AppPreferences.isSystemHookActive(this);
         rebootNotice.setVisibility(needReboot ? View.VISIBLE : View.GONE);
     }

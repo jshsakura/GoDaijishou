@@ -13,10 +13,14 @@
 
     <!-- Bottom screen only mode (black top screen) -->
     <string name="main_no_top_screen_switch">No top screen</string>
-    <string name="main_no_top_screen_desc">For a Wing with only the bottom screen. The top panel stays off and every window, dialog, volume bar and message opens on the bottom screen.</string>
+    <string name="main_no_top_screen_desc">The top panel stays off and every window, dialog, volume bar and message opens on the bottom screen.</string>
     <string name="main_top_blackout_switch">Bottom screen only (black top screen)</string>
     <string name="main_top_blackout_desc">While the swivel is open, the top panel is powered off and anything that would open there appears on the bottom screen instead (needs System Framework).</string>
     <string name="main_volume_overlay_switch">Volume overlay</string>
+    <string name="main_battery_strip_switch">Status label</string>
+    <string name="main_battery_strip_desc">A small translucent tab at the top right of the bottom screen shows Wi-Fi, mobile data, the notification count and battery %. Covers nothing, takes no input.</string>
+    <string name="main_label_hide_fullscreen_switch">Hide label in fullscreen</string>
+    <string name="main_label_hide_fullscreen_desc">Hides the status label while the bottom screen app is fullscreen (Daijishou, games and other apps that hide status info). It comes back with regular apps.</string>
     <string name="main_volume_overlay_desc">A slim vertical volume bar on the right edge of the screen in use, drawn by the system (no extra permission). Never takes input.</string>
 
     <!-- Rotation forcing (formerly GoRotation90) -->
@@ -25,7 +29,7 @@
 
     <!-- Settings screen (freetv style) -->
     <string name="app_title">GoDaijishou</string>
-    <string name="app_subtitle">LG Wing second screen helper</string>
+    <string name="app_subtitle">LG Wing customization module</string>
     <string name="group_screen">Screen</string>
     <string name="group_module">Module</string>
     <string name="row_launcher_title">Second screen home</string>
@@ -55,4 +59,9 @@
     <string name="power_recovery">Recovery</string>
     <string name="power_screenshot">Screenshot</string>
     <string name="toast_screenshot_saved">Screenshot saved</string>
+    <!-- Second screen notification list -->
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_battery_saver">Battery saver</string>
+    <string name="notifications_clear_all">Clear all</string>
+    <string name="notifications_empty">No notifications</string>
 </resources>

@@ -45,6 +45,8 @@ public class SettingsProvider extends ContentProvider {
         String volume = prefs.getBoolean(AppPreferences.KEY_VOLUME_OVERLAY, false) ? "1" : "0";
         String noTop = prefs.getBoolean(AppPreferences.KEY_NO_TOP_SCREEN, false) ? "1" : "0";
         String usbPin = prefs.getBoolean(AppPreferences.KEY_USB_DEBUG_PIN, false) ? "1" : "0";
+        String batteryStrip = prefs.getBoolean(AppPreferences.KEY_BATTERY_STRIP, false) ? "1" : "0";
+        String labelHideFullscreen = prefs.getBoolean(AppPreferences.KEY_LABEL_HIDE_FULLSCREEN, false) ? "1" : "0";
 
         MatrixCursor cursor = new MatrixCursor(new String[]{
                 AppPreferences.KEY_LAUNCHER_PACKAGE,
@@ -54,9 +56,12 @@ public class SettingsProvider extends ContentProvider {
                 AppPreferences.KEY_TOP_SCREEN_OFF,
                 AppPreferences.KEY_NO_TOP_SCREEN,
                 AppPreferences.KEY_USB_DEBUG_PIN,
-                AppPreferences.KEY_VOLUME_OVERLAY
+                AppPreferences.KEY_VOLUME_OVERLAY,
+                AppPreferences.KEY_BATTERY_STRIP,
+                AppPreferences.KEY_LABEL_HIDE_FULLSCREEN
         });
-        cursor.addRow(new Object[]{targetPackage, targetActivity, forceRotation, powerMenu, topOff, noTop, usbPin, volume});
+        cursor.addRow(new Object[]{targetPackage, targetActivity, forceRotation, powerMenu, topOff, noTop, usbPin, volume,
+                batteryStrip, labelHideFullscreen});
         return cursor;
     }
 

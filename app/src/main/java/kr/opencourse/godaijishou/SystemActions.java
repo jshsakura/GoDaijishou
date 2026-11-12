@@ -3,6 +3,7 @@ package kr.opencourse.godaijishou;
 import android.app.ActivityOptions;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
+import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -135,6 +136,8 @@ final class SystemActions {
         return (long) XposedHelpers.callMethod(address, "getPhysicalDisplayId");
     }
 
+    // Capture runs on the settings thread (one fast GPU readback). Encoding the PNG is the slow
+    // part, so it runs on its own normal-priority thread instead of the background-priority one.
     private static void screenshot(Context context, int displayId) throws Throwable {
         Class<?> sc = Class.forName("android.view.SurfaceControl");
         IBinder token = (IBinder) XposedHelpers.callStaticMethod(sc, "getPhysicalDisplayToken",
@@ -145,17 +148,45 @@ final class SystemActions {
         Object buffer = XposedHelpers.callStaticMethod(sc, "captureDisplay", args);
         if (buffer == null) return;
         Bitmap hw = (Bitmap) XposedHelpers.callMethod(buffer, "asBitmap");
-        Bitmap bitmap = hw.copy(Bitmap.Config.ARGB_8888, false);
+        if (hw == null) return;
+        Thread worker = new Thread(() -> {
+            try {
+                save(context, hw);
+            } catch (Throwable ignored) {
+            } finally {
+                hw.recycle();
+            }
+        }, "GoDaijishou-screenshot");
+        worker.setPriority(Thread.NORM_PRIORITY);
+        worker.start();
+    }
 
-        String name = "Screenshot_" + new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(new Date()) + ".png";
+    private static void save(Context context, Bitmap hw) throws Exception {
+        Bitmap bitmap = hw.copy(Bitmap.Config.ARGB_8888, false);
+        long now = System.currentTimeMillis();
+        String name = "Screenshot_" + new SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(new Date(now)) + ".png";
         ContentValues values = new ContentValues();
         values.put(MediaStore.Images.Media.DISPLAY_NAME, name);
+        // Google Photos sorts by DATE_TAKEN; without it the shot lands at a wrong date.
+        values.put(MediaStore.Images.Media.DATE_TAKEN, now);
+        values.put(MediaStore.Images.Media.DATE_ADDED, now / 1000);
+        values.put(MediaStore.Images.Media.DATE_MODIFIED, now / 1000);
+        values.put(MediaStore.Images.Media.WIDTH, bitmap.getWidth());
+        values.put(MediaStore.Images.Media.HEIGHT, bitmap.getHeight());
         values.put(MediaStore.Images.Media.MIME_TYPE, "image/png");
         values.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Screenshots");
-        Uri uri = context.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+        // Hidden from the gallery until the file is complete.
+        values.put(MediaStore.Images.Media.IS_PENDING, 1);
+        ContentResolver resolver = context.getContentResolver();
+        Uri uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
         if (uri == null) return;
-        try (OutputStream out = context.getContentResolver().openOutputStream(uri)) {
+        try (OutputStream out = resolver.openOutputStream(uri)) {
             if (out != null) bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
+        } finally {
+            bitmap.recycle();
         }
+        ContentValues done = new ContentValues();
+        done.put(MediaStore.Images.Media.IS_PENDING, 0);
+        resolver.update(uri, done, null, null);
     }
 }

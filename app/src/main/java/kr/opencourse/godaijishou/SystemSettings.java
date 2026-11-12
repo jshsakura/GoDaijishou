@@ -43,6 +43,10 @@ final class SystemSettings {
     static volatile boolean usbDebugPinned = false;
     // Volume overlay drawn by system_server.
     static volatile boolean volumeOverlay = false;
+    // Status label (Wi-Fi, mobile data, notifications, battery) on the second screen.
+    static volatile boolean batteryStrip = false;
+    // Hide the status label while the second screen shows a fullscreen app.
+    static volatile boolean labelHideFullscreen = false;
     // Swivel state, kept current by a display listener so hooks never query DisplayManager
     // (the rotation hooks run under the WindowManager lock).
     static volatile boolean secondScreenOn = false;
@@ -68,9 +72,13 @@ final class SystemSettings {
             handler = new Handler(thread.getLooper());
 
             // Privileged actions requested by the app (power, screenshot, LSPosed).
-            SystemActions.register(context, handler);
+            // Each feature installs on its own: one failing (e.g. a service not up yet this
+            // early in boot) must not take the settings observer and the others down with it.
+            safely(() -> SystemActions.register(context, handler));
             // Volume overlay (drawn here, so the app needs no overlay permission).
-            SystemVolumeOverlay.install(context, handler);
+            safely(() -> SystemVolumeOverlay.install(context, handler));
+            // Status label on the second screen (same: drawn here, no permission).
+            safely(() -> StatusLabel.install(context, handler));
             // USB debugging pin: re-enable adb whenever it gets turned off.
             addListener(() -> SystemActions.enforceUsbDebug(context));
             resolver.registerContentObserver(
@@ -128,6 +136,14 @@ final class SystemSettings {
         }
     }
 
+    private static void safely(Runnable install) {
+        try {
+            install.run();
+        } catch (Throwable ignored) {
+            // That feature stays off; the rest keeps working.
+        }
+    }
+
     /** Background handler for hook work that must stay off the caller's thread. */
     static Handler handler() {
         return handler;
@@ -166,15 +182,20 @@ final class SystemSettings {
             boolean noTop = readFlag(cursor, AppPreferences.KEY_NO_TOP_SCREEN);
             boolean usbPin = readFlag(cursor, AppPreferences.KEY_USB_DEBUG_PIN);
             boolean volume = readFlag(cursor, AppPreferences.KEY_VOLUME_OVERLAY);
+            boolean strip = readFlag(cursor, AppPreferences.KEY_BATTERY_STRIP);
+            boolean hideFullscreen = readFlag(cursor, AppPreferences.KEY_LABEL_HIDE_FULLSCREEN);
             boolean changed = rotation != forceRotation || powerMenu != powerMenuOnSecondScreen
                     || topOff != topScreenOff || noTop != noTopScreen
-                    || usbPin != usbDebugPinned || volume != volumeOverlay;
+                    || usbPin != usbDebugPinned || volume != volumeOverlay
+                    || strip != batteryStrip || hideFullscreen != labelHideFullscreen;
             forceRotation = rotation;
             powerMenuOnSecondScreen = powerMenu;
             topScreenOff = topOff;
             noTopScreen = noTop;
             usbDebugPinned = usbPin;
             volumeOverlay = volume;
+            batteryStrip = strip;
+            labelHideFullscreen = hideFullscreen;
             if (changed) {
                 for (Runnable l : listeners) l.run();
             }

@@ -13,10 +13,14 @@
 
     <!-- Bottom screen only mode (black top screen) -->
     <string name="main_no_top_screen_switch">상단 화면 없음</string>
-    <string name="main_no_top_screen_desc">하단 화면만 쓰는 윙용입니다. 상단 패널을 늘 끄고, 모든 창·대화상자·볼륨 바·안내 메시지를 하단 화면에 띄웁니다.</string>
+    <string name="main_no_top_screen_desc">상단 패널을 늘 끄고, 모든 창·대화상자·볼륨 바·안내 메시지를 하단 화면에 띄웁니다.</string>
     <string name="main_top_blackout_switch">하단 화면 전용 모드 (상단 검은 화면)</string>
     <string name="main_top_blackout_desc">스위블이 열려 있는 동안 상단 패널 전원을 끄고, 상단에 뜨던 창은 하단 화면으로 보냅니다(시스템 프레임워크 필요).</string>
     <string name="main_volume_overlay_switch">볼륨 표시</string>
+    <string name="main_battery_strip_switch">상태 라벨</string>
+    <string name="main_battery_strip_desc">하단 화면 오른쪽 위에 작은 반투명 라벨로 와이파이, LTE, 알림 개수, 배터리 %를 보여줍니다. 아무것도 가리지 않고 입력도 받지 않습니다.</string>
+    <string name="main_label_hide_fullscreen_switch">전체화면에서 라벨 숨기기</string>
+    <string name="main_label_hide_fullscreen_desc">하단 화면 앱이 전체화면일 때(다이지쇼, 게임 등 상태 표시를 숨기는 앱) 상태 라벨을 감춥니다. 일반 앱으로 돌아오면 다시 나타납니다.</string>
     <string name="main_volume_overlay_desc">지금 쓰는 화면 오른쪽 가장자리에 얇은 세로 볼륨 바를 시스템이 직접 그립니다(추가 권한 없음). 입력을 가로채지 않습니다.</string>
 
     <!-- Rotation forcing (formerly GoRotation90) -->
@@ -25,7 +29,7 @@
 
     <!-- Settings screen (freetv style) -->
     <string name="app_title">GoDaijishou</string>
-    <string name="app_subtitle">LG Wing 세컨드 스크린 도우미</string>
+    <string name="app_subtitle">LG Wing 커스텀 모듈</string>
     <string name="group_screen">화면</string>
     <string name="group_module">모듈</string>
     <string name="row_launcher_title">세컨드 스크린 홈</string>
@@ -55,4 +59,9 @@
     <string name="power_recovery">리커버리</string>
     <string name="power_screenshot">스크린샷</string>
     <string name="toast_screenshot_saved">스크린샷을 저장했습니다</string>
+    <!-- Second screen notification list -->
+    <string name="notifications_title">알림</string>
+    <string name="notifications_battery_saver">절전</string>
+    <string name="notifications_clear_all">모두 지우기</string>
+    <string name="notifications_empty">알림이 없습니다</string>
 </resources>

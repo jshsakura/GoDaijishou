@@ -4,7 +4,6 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Color;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -14,6 +13,9 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.TextView;
+import android.text.TextUtils;
+import android.util.TypedValue;
 import android.view.animation.DecelerateInterpolator;
 import android.view.animation.OvershootInterpolator;
 
@@ -26,8 +28,13 @@ import android.view.animation.OvershootInterpolator;
  */
 public class PowerMenuActivity extends Activity {
 
-    private static final int BLUR_RADIUS = 60;
-    private static final long SCREENSHOT_DELAY_MS = 450; // let the menu fade out first
+    private static final float DIM_AMOUNT = 0.6f;
+    // Side margin as a share of the screen width; the tiles split what is left.
+    private static final float SIDE_MARGIN_RATIO = 0.08f;
+    private static final int MAX_TILE_DP = 108;
+    private static final int TILE_MARGIN_DP = 5;
+    // The menu window is hidden at once; this only covers the frame that removes it.
+    private static final long SCREENSHOT_DELAY_MS = 120;
 
     private static final long ENTER_MS = 260;
     private static final long ITEM_STAGGER_MS = 35;
@@ -42,9 +49,10 @@ public class PowerMenuActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_power_menu);
-        applyGlassBackdrop();
+        applyDimBackdrop();
 
         card = findViewById(R.id.power_card);
+        fitTilesToScreen();
 
         // Tap outside the card dismisses the menu, like the stock dialog.
         findViewById(R.id.power_root).setOnClickListener(v -> close(null));
@@ -65,22 +73,44 @@ public class PowerMenuActivity extends Activity {
         close(null);
     }
 
-    // Blur whatever is behind the menu (Android 12+ cross-window blur). Falls back to a
-    // plain dim when the device has blur turned off.
-    private void applyGlassBackdrop() {
+    // Plain dim behind the solid card (no blur: the menu must stay readable on any wallpaper).
+    private void applyDimBackdrop() {
         WindowManager.LayoutParams lp = getWindow().getAttributes();
         lp.flags |= WindowManager.LayoutParams.FLAG_DIM_BEHIND;
-        boolean blur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-                && getSystemService(WindowManager.class).isCrossWindowBlurEnabled();
-        if (blur) {
-            lp.flags |= WindowManager.LayoutParams.FLAG_BLUR_BEHIND;
-            lp.setBlurBehindRadius(BLUR_RADIUS);
-            lp.dimAmount = 0.25f;
-        } else {
-            lp.dimAmount = 0.6f;
-        }
+        lp.dimAmount = DIM_AMOUNT;
         getWindow().setAttributes(lp);
         getWindow().getDecorView().setBackgroundColor(Color.TRANSPARENT);
+    }
+
+    // Square tiles sized to the screen: in portrait the bottom screen is too narrow for
+    // four fixed 108dp tiles, so they shrink to fit inside the side margins.
+    private void fitTilesToScreen() {
+        float density = getResources().getDisplayMetrics().density;
+        int screen = getResources().getDisplayMetrics().widthPixels;
+        int available = Math.round(screen * (1f - SIDE_MARGIN_RATIO * 2))
+                - card.getPaddingStart() - card.getPaddingEnd();
+        ViewGroup row = (ViewGroup) card;
+        int count = row.getChildCount();
+        int margin = Math.round(TILE_MARGIN_DP * density);
+        int tile = Math.min(Math.round(MAX_TILE_DP * density), available / count - margin * 2);
+        for (int i = 0; i < count; i++) {
+            View item = row.getChildAt(i);
+            ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) item.getLayoutParams();
+            lp.width = tile;
+            lp.height = tile;
+            lp.setMargins(margin, margin, margin, margin);
+            item.setLayoutParams(lp);
+            // Labels shrink with the tile instead of being cut.
+            for (int j = 0; j < ((ViewGroup) item).getChildCount(); j++) {
+                View child = ((ViewGroup) item).getChildAt(j);
+                if (child instanceof TextView) {
+                    TextView label = (TextView) child;
+                    label.setMaxWidth(tile - margin * 2);
+                    label.setTextSize(TypedValue.COMPLEX_UNIT_SP, tile < 96 * density ? 12 : 14);
+                    label.setEllipsize(TextUtils.TruncateAt.END);
+                }
+            }
+        }
     }
 
     // --- Motion ---
@@ -161,14 +191,22 @@ public class PowerMenuActivity extends Activity {
         close(() -> SystemActions.send(app, op, displayId));
     }
 
-    // Captures the screen this menu was shown on, after the menu has closed.
+    // Captures the screen this menu was shown on. No exit animation: the card and the dim
+    // vanish in the same frame, so the capture can follow right after.
     private void takeScreenshot() {
+        if (closing) return;
+        closing = true;
         final Context app = getApplicationContext();
         final int displayId = displayId();
-        close(() -> new Handler(Looper.getMainLooper()).postDelayed(() -> {
+        card.animate().cancel();
+        card.setVisibility(View.INVISIBLE);
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+        finish();
+        overridePendingTransition(0, 0);
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
             SystemActions.send(app, SystemActions.OP_SCREENSHOT, displayId);
             Toasts.show(app, R.string.toast_screenshot_saved);
-        }, SCREENSHOT_DELAY_MS));
+        }, SCREENSHOT_DELAY_MS);
     }
 
     private int displayId() {

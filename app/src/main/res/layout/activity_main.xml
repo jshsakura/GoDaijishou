@@ -220,6 +220,56 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/row_battery_strip"
+            style="@style/Ft.Row">
+
+            <ImageView
+                style="@style/Ft.RowIcon"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_ft_battery" />
+
+            <LinearLayout style="@style/Ft.RowText">
+
+                <TextView
+                    style="@style/Ft.RowTitle"
+                    android:text="@string/main_battery_strip_switch" />
+
+                <TextView
+                    style="@style/Ft.RowDesc"
+                    android:text="@string/main_battery_strip_desc" />
+            </LinearLayout>
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_battery_strip"
+                style="@style/Ft.Switch" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/row_label_hide_fullscreen"
+            style="@style/Ft.Row">
+
+            <ImageView
+                style="@style/Ft.RowIcon"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_ft_screen_bottom" />
+
+            <LinearLayout style="@style/Ft.RowText">
+
+                <TextView
+                    style="@style/Ft.RowTitle"
+                    android:text="@string/main_label_hide_fullscreen_switch" />
+
+                <TextView
+                    style="@style/Ft.RowDesc"
+                    android:text="@string/main_label_hide_fullscreen_desc" />
+            </LinearLayout>
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_label_hide_fullscreen"
+                style="@style/Ft.Switch" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/row_force_rotation"
             style="@style/Ft.Row">
 

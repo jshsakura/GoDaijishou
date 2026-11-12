@@ -12,6 +12,8 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
  *   android (system framework)    -> RotationHook  (rotation forced by the auto-rotate toggle)
  *                                    PowerMenuHook (power menu on the second screen)
  *                                    LaunchRedirectHook (top-display launches -> second screen)
+ *                                    NotificationBanner (heads-up on the second screen)
+ *                                    (SystemSettings also installs the volume overlay and status label)
  */
 public class MainModule implements IXposedHookLoadPackage {
 
@@ -31,6 +33,8 @@ public class MainModule implements IXposedHookLoadPackage {
             safely(() -> RotationHook.install(cl));
             safely(() -> PowerMenuHook.install(cl));
             safely(() -> LaunchRedirectHook.install(cl));
+            safely(() -> NotificationBanner.install(cl));
+            safely(() -> StatusLabel.installFullscreenHook(cl));
         }
     }
 

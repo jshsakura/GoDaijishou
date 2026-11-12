@@ -78,11 +78,11 @@
         <item name="android:focusable">false</item>
         <item name="android:clickable">false</item>
     </style>
-    <!-- Power menu tile -->
+    <!-- Power menu tile: square, solid FT surface (yellow outline on gamepad focus) -->
     <style name="Ft.Tile">
-        <item name="android:layout_width">140dp</item>
-        <item name="android:layout_height">120dp</item>
-        <item name="android:layout_margin">6dp</item>
+        <item name="android:layout_width">108dp</item>
+        <item name="android:layout_height">108dp</item>
+        <item name="android:layout_margin">5dp</item>
         <item name="android:orientation">vertical</item>
         <item name="android:gravity">center</item>
         <item name="android:background">@drawable/bg_ft_row</item>
@@ -99,42 +99,14 @@
     <style name="Ft.TileLabel">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">12dp</item>
-        <item name="android:textSize">15sp</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:textColor">@color/ft_ink</item>
-    </style>
-
-    <!-- Power menu row item: compact glass tile (yellow icon + label) -->
-    <style name="Ft.GlassItem">
-        <item name="android:layout_width">68dp</item>
-        <item name="android:layout_height">84dp</item>
-        <item name="android:layout_marginStart">3dp</item>
-        <item name="android:layout_marginEnd">3dp</item>
-        <item name="android:orientation">vertical</item>
-        <item name="android:gravity">center</item>
-        <item name="android:clickable">true</item>
-        <item name="android:focusable">true</item>
-        <item name="android:background">@drawable/bg_ft_glass_tile</item>
-    </style>
-
-    <style name="Ft.GlassIcon">
-        <item name="android:layout_width">26dp</item>
-        <item name="android:layout_height">26dp</item>
-        <item name="tint">@color/ft_butter</item>
-    </style>
-
-    <style name="Ft.GlassLabel">
-        <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">8dp</item>
+        <item name="android:layout_marginTop">10dp</item>
         <item name="android:maxLines">1</item>
-        <item name="android:textSize">12sp</item>
+        <item name="android:textSize">14sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textColor">@color/ft_ink</item>
     </style>
 
-    <!-- Transparent, dimmed window for the power menu -->
+    <!-- Translucent window for the power menu (dim set in code) -->
     <style name="App.Theme.Godaijishou.PowerMenu">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
