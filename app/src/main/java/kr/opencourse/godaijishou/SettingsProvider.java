@@ -32,7 +32,10 @@ public class SettingsProvider extends ContentProvider {
         // The system_server hook (RotationHook) reads settings here on every boot.
         // Recording that lets the settings screen tell, at no extra cost, whether
         // the hook is loaded in this boot (used for the reboot notice).
-        if (Binder.getCallingUid() == Process.SYSTEM_UID) {
+        // Hooks in other processes say so with selection "hook:<name>" (SystemUI...).
+        if (selection != null && selection.startsWith("hook:")) {
+            AppPreferences.markHookSeen(context, selection.substring(5));
+        } else if (Binder.getCallingUid() == Process.SYSTEM_UID) {
             AppPreferences.markSystemHookSeen(context);
         }
         SharedPreferences prefs = AppPreferences.settings(context);

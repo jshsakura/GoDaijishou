@@ -72,6 +72,7 @@ final class NavBarHook {
                 View v = (View) param.thisObject;
                 handles.add(v);
                 observe(v.getContext());
+                reportLoaded(v.getContext());
                 // Shown once when the bar comes up, then it hides.
                 v.post(() -> peek(v));
             }
@@ -170,6 +171,21 @@ final class NavBarHook {
         });
         XposedHelpers.setAdditionalInstanceField(v, "gdjAnim", a);
         a.start();
+    }
+
+    // Tells the app "the SystemUI hook is loaded this boot" (the app warns when it isn't).
+    private static boolean reported = false;
+
+    private static void reportLoaded(Context context) {
+        if (reported) return;
+        reported = true;
+        new Thread(() -> {
+            try (android.database.Cursor c = context.getContentResolver().query(
+                    SettingsProvider.CONTENT_URI, null, "hook:systemui", null, null)) {
+                // nothing to read
+            } catch (Throwable ignored) {
+            }
+        }, "GoDaijishou-report").start();
     }
 
     // --- Keyboard strip (SystemUI and keyboard processes) ---

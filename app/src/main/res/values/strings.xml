@@ -80,4 +80,11 @@
     <string name="main_hide_ime_nav_strip_desc">Removes the hide-keyboard / switcher row under the keyboard, leaving only the gesture bar\'s height. Check System UI and your keyboard app in LSPosed, then reboot.</string>
     <string name="main_fingerprint_off_switch">Turn off the fingerprint sensor</string>
     <string name="main_fingerprint_off_desc">Tells the system there is no fingerprint sensor, so passkeys and biometric prompts use the screen lock (PIN / pattern) instead. Enrolled fingerprints are kept. Applies after a reboot.</string>
+    <string name="scope_dialog_title">LSPosed setup needed</string>
+    <string name="scope_dialog_message">This feature works once these are checked in the GoDaijishou module\'s scope in LSPosed, followed by a reboot.\n\n%1$s</string>
+    <string name="scope_dialog_open">Open LSPosed</string>
+    <string name="scope_system">• System Framework</string>
+    <string name="scope_systemui">• System UI (com.android.systemui)</string>
+    <string name="scope_systemui_keyboard">• System UI (com.android.systemui)\n• Your keyboard app (e.g. Gboard)</string>
+    <string name="scope_popupcamera">• LG pop-up camera (com.lge.popupcamera)</string>
 </resources>

@@ -91,6 +91,18 @@ public class AppPreferences {
         return Math.abs(seen - currentBootTime()) < BOOT_MATCH_TOLERANCE_MS;
     }
 
+    // Same for hooks in other processes (e.g. "systemui"): each reports once per boot.
+    static void markHookSeen(Context context, String name) {
+        prefs(context, MODE_PREF_FILE_NAME)
+                .edit().putLong(KEY_SYSTEM_HOOK_BOOT + "_" + name, currentBootTime()).apply();
+    }
+
+    public static boolean isHookActive(Context context, String name) {
+        long seen = prefs(context, MODE_PREF_FILE_NAME)
+                .getLong(KEY_SYSTEM_HOOK_BOOT + "_" + name, 0);
+        return Math.abs(seen - currentBootTime()) < BOOT_MATCH_TOLERANCE_MS;
+    }
+
     public static boolean isNoTopScreen(Context context) {
         return prefs(context, PREF_FILE_NAME)
                 .getBoolean(KEY_NO_TOP_SCREEN, false);

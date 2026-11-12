@@ -114,14 +114,16 @@ public class MainActivity extends AppCompatActivity {
         usbDebugSwitch = findViewById(R.id.switch_usb_debug);
         bindSystemHookSwitch(R.id.row_usb_debug, usbDebugSwitch, AppPreferences.KEY_USB_DEBUG_PIN);
 
-        bindSystemHookSwitch(R.id.row_hide_swivel_warnings, findViewById(R.id.switch_hide_swivel_warnings),
-                AppPreferences.KEY_HIDE_SWIVEL_WARNINGS);
-        bindSystemHookSwitch(R.id.row_slim_nav_pill, findViewById(R.id.switch_slim_nav_pill),
-                AppPreferences.KEY_SLIM_NAV_PILL);
-        bindSystemHookSwitch(R.id.row_hide_ime_nav_strip, findViewById(R.id.switch_hide_ime_nav_strip),
-                AppPreferences.KEY_HIDE_IME_NAV_STRIP);
-        bindSystemHookSwitch(R.id.row_fingerprint_off, findViewById(R.id.switch_fingerprint_off),
-                AppPreferences.KEY_FINGERPRINT_OFF);
+        // These need an extra LSPosed scope: turning one on explains which, unless that
+        // hook is already known to be loaded this boot.
+        bindScopedSwitch(R.id.row_hide_swivel_warnings, findViewById(R.id.switch_hide_swivel_warnings),
+                AppPreferences.KEY_HIDE_SWIVEL_WARNINGS, R.string.scope_popupcamera, null);
+        bindScopedSwitch(R.id.row_slim_nav_pill, findViewById(R.id.switch_slim_nav_pill),
+                AppPreferences.KEY_SLIM_NAV_PILL, R.string.scope_systemui, "systemui");
+        bindScopedSwitch(R.id.row_hide_ime_nav_strip, findViewById(R.id.switch_hide_ime_nav_strip),
+                AppPreferences.KEY_HIDE_IME_NAV_STRIP, R.string.scope_systemui_keyboard, null);
+        bindScopedSwitch(R.id.row_fingerprint_off, findViewById(R.id.switch_fingerprint_off),
+                AppPreferences.KEY_FINGERPRINT_OFF, R.string.scope_system, "android");
         buildPerfProfileButtons();
 
         findViewById(R.id.row_reboot).setOnClickListener(v -> confirmReboot());
@@ -233,6 +235,31 @@ public class MainActivity extends AppCompatActivity {
             getContentResolver().notifyChange(SettingsProvider.CONTENT_URI, null);
             updateRebootNotice();
         });
+    }
+
+    // hookName: "android" = system framework, other names report through the provider;
+    // null = can't be detected (the dialog shows on every switch-on).
+    private void bindScopedSwitch(int rowId, SwitchMaterial sw, String key, int scopeText, String hookName) {
+        bindSystemHookSwitch(rowId, sw, key);
+        sw.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            prefs.edit().putBoolean(key, isChecked).commit();
+            getContentResolver().notifyChange(SettingsProvider.CONTENT_URI, null);
+            updateRebootNotice();
+            if (!isChecked) return;
+            boolean loaded = hookName != null && ("android".equals(hookName)
+                    ? AppPreferences.isSystemHookActive(this)
+                    : AppPreferences.isHookActive(this, hookName));
+            if (!loaded) explainScope(scopeText);
+        });
+    }
+
+    private void explainScope(int scopeText) {
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.scope_dialog_title)
+                .setMessage(getString(R.string.scope_dialog_message, getString(scopeText)))
+                .setPositiveButton(R.string.scope_dialog_open, (d, w) -> openLsposed())
+                .setNegativeButton(android.R.string.ok, null)
+                .show();
     }
 
     // Show the notice when a system_server feature is on but the hook is not loaded
