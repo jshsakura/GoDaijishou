@@ -388,6 +388,7 @@ public class MainActivity extends AppCompatActivity {
                     .setPackage(LauncherHook.TARGET_PACKAGE);
         }
         home.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+        home.putExtra(LauncherHook.EXTRA_REFRESH, true);
         try {
             startActivity(home, ActivityOptions.makeBasic()
                     .setLaunchDisplayId(MainModule.SECOND_SCREEN_DISPLAY_ID).toBundle());

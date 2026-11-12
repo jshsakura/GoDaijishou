@@ -23,6 +23,10 @@ import de.robv.android.xposed.XposedHelpers;
 final class LauncherHook {
 
     static final String TARGET_PACKAGE = "com.lge.secondlauncher";
+    // Set by the app when it brings this home up right after a new choice: the change
+    // notification may not have reached our cache yet, so read the setting fresh.
+    static final String EXTRA_REFRESH = "kr.opencourse.godaijishou.REFRESH_LAUNCHER";
+    private static volatile boolean refreshNext = false;
 
     // Backoff against duplicate launches and heat
     // If redirects repeat in a short time (launchers bouncing each other), the pause
@@ -43,6 +47,13 @@ final class LauncherHook {
     }
 
     static void install() {
+        XposedHelpers.findAndHookMethod(Activity.class, "onNewIntent", Intent.class, new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) {
+                Intent i = (Intent) param.args[0];
+                if (i != null && i.getBooleanExtra(EXTRA_REFRESH, false)) refreshNext = true;
+            }
+        });
         // onResume alone covers every redirect point (first launch and returning via back).
         XposedHelpers.findAndHookMethod(Activity.class, "onResume", new XC_MethodHook() {
             @Override
@@ -62,6 +73,14 @@ final class LauncherHook {
 
         // 2) Read the setting from the cache (queried once + observer registered).
         ensureCacheInitialized(appContext);
+        Intent started = launcherActivity.getIntent();
+        if (refreshNext || (started != null && started.getBooleanExtra(EXTRA_REFRESH, false))) {
+            // Just switched in the app (e.g. back to the LG home): don't redirect on a stale
+            // cache to the launcher that was chosen before.
+            refreshNext = false;
+            if (started != null) started.removeExtra(EXTRA_REFRESH);
+            cachedTargetPackage = queryTargetPackage(appContext);
+        }
         final String targetPackage = cachedTargetPackage;
         if (TextUtils.isEmpty(targetPackage)) return;  // nothing chosen -> keep the stock launcher
 
