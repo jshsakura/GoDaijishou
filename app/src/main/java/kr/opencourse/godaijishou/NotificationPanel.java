@@ -229,36 +229,22 @@ final class NotificationPanel {
         withIcon(title, R.drawable.ic_ft_bell, ui.getColor(R.color.ft_butter), 18, density);
         row.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        // Performance profiles: eco (green leaf), normal (gauge), performance (red bolt).
-        LinearLayout profiles = new LinearLayout(ui);
-        profiles.setOrientation(LinearLayout.HORIZONTAL);
-        int[][] defs = {
-                {PerfProfile.ECO, R.drawable.ic_ft_leaf, R.color.ft_good},
-                {PerfProfile.NORMAL, R.drawable.ic_ft_gauge, R.color.ft_secondary},
-                {PerfProfile.PERFORMANCE, R.drawable.ic_ft_bolt, R.color.ft_error},
-        };
+        // Performance profile: one small round button showing the current one; each tap
+        // cycles eco (green leaf) -> normal (grey gauge) -> performance (red bolt).
+        android.widget.ImageView profile = new android.widget.ImageView(ui);
+        int pp = Math.round(6 * density);
+        profile.setPadding(pp, pp, pp, pp);
+        styleProfile(profile, density);
+        profile.setOnClickListener(v -> {
+            int next = (indexOf(SystemSettings.perfProfile) + 1) % PROFILES.length;
+            SystemSettings.perfProfile = PROFILES[next][0];
+            styleProfile(profile, density);
+            PerfProfile.request(SystemSettings.context(), SystemSettings.perfProfile);
+        });
         int profileSize = Math.round(30 * density);
-        android.widget.ImageView[] buttons = new android.widget.ImageView[defs.length];
-        for (int i = 0; i < defs.length; i++) {
-            int[] d = defs[i];
-            android.widget.ImageView b = new android.widget.ImageView(ui);
-            int pp = Math.round(6 * density);
-            b.setPadding(pp, pp, pp, pp);
-            buttons[i] = b;
-            b.setOnClickListener(v -> {
-                SystemSettings.perfProfile = d[0];
-                for (int j = 0; j < defs.length; j++) styleProfile(buttons[j], defs[j], density);
-                PerfProfile.request(SystemSettings.context(), d[0]);
-            });
-            styleProfile(b, d, density);
-            LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(profileSize, profileSize);
-            if (i > 0) blp.setMarginStart(Math.round(4 * density));
-            profiles.addView(b, blp);
-        }
-        LinearLayout.LayoutParams profilesLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        profilesLp.setMarginEnd(Math.round(8 * density));
-        row.addView(profiles, profilesLp);
+        LinearLayout.LayoutParams profileLp = new LinearLayout.LayoutParams(profileSize, profileSize);
+        profileLp.setMarginEnd(Math.round(8 * density));
+        row.addView(profile, profileLp);
 
         TextView clear = chip(density);
         clear.setText(R.string.notifications_clear_all);
@@ -319,24 +305,32 @@ final class NotificationPanel {
         return chip;
     }
 
-    // Selected profile: filled with its color. Others: outlined, icon in that color.
-    private static void styleProfile(android.widget.ImageView button, int[] def, float density) {
-        boolean on = SystemSettings.perfProfile == def[0];
+    // {profile, icon, color}, in cycling order.
+    private static final int[][] PROFILES = {
+            {PerfProfile.ECO, R.drawable.ic_ft_leaf, R.color.ft_good},
+            {PerfProfile.NORMAL, R.drawable.ic_ft_gauge, R.color.ft_secondary},
+            {PerfProfile.PERFORMANCE, R.drawable.ic_ft_bolt, R.color.ft_error},
+    };
+
+    private static int indexOf(int profile) {
+        for (int i = 0; i < PROFILES.length; i++) if (PROFILES[i][0] == profile) return i;
+        return 1; // normal
+    }
+
+    // Current profile's icon in its color on the usual outlined circle.
+    private static void styleProfile(android.widget.ImageView button, float density) {
+        int[] def = PROFILES[indexOf(SystemSettings.perfProfile)];
         int color = ui.getColor(def[2]);
         android.graphics.drawable.Drawable icon = ui.getDrawable(def[1]);
         if (icon != null) {
             icon = icon.mutate();
-            icon.setTint(on ? ui.getColor(R.color.ft_on_butter) : color);
+            icon.setTint(color);
             button.setImageDrawable(icon);
         }
         GradientDrawable bg = new GradientDrawable();
         bg.setShape(GradientDrawable.OVAL);
-        if (on) {
-            bg.setColor(color);
-        } else {
-            bg.setColor(ui.getColor(R.color.ft_surface));
-            bg.setStroke(Math.max(1, Math.round(density)), ui.getColor(R.color.ft_line));
-        }
+        bg.setColor(ui.getColor(R.color.ft_surface));
+        bg.setStroke(Math.max(1, Math.round(density)), color);
         button.setBackground(bg);
     }
 
