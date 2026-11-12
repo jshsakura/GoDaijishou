@@ -144,16 +144,7 @@ final class NotificationPanel {
             column.setPadding(margin, margin, margin, margin);
             column.setClickable(true); // taps between cards don't close
 
-            final int reserved = Math.round(28 * density) + Math.round(44 * density); // handle + undo
-            ScrollView scroll = new ScrollView(ui) {
-                @Override
-                protected void onMeasure(int widthSpec, int heightSpec) {
-                    // Whatever the screen has left under the header, minus the handle and the
-                    // undo slot below: the list uses the full height, then scrolls.
-                    int left = Math.max(0, MeasureSpec.getSize(heightSpec) - reserved);
-                    super.onMeasure(widthSpec, MeasureSpec.makeMeasureSpec(left, MeasureSpec.AT_MOST));
-                }
-            };
+            ScrollView scroll = new ScrollView(ui);
             scroll.setVerticalScrollBarEnabled(false);
             // Cards scroll up under the header band and disappear behind it.
             scroll.setClipToPadding(false);
@@ -166,19 +157,20 @@ final class NotificationPanel {
             // on top of it and the list starts below the header.
             FrameLayout stack = new FrameLayout(ui);
             stack.addView(scroll, new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
             View head = header(density);
             stack.addView(head, new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP));
             int headerSpace = Math.round((32 + 8 + 8) * density); // band + gap
             scroll.setPadding(0, headerSpace, 0, 0);
-            column.addView(stack, new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
+            // Undo floats over the bottom of the list for a few seconds.
             undoSlot = new FrameLayout(ui);
-            column.addView(undoSlot, new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-            column.addView(handle(density));
+            FrameLayout.LayoutParams undoLp = new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM);
+            undoLp.bottomMargin = Math.round(8 * density);
+            stack.addView(undoSlot, undoLp);
+            // The panel takes the whole screen; the list scrolls inside it.
+            column.addView(stack, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
             // Keep clear of the second screen's navigation bar (and anything at the top).
             scrim.setOnApplyWindowInsetsListener((v, insets) -> {
@@ -187,7 +179,7 @@ final class NotificationPanel {
                 return insets;
             });
             FrameLayout.LayoutParams columnLp = new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP);
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.TOP);
             scrim.addView(column, columnLp);
 
             WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
@@ -204,37 +196,18 @@ final class NotificationPanel {
             actionsOpen.clear();
             fill();
             scrim.setAlpha(0f);
-            column.setTranslationY(-24 * density);
+            column.setPivotY(0f);
+            column.setScaleY(0.92f);
+            column.setTranslationY(-16 * density);
+            column.setAlpha(0f);
             windowManager.addView(scrim, lp);
             scrim.requestFocus();
             scrim.animate().alpha(1f).setDuration(ANIM_MS).start();
-            column.animate().translationY(0f).setDuration(ANIM_MS)
-                    .setInterpolator(new DecelerateInterpolator(2f)).start();
+            column.animate().scaleY(1f).translationY(0f).alpha(1f).setDuration(260)
+                    .setInterpolator(new android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f)).start();
         } catch (Throwable ignored) {
             root = null;
         }
-    }
-
-    // Grab bar under the list: swipe it up (or tap it) to close.
-    private static View handle(float density) {
-        FrameLayout area = new FrameLayout(ui);
-        int h = Math.round(28 * density);
-        View bar = new View(ui);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(ui.getColor(R.color.ft_secondary));
-        bg.setCornerRadius(100 * density);
-        bar.setBackground(bg);
-        bar.setAlpha(0.6f);
-        area.addView(bar, new FrameLayout.LayoutParams(
-                Math.round(40 * density), Math.round(4 * density), Gravity.CENTER));
-        final float[] downY = new float[1];
-        area.setOnTouchListener((v, ev) -> {
-            if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) downY[0] = ev.getRawY();
-            if (ev.getActionMasked() == MotionEvent.ACTION_UP) close(); // swipe up or tap
-            return true;
-        });
-        area.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, h));
-        return area;
     }
 
     // Header floating over the list: [bell Notifications]  [clear all]  [profile | blocked | close].
@@ -455,6 +428,20 @@ final class NotificationPanel {
         button.setBackground(bg);
     }
 
+    // One smooth motion for the list: cards move, grow and fade at the same time
+    // (the default transition fades out, then moves, then fades in — it looks jerky).
+    private static void smoothly() {
+        if (list == null) return;
+        android.transition.TransitionSet set = new android.transition.TransitionSet()
+                .setOrdering(android.transition.TransitionSet.ORDERING_TOGETHER)
+                .addTransition(new android.transition.ChangeBounds())
+                .addTransition(new android.transition.Fade())
+                .setDuration(260)
+                .setInterpolator(new android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f));
+        ViewGroup scene = scrollView != null ? scrollView : list;
+        android.transition.TransitionManager.beginDelayedTransition(scene, set);
+    }
+
     // Rebuilds the list for the current mode.
     private static void fill() {
         if (list == null) return;
@@ -525,6 +512,7 @@ final class NotificationPanel {
             TextView pill = countPill(count, open, density);
             pill.setOnClickListener(v -> {
                 if (!expanded.remove(groupKey)) expanded.add(groupKey);
+                smoothly();
                 fill();
             });
             LinearLayout.LayoutParams pillLp = new LinearLayout.LayoutParams(
@@ -673,9 +661,15 @@ final class NotificationPanel {
         Object[] tag = (Object[]) card.getTag();
         View box = (View) tag[1];
         View chevron = (View) tag[2];
-        if (animate && list != null) android.transition.TransitionManager.beginDelayedTransition(list);
+        if (animate) smoothly();
         box.setVisibility(open ? View.VISIBLE : View.GONE);
-        chevron.setRotation(open ? -90f : 90f);
+        float turn = open ? -90f : 90f;
+        if (animate) {
+            chevron.animate().rotation(turn).setDuration(260)
+                    .setInterpolator(new android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f)).start();
+        } else {
+            chevron.setRotation(turn);
+        }
         int basePad = (int) tag[3];
         ((LinearLayout) card).setPadding(card.getPaddingLeft(), card.getPaddingTop(), card.getPaddingRight(),
                 open ? 0 : basePad);
@@ -899,9 +893,11 @@ final class NotificationPanel {
         }
         v.setEnabled(false);
         column.setPivotY(0f);
-        column.animate().scaleY(0.2f).alpha(0f).setDuration(ANIM_MS)
-                .setInterpolator(new android.view.animation.AccelerateInterpolator(1.5f)).start();
-        v.animate().alpha(0f).setDuration(ANIM_MS).withEndAction(remove).start();
+        float density = ui.getResources().getDisplayMetrics().density;
+        column.animate().cancel();
+        column.animate().scaleY(0.92f).translationY(-16 * density).alpha(0f).setDuration(200)
+                .setInterpolator(new android.view.animation.PathInterpolator(0.4f, 0f, 1f, 1f)).start();
+        v.animate().alpha(0f).setDuration(220).withEndAction(remove).start();
     }
 
     // --- NotificationManagerService access ---
@@ -1041,7 +1037,6 @@ final class NotificationPanel {
         android.widget.ImageView undo = iconButton(R.drawable.ic_ft_undo, true, density);
         int size = Math.round(36 * density);
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(size, size, Gravity.CENTER);
-        lp.topMargin = Math.round(4 * density);
         undoSlot.addView(undo, lp);
         undo.setOnClickListener(v -> {
             for (Runnable r : restores) r.run();
