@@ -171,12 +171,15 @@ final class NotificationPanel {
             stack.addView(undoSlot, undoLp);
             // The panel takes the whole screen; the list scrolls inside it.
             column.addView(stack, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
-            column.addView(handle(density));
 
             // Keep clear of the second screen's navigation bar (and anything at the top).
             scrim.setOnApplyWindowInsetsListener((v, insets) -> {
                 android.graphics.Insets bars = insets.getInsets(android.view.WindowInsets.Type.systemBars());
-                v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+                // The bottom edge is the system's home gesture: a swipe starting there goes to
+                // the app behind / home, never to us. Keep the list out of it.
+                android.graphics.Insets gestures = insets.getInsets(
+                        android.view.WindowInsets.Type.mandatorySystemGestures());
+                v.setPadding(bars.left, bars.top, bars.right, Math.max(bars.bottom, gestures.bottom));
                 return insets;
             });
             FrameLayout.LayoutParams columnLp = new FrameLayout.LayoutParams(
@@ -430,24 +433,8 @@ final class NotificationPanel {
         android.transition.TransitionManager.beginDelayedTransition(scene, set);
     }
 
-    // Grab bar at the bottom: drag it up and the panel follows the finger; let go past a
-    // quarter (or flick) and it goes, otherwise it springs back. A tap closes too.
-    private static View handle(float density) {
-        FrameLayout area = new FrameLayout(ui);
-        View bar = new View(ui);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(ui.getColor(R.color.ft_secondary));
-        bg.setCornerRadius(100 * density);
-        bar.setBackground(bg);
-        bar.setAlpha(0.7f);
-        area.addView(bar, new FrameLayout.LayoutParams(
-                Math.round(44 * density), Math.round(5 * density), Gravity.CENTER));
-        area.setOnTouchListener(dragToClose(density, true));
-        area.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-                Math.round(32 * density)));
-        return area;
-    }
-
+    // The header drags the panel up: it follows the finger; past a quarter (or a flick)
+    // it goes, otherwise it springs back.
     private static View.OnTouchListener dragToClose(float density, boolean tapCloses) {
         final float[] downY = new float[1];
         final boolean[] dragging = new boolean[1];
