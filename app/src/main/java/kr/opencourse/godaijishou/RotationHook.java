@@ -7,6 +7,7 @@ import android.provider.Settings;
 import android.view.Surface;
 
 import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 
 /**
@@ -65,6 +66,28 @@ final class RotationHook {
                             XposedHelpers.setIntField(param.thisObject, "mUserRotation", forcedRotation());
                         } catch (Throwable ignored) {
                         }
+                    }
+                });
+
+        // No per-app fixed rotation while forcing. Android rotates a launching app with a
+        // different orientation through a transform instead of the display, and links the
+        // wallpaper to it. Going home and locking again left that transform on the wallpaper:
+        // a portrait lock screen over a landscape background. With one forced rotation the
+        // transform has nothing to do, so a fixed-orientation app rotates the display instead.
+        XposedBridge.hookAllMethods(
+                XposedHelpers.findClass("com.android.server.wm.DisplayContent", classLoader),
+                "handleTopActivityLaunchingInDifferentOrientation",
+                new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) {
+                        if (!SystemSettings.forceRotation) return;
+                        Object displayRotation;
+                        try {
+                            displayRotation = XposedHelpers.getObjectField(param.thisObject, "mDisplayRotation");
+                        } catch (Throwable t) {
+                            return;
+                        }
+                        if (shouldForce(displayRotation)) param.setResult(false);
                     }
                 });
     }
