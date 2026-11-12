@@ -266,7 +266,7 @@ final class NotificationBanner {
             Drawable pin = ui.getDrawable(R.drawable.ic_ft_pin);
             if (pin != null) {
                 pin = pin.mutate();
-                pin.setTint(ui.getColor(R.color.ft_butter));
+                pin.setTint(ui.getColor(R.color.ft_secondary)); // quiet: just a marker
                 int size = Math.round(11 * density);
                 pin.setBounds(0, 0, size, size);
                 app.setCompoundDrawablesRelative(null, null, pin, null);

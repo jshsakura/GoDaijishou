@@ -143,7 +143,6 @@ final class NotificationPanel {
             column.setOrientation(LinearLayout.VERTICAL);
             column.setPadding(margin, margin, margin, margin);
             column.setClickable(true); // taps between cards don't close
-            column.addView(header(density));
 
             final int reserved = Math.round(28 * density) + Math.round(44 * density); // handle + undo
             ScrollView scroll = new ScrollView(ui) {
@@ -156,13 +155,26 @@ final class NotificationPanel {
                 }
             };
             scroll.setVerticalScrollBarEnabled(false);
+            // Cards scroll up under the floating header and fade out at the top edge.
+            scroll.setClipToPadding(false);
+            scroll.setVerticalFadingEdgeEnabled(true);
+            scroll.setFadingEdgeLength(Math.round(28 * density));
             scrollView = scroll;
             panelColumn = column;
             list = new LinearLayout(ui);
             list.setOrientation(LinearLayout.VERTICAL);
             scroll.addView(list);
-            // Wraps its cards, capped by the screen height (then it scrolls).
-            column.addView(scroll, new LinearLayout.LayoutParams(
+            // Wraps its cards, capped by the screen height (then it scrolls); the header sits
+            // on top of it and the list starts below the header.
+            FrameLayout stack = new FrameLayout(ui);
+            stack.addView(scroll, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            View head = header(density);
+            stack.addView(head, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP));
+            int headerSpace = Math.round((32 + 10) * density);
+            scroll.setPadding(0, headerSpace, 0, 0);
+            column.addView(stack, new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
             undoSlot = new FrameLayout(ui);
@@ -227,26 +239,52 @@ final class NotificationPanel {
         return area;
     }
 
+    // Header floating over the list: [bell Notifications]  [clear all]  [profile | blocked | close].
+    // Each group is its own pill on the panel color, so cards scrolling up slide under them.
     private static View header(float density) {
         LinearLayout row = new LinearLayout(ui);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        int pad = Math.round(6 * density);
-        row.setPadding(pad, 0, pad, pad);
+        int pillHeight = Math.round(32 * density);
 
         TextView title = new TextView(ui);
         title.setText(R.string.notifications_title);
         title.setTextColor(ui.getColor(R.color.ft_ink));
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         title.setTypeface(Typeface.DEFAULT_BOLD);
-        withIcon(title, R.drawable.ic_ft_bell, ui.getColor(R.color.ft_butter), 18, density);
-        row.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        withIcon(title, R.drawable.ic_ft_bell, ui.getColor(R.color.ft_butter), 15, density);
+        int tp = Math.round(12 * density);
+        title.setPadding(tp, 0, tp, 0);
+        title.setBackground(pill(density, false));
+        row.addView(title, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, pillHeight));
 
-        // Performance profile: one small round button showing the current one; each tap
-        // cycles eco (green leaf) -> normal (grey gauge) -> performance (red bolt).
-        android.widget.ImageView profile = new android.widget.ImageView(ui);
-        int pp = Math.round(6 * density);
-        profile.setPadding(pp, pp, pp, pp);
+        row.addView(new View(ui), new LinearLayout.LayoutParams(0, 1, 1f));
+
+        clearButton = chip(density);
+        clearButton.setText(R.string.notifications_clear_all);
+        clearButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        clearButton.setPadding(tp, 0, tp, 0);
+        clearButton.setOnClickListener(x -> {
+            clearAll();
+            close();
+        });
+        styleClear(false, density);
+        LinearLayout.LayoutParams clearLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, pillHeight);
+        clearLp.setMarginEnd(Math.round(6 * density));
+        row.addView(clearButton, clearLp);
+
+        // Tool pill: small icon buttons side by side.
+        LinearLayout tools = new LinearLayout(ui);
+        tools.setOrientation(LinearLayout.HORIZONTAL);
+        tools.setGravity(Gravity.CENTER_VERTICAL);
+        int inset = Math.round(3 * density);
+        tools.setPadding(inset, 0, inset, 0);
+        tools.setBackground(pill(density, false));
+        int buttonSize = pillHeight - inset * 2;
+
+        // Performance profile: shows the current one; each tap cycles
+        // eco (green leaf) -> normal (grey gauge) -> turbo (red bolt).
+        android.widget.ImageView profile = toolButton(density);
         styleProfile(profile, density);
         profile.setOnClickListener(v -> {
             int next = (indexOf(SystemSettings.perfProfile) + 1) % PROFILES.length;
@@ -254,44 +292,24 @@ final class NotificationPanel {
             styleProfile(profile, density);
             PerfProfile.request(SystemSettings.context(), SystemSettings.perfProfile);
         });
-        int profileSize = Math.round(30 * density);
-        LinearLayout.LayoutParams profileLp = new LinearLayout.LayoutParams(profileSize, profileSize);
-        profileLp.setMarginEnd(Math.round(8 * density));
-        row.addView(profile, profileLp);
+        tools.addView(profile, new LinearLayout.LayoutParams(buttonSize, buttonSize));
 
-        TextView clear = chip(density);
-        clear.setText(R.string.notifications_clear_all);
-        clear.setTextColor(ui.getColor(R.color.ft_on_butter));
-        withIcon(clear, R.drawable.ic_ft_clear_all, ui.getColor(R.color.ft_on_butter), 15, density);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(ui.getColor(R.color.ft_butter));
-        bg.setCornerRadius(100 * density);
-        clear.setBackground(bg);
-        clear.setOnClickListener(x -> {
-            clearAll();
-            close();
-        });
-        LinearLayout.LayoutParams clearLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        clearLp.setMarginEnd(Math.round(8 * density));
-        row.addView(clear, clearLp);
-
-        int buttonSize = Math.round(30 * density);
         // Turned-off notifications: switches the list to them (and back).
-        blockedToggle = iconButton(R.drawable.ic_ft_bell_off, false, density);
+        blockedToggle = toolButton(density);
+        styleTool(blockedToggle, R.drawable.ic_ft_bell_off, false, density);
         blockedToggle.setOnClickListener(v -> {
             showingBlocked = !showingBlocked;
-            styleIconButton(blockedToggle, R.drawable.ic_ft_bell_off, showingBlocked, density);
+            styleTool(blockedToggle, R.drawable.ic_ft_bell_off, showingBlocked, density);
             fill();
         });
-        LinearLayout.LayoutParams toggleLp = new LinearLayout.LayoutParams(buttonSize, buttonSize);
-        toggleLp.setMarginEnd(Math.round(8 * density));
-        row.addView(blockedToggle, toggleLp);
+        tools.addView(blockedToggle, new LinearLayout.LayoutParams(buttonSize, buttonSize));
 
-        // Close button: always reachable, whatever the list covers.
-        android.widget.ImageView close = iconButton(R.drawable.ic_ft_close, false, density);
+        // Close: always reachable, whatever the list covers.
+        android.widget.ImageView close = toolButton(density);
+        styleTool(close, R.drawable.ic_ft_close, false, density);
         close.setOnClickListener(v -> close());
-        row.addView(close, new LinearLayout.LayoutParams(buttonSize, buttonSize));
+        tools.addView(close, new LinearLayout.LayoutParams(buttonSize, buttonSize));
+        row.addView(tools, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, pillHeight));
 
         // Swiping the header up also closes.
         final float[] downY = new float[1];
@@ -307,6 +325,57 @@ final class NotificationPanel {
             return true;
         });
         return row;
+    }
+
+    private static TextView clearButton;
+
+    // Rounded pill on the panel color with a hairline; filled butter when active.
+    private static GradientDrawable pill(float density, boolean active) {
+        GradientDrawable bg = new GradientDrawable();
+        bg.setCornerRadius(100 * density);
+        if (active) {
+            bg.setColor(ui.getColor(R.color.ft_butter));
+        } else {
+            bg.setColor(ui.getColor(R.color.ft_surface));
+            bg.setStroke(Math.max(1, Math.round(density)), ui.getColor(R.color.ft_line));
+        }
+        return bg;
+    }
+
+    // Clear all: butter only when something can be cleared, otherwise muted and inert.
+    private static void styleClear(boolean clearable, float density) {
+        if (clearButton == null) return;
+        int ink = ui.getColor(clearable ? R.color.ft_on_butter : R.color.ft_secondary);
+        clearButton.setTextColor(ink);
+        withIcon(clearButton, R.drawable.ic_ft_clear_all, ink, 14, density);
+        clearButton.setBackground(pill(density, clearable));
+        clearButton.setEnabled(clearable);
+        clearButton.setAlpha(clearable ? 1f : 0.6f);
+    }
+
+    private static android.widget.ImageView toolButton(float density) {
+        android.widget.ImageView b = new android.widget.ImageView(ui);
+        int p = Math.round(5 * density);
+        b.setPadding(p, p, p, p);
+        return b;
+    }
+
+    // Tool icon: ink on the pill, or ink on a small butter circle when active.
+    private static void styleTool(android.widget.ImageView button, int iconRes, boolean active, float density) {
+        android.graphics.drawable.Drawable icon = ui.getDrawable(iconRes);
+        if (icon != null) {
+            icon = icon.mutate();
+            icon.setTint(ui.getColor(active ? R.color.ft_on_butter : R.color.ft_ink));
+            button.setImageDrawable(icon);
+        }
+        if (active) {
+            GradientDrawable bg = new GradientDrawable();
+            bg.setShape(GradientDrawable.OVAL);
+            bg.setColor(ui.getColor(R.color.ft_butter));
+            button.setBackground(bg);
+        } else {
+            button.setBackground(null);
+        }
     }
 
     private static TextView chip(float density) {
@@ -330,21 +399,15 @@ final class NotificationPanel {
         return 1; // normal
     }
 
-    // Current profile's icon in its color on the usual outlined circle.
+    // Current profile's icon in its own color, on the tool pill.
     private static void styleProfile(android.widget.ImageView button, float density) {
         int[] def = PROFILES[indexOf(SystemSettings.perfProfile)];
-        int color = ui.getColor(def[2]);
         android.graphics.drawable.Drawable icon = ui.getDrawable(def[1]);
         if (icon != null) {
             icon = icon.mutate();
-            icon.setTint(color);
+            icon.setTint(ui.getColor(def[2]));
             button.setImageDrawable(icon);
         }
-        GradientDrawable bg = new GradientDrawable();
-        bg.setShape(GradientDrawable.OVAL);
-        bg.setColor(ui.getColor(R.color.ft_surface));
-        bg.setStroke(Math.max(1, Math.round(density)), color);
-        button.setBackground(bg);
     }
 
     // Leading icon in the text's color.
@@ -392,12 +455,16 @@ final class NotificationPanel {
         if (list == null) return;
         list.removeAllViews();
         if (showingBlocked) {
+            styleClear(false, ui.getResources().getDisplayMetrics().density);
             fillBlocked();
             return;
         }
         float density = ui.getResources().getDisplayMetrics().density;
         int gap = Math.round(8 * density);
         List<Entry> entries = snapshot();
+        boolean anyClearable = false;
+        for (Entry e : entries) anyClearable |= e.clearable;
+        styleClear(anyClearable, density);
         if (entries.isEmpty()) {
             TextView empty = new TextView(ui);
             empty.setText(R.string.notifications_empty);
