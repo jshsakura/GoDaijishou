@@ -156,7 +156,15 @@ public class MainActivity extends AppCompatActivity {
             b.setGravity(android.view.Gravity.CENTER);
             b.setCompoundDrawablePadding(Math.round(6 * density));
             buttons[i] = b;
-            b.setOnClickListener(v -> {
+            // The segment is the cell; icon + name sit together in its middle
+            // (a drawableStart on a full-width TextView hugs the left edge).
+            android.widget.FrameLayout cell = new android.widget.FrameLayout(this);
+            cell.addView(b, new android.widget.FrameLayout.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.Gravity.CENTER));
+            cell.setClickable(true);
+            cell.setContentDescription(getString(def[3]));
+            cell.setOnClickListener(v -> {
                 prefs.edit().putInt(AppPreferences.KEY_PERF_PROFILE, def[0]).commit();
                 // The notification panel (system_server) shows the same choice.
                 getContentResolver().notifyChange(SettingsProvider.CONTENT_URI, null);
@@ -171,7 +179,7 @@ public class MainActivity extends AppCompatActivity {
             android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(
                     0, Math.round(44 * density), 1f);
             if (i > 0) lp.setMarginStart(Math.round(8 * density));
-            box.addView(b, lp);
+            box.addView(cell, lp);
         }
         stylePerfButtons(buttons);
     }
@@ -199,7 +207,7 @@ public class MainActivity extends AppCompatActivity {
                 bg.setColor(getColor(R.color.ft_surface));
                 bg.setStroke(Math.max(1, Math.round(density)), getColor(R.color.ft_line));
             }
-            buttons[i].setBackground(bg);
+            ((View) buttons[i].getParent()).setBackground(bg);
         }
     }
 
