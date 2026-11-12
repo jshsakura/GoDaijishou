@@ -2,6 +2,8 @@ package kr.opencourse.godaijishou;
 
 import android.app.ActivityOptions;
 import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.graphics.PixelFormat;
@@ -69,6 +71,8 @@ final class NotificationPanel {
         String key;
         String pkg;
         int userId;
+        int uid;
+        String channelId;
         CharSequence title;
         CharSequence text;
         PendingIntent contentIntent;
@@ -350,18 +354,33 @@ final class NotificationPanel {
         }
         int slop = ViewConfiguration.get(ui).getScaledTouchSlop();
         for (Entry e : entries) {
-            LinearLayout card = NotificationBanner.card(ui, SystemSettings.context(), e.pkg, e.title, e.text);
+            LinearLayout card = NotificationBanner.card(ui, SystemSettings.context(), e.pkg, e.title, e.text,
+                    !e.clearable);
             card.setElevation(0);
+            // Behind the card: what the current swipe direction will do.
+            FrameLayout slot = new FrameLayout(ui);
+            TextView hint = new TextView(ui);
+            hint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+            hint.setTypeface(Typeface.DEFAULT_BOLD);
+            int hp = Math.round(18 * density);
+            hint.setPadding(hp, 0, hp, 0);
+            hint.setVisibility(View.INVISIBLE);
+            slot.addView(hint, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            slot.addView(card, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             lp.bottomMargin = gap;
-            list.addView(card, lp);
-            bindGestures(card, e, slop);
+            list.addView(slot, lp);
+            bindGestures(card, hint, e, slop, density);
         }
     }
 
-    // Tap opens; horizontal swipe past a third of the width dismisses (clearable only).
-    private static void bindGestures(View card, Entry e, int slop) {
+    // Tap opens. Swipe right: dismiss (clearable only). Swipe left: never show this kind
+    // again (turns the notification's channel off) and dismiss. Past a third of the width
+    // the action runs; the hint behind the card shows which one.
+    private static void bindGestures(View card, TextView hint, Entry e, int slop, float density) {
         final float[] downX = new float[1];
         final boolean[] dragging = new boolean[1];
         card.setOnTouchListener((v, ev) -> {
@@ -370,25 +389,32 @@ final class NotificationPanel {
                     downX[0] = ev.getRawX();
                     dragging[0] = false;
                     return true;
-                case MotionEvent.ACTION_MOVE:
-                    float dx = ev.getRawX() - downX[0];
-                    if (e.clearable && Math.abs(dx) > slop) {
+                case MotionEvent.ACTION_MOVE: {
+                    float dx = allowed(e, ev.getRawX() - downX[0]);
+                    if (Math.abs(dx) > slop) {
                         dragging[0] = true;
                         v.getParent().requestDisallowInterceptTouchEvent(true);
                     }
                     if (dragging[0]) {
                         v.setTranslationX(dx);
-                        v.setAlpha(1f - Math.min(1f, Math.abs(dx) / v.getWidth()));
+                        showHint(hint, dx, density);
                     }
                     return true;
+                }
                 case MotionEvent.ACTION_UP:
                     if (dragging[0]) {
                         float moved = v.getTranslationX();
                         if (Math.abs(moved) > v.getWidth() / 3f) {
+                            boolean block = moved < 0;
                             v.animate().translationX(Math.signum(moved) * v.getWidth()).alpha(0f)
-                                    .setDuration(ANIM_MS).withEndAction(() -> dismiss(e)).start();
+                                    .setDuration(ANIM_MS)
+                                    .withEndAction(() -> {
+                                        if (block) block(e);
+                                        dismiss(e);
+                                    }).start();
                         } else {
-                            v.animate().translationX(0f).alpha(1f).setDuration(ANIM_MS).start();
+                            v.animate().translationX(0f).setDuration(ANIM_MS)
+                                    .withEndAction(() -> hint.setVisibility(View.INVISIBLE)).start();
                         }
                     } else {
                         click(e);
@@ -396,12 +422,34 @@ final class NotificationPanel {
                     }
                     return true;
                 case MotionEvent.ACTION_CANCEL:
-                    v.animate().translationX(0f).alpha(1f).setDuration(ANIM_MS).start();
+                    v.animate().translationX(0f).setDuration(ANIM_MS)
+                            .withEndAction(() -> hint.setVisibility(View.INVISIBLE)).start();
                     return true;
                 default:
                     return false;
             }
         });
+    }
+
+    // Pinned notifications can't be dismissed, but can still be turned off (swipe left).
+    private static float allowed(Entry e, float dx) {
+        return dx > 0 && !e.clearable ? 0 : dx;
+    }
+
+    private static void showHint(TextView hint, float dx, float density) {
+        if (dx == 0) {
+            hint.setVisibility(View.INVISIBLE);
+            return;
+        }
+        boolean block = dx < 0;
+        hint.setVisibility(View.VISIBLE);
+        hint.setText(block ? R.string.notifications_block : R.string.notifications_dismiss);
+        hint.setGravity((block ? Gravity.END : Gravity.START) | Gravity.CENTER_VERTICAL);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setCornerRadius(16 * density);
+        bg.setColor(ui.getColor(block ? R.color.ft_red_tint : R.color.ft_surface));
+        hint.setBackground(bg);
+        hint.setTextColor(ui.getColor(block ? R.color.ft_error : R.color.ft_secondary));
     }
 
     static void close() {
@@ -437,6 +485,8 @@ final class NotificationPanel {
                     e.key = sbn.getKey();
                     e.pkg = sbn.getPackageName();
                     e.userId = sbn.getUserId();
+                    e.uid = sbn.getUid();
+                    e.channelId = n.getChannelId();
                     e.title = title;
                     e.text = text;
                     e.contentIntent = n.contentIntent;
@@ -487,6 +537,22 @@ final class NotificationPanel {
                         Process.SYSTEM_UID, Process.myPid(), e.pkg, e.userId, e.key,
                         DISMISSAL_SHADE, SENTIMENT_NEUTRAL, visibility(e.key));
             }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    // Turns off the notification's channel ("never show this kind again"), like long-press
+    // > turn off in the shade. Goes through the service binder; system_server may call it.
+    private static void block(Entry e) {
+        if (e.channelId == null) return;
+        try {
+            Object nms = NotificationBanner.service();
+            Object binder = XposedHelpers.getObjectField(nms, "mService");
+            NotificationChannel channel = (NotificationChannel) XposedHelpers.callMethod(binder,
+                    "getNotificationChannelForPackage", e.pkg, e.uid, e.channelId, null, false);
+            if (channel == null) return;
+            channel.setImportance(NotificationManager.IMPORTANCE_NONE);
+            XposedHelpers.callMethod(binder, "updateNotificationChannelForPackage", e.pkg, e.uid, channel);
         } catch (Throwable ignored) {
         }
     }

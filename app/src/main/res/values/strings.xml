@@ -62,6 +62,8 @@
     <!-- Second screen notification list -->
     <string name="notifications_title">Notifications</string>
     <string name="notifications_battery_saver">Battery saver</string>
+    <string name="notifications_dismiss">Dismiss</string>
+    <string name="notifications_block">Never show</string>
     <string name="notifications_clear_all">Clear all</string>
     <string name="notifications_empty">No notifications</string>
 </resources>

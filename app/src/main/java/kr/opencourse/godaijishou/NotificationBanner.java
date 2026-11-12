@@ -230,6 +230,12 @@ final class NotificationBanner {
 
     /** FT notification card (icon, app name, title, text); shared with NotificationPanel. */
     static LinearLayout card(Context ui, Context system, String pkg, CharSequence title, CharSequence body) {
+        return card(ui, system, pkg, title, body, false);
+    }
+
+    /** Same card; pinned (non-clearable) ones get a small pin after the app name. */
+    static LinearLayout card(Context ui, Context system, String pkg, CharSequence title, CharSequence body,
+                             boolean pinned) {
         float density = ui.getResources().getDisplayMetrics().density;
         int pad = Math.round(14 * density);
 
@@ -255,7 +261,20 @@ final class NotificationBanner {
         texts.setOrientation(LinearLayout.VERTICAL);
         card.addView(texts, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
-        texts.addView(text(ui, appLabel(system, pkg), 11, R.color.ft_secondary, false, 1));
+        TextView app = text(ui, appLabel(system, pkg), 11, R.color.ft_secondary, false, 1);
+        if (pinned) {
+            Drawable pin = ui.getDrawable(R.drawable.ic_ft_pin);
+            if (pin != null) {
+                pin = pin.mutate();
+                pin.setTint(ui.getColor(R.color.ft_butter));
+                int size = Math.round(11 * density);
+                pin.setBounds(0, 0, size, size);
+                app.setCompoundDrawablesRelative(null, null, pin, null);
+                app.setCompoundDrawablePadding(Math.round(4 * density));
+            }
+        }
+        texts.addView(app, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         if (!TextUtils.isEmpty(title)) texts.addView(text(ui, title, 15, R.color.ft_ink, true, 1));
         if (!TextUtils.isEmpty(body)) texts.addView(text(ui, body, 13, R.color.ft_secondary, false, 2));
         return card;
