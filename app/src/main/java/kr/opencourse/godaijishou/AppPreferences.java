@@ -38,8 +38,8 @@ public class AppPreferences {
     public static final String KEY_FINGERPRINT_OFF = "fingerprint_off";
     // CPU/GPU performance profile (PerfProfile.NORMAL / ECO / PERFORMANCE), applied by the app as root.
     public static final String KEY_PERF_PROFILE = "perf_profile";
-    // Keep USB debugging (adb) on across reboots (system_server hook).
-    public static final String KEY_USB_DEBUG_PIN = "usb_debug_pin";
+    // Bring each USB connection up as charging only instead of file transfer (system_server hook).
+    public static final String KEY_USB_CHARGE_ONLY = "usb_charge_only";
 
     // App-only state, kept apart from the provider-exposed settings.
     private static final String MODE_PREF_FILE_NAME = "Godaijishou_mode_prefs";

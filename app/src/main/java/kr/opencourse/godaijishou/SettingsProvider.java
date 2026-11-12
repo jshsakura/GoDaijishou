@@ -47,7 +47,7 @@ public class SettingsProvider extends ContentProvider {
         String topOff = prefs.getBoolean(AppPreferences.KEY_TOP_SCREEN_OFF, false) ? "1" : "0";
         String volume = prefs.getBoolean(AppPreferences.KEY_VOLUME_OVERLAY, false) ? "1" : "0";
         String noTop = prefs.getBoolean(AppPreferences.KEY_NO_TOP_SCREEN, false) ? "1" : "0";
-        String usbPin = prefs.getBoolean(AppPreferences.KEY_USB_DEBUG_PIN, false) ? "1" : "0";
+        String chargeOnly = prefs.getBoolean(AppPreferences.KEY_USB_CHARGE_ONLY, false) ? "1" : "0";
         String batteryStrip = prefs.getBoolean(AppPreferences.KEY_BATTERY_STRIP, false) ? "1" : "0";
         String labelHideFullscreen = prefs.getBoolean(AppPreferences.KEY_LABEL_HIDE_FULLSCREEN, false) ? "1" : "0";
         String hideSwivel = prefs.getBoolean(AppPreferences.KEY_HIDE_SWIVEL_WARNINGS, false) ? "1" : "0";
@@ -63,7 +63,7 @@ public class SettingsProvider extends ContentProvider {
                 AppPreferences.KEY_POWER_MENU_SECOND_SCREEN,
                 AppPreferences.KEY_TOP_SCREEN_OFF,
                 AppPreferences.KEY_NO_TOP_SCREEN,
-                AppPreferences.KEY_USB_DEBUG_PIN,
+                AppPreferences.KEY_USB_CHARGE_ONLY,
                 AppPreferences.KEY_VOLUME_OVERLAY,
                 AppPreferences.KEY_BATTERY_STRIP,
                 AppPreferences.KEY_LABEL_HIDE_FULLSCREEN,
@@ -73,7 +73,7 @@ public class SettingsProvider extends ContentProvider {
                 AppPreferences.KEY_HIDE_IME_NAV_STRIP,
                 AppPreferences.KEY_FINGERPRINT_OFF
         });
-        cursor.addRow(new Object[]{targetPackage, targetActivity, forceRotation, powerMenu, topOff, noTop, usbPin, volume,
+        cursor.addRow(new Object[]{targetPackage, targetActivity, forceRotation, powerMenu, topOff, noTop, chargeOnly, volume,
                 batteryStrip, labelHideFullscreen, perfProfile, hideSwivel, slimPill, imeStrip, fingerprintOff});
         return cursor;
     }

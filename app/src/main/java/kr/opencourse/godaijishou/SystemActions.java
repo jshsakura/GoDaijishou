@@ -31,7 +31,7 @@ import de.robv.android.xposed.XposedHelpers;
 /**
  * Privileged actions the app asks system_server to perform, so the app itself never needs
  * root: power off, restart, recovery, screenshot of a display, opening the LSPosed manager
- * and keeping USB debugging on.
+ * and switching USB to charging only.
  *
  * The app sends an explicit broadcast to package "android". The receiver is registered with
  * a signature-level permission, so only an app signed with the same key can trigger it.
@@ -106,13 +106,13 @@ final class SystemActions {
         }
     }
 
-    /** Keeps adb enabled while the pin is on (LG drops it after a reboot). */
-    static void enforceUsbDebug(Context context) {
-        if (!SystemSettings.usbDebugPinned) return;
+    // UsbManager.setCurrentFunctions(FUNCTION_NONE): charging only (adb stays on top when it is
+    // enabled). Applied once per connection, so file transfer picked by hand afterwards stays.
+    static void chargeOnlyUsb(Context context) {
+        if (!SystemSettings.usbChargeOnly) return;
         try {
-            if (Settings.Global.getInt(context.getContentResolver(), Settings.Global.ADB_ENABLED, 0) != 1) {
-                Settings.Global.putInt(context.getContentResolver(), Settings.Global.ADB_ENABLED, 1);
-            }
+            Object usb = context.getSystemService(Context.USB_SERVICE);
+            if (usb != null) XposedHelpers.callMethod(usb, "setCurrentFunctions", 0L);
         } catch (Throwable ignored) {
         }
     }
