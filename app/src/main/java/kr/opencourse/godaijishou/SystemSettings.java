@@ -151,6 +151,7 @@ final class SystemSettings {
             }, handler);
 
             handler.post(() -> updateSecondScreen(dm));
+            handler.post(SystemSettings::loadCache);
             handler.post(SystemSettings::reload);
         } catch (Throwable ignored) {
             // Init failed: every feature stays disabled and system behavior is untouched.
@@ -226,6 +227,7 @@ final class SystemSettings {
                 } catch (RuntimeException ignored) {
                 }
             }
+            saveCache();
             if (changed) {
                 for (Runnable l : listeners) l.run();
             }
@@ -233,6 +235,50 @@ final class SystemSettings {
             // Provider not readable yet (e.g. before unlock): keep current values.
         } finally {
             if (cursor != null) cursor.close();
+        }
+    }
+
+    // Last read settings, kept in Settings.Global (system_server's own store) so the next boot
+    // starts with them before the app's provider can run: the second screen comes up with the
+    // right rotation from the first frame, not only from LOCKED_BOOT_COMPLETED on.
+    private static final String CACHE_KEY = "godaijishou_flags";
+    private static final String[] CACHE_ORDER = {"rotation", "powerMenu", "topOff", "noTop", "usbPin",
+            "volume", "strip", "hideFullscreen"};
+
+    private static void saveCache() {
+        try {
+            boolean[] f = {forceRotation, powerMenuOnSecondScreen, topScreenOff, noTopScreen,
+                    usbDebugPinned, volumeOverlay, batteryStrip, labelHideFullscreen};
+            StringBuilder b = new StringBuilder();
+            for (boolean v : f) b.append(v ? '1' : '0');
+            b.append(':').append(perfProfile);
+            String value = b.toString();
+            if (!value.equals(Settings.Global.getString(resolver, CACHE_KEY))) {
+                Settings.Global.putString(resolver, CACHE_KEY, value);
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    /** Applies the cached settings; only until the real ones have been read. */
+    private static void loadCache() {
+        if (loaded) return;
+        try {
+            String value = Settings.Global.getString(resolver, CACHE_KEY);
+            if (value == null || value.length() < CACHE_ORDER.length) return;
+            forceRotation = value.charAt(0) == '1';
+            powerMenuOnSecondScreen = value.charAt(1) == '1';
+            topScreenOff = value.charAt(2) == '1';
+            noTopScreen = value.charAt(3) == '1';
+            usbDebugPinned = value.charAt(4) == '1';
+            volumeOverlay = value.charAt(5) == '1';
+            batteryStrip = value.charAt(6) == '1';
+            labelHideFullscreen = value.charAt(7) == '1';
+            int colon = value.indexOf(':');
+            if (colon > 0) perfProfile = Integer.parseInt(value.substring(colon + 1));
+            for (Runnable l : listeners) l.run();
+        } catch (Throwable ignored) {
+            // Settings store not up yet this early: the provider read comes later anyway.
         }
     }
 
