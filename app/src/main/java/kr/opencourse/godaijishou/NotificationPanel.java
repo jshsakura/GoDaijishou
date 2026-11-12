@@ -142,7 +142,8 @@ final class NotificationPanel {
             LinearLayout column = new LinearLayout(ui);
             column.setOrientation(LinearLayout.VERTICAL);
             column.setPadding(margin, margin, margin, margin);
-            column.setClickable(true); // taps between cards don't close
+            // A tap on empty space (below the cards, the bottom strip) closes, like outside.
+            column.setOnClickListener(v -> close());
 
             ScrollView scroll = new ScrollView(ui);
             scroll.setVerticalScrollBarEnabled(false);
