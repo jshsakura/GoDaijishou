@@ -41,19 +41,20 @@ final class StatusLabel {
 
     // WindowManager.LayoutParams.TYPE_VOLUME_OVERLAY (hidden): above apps and system bars.
     private static final int TYPE_OVERLAY = 2020;
-    private static final float HEIGHT_DP = 14f;
+    private static final float HEIGHT_DP = 16f;
     private static final float RIGHT_MARGIN_DP = 14f;
     // Transparent slack under the tab so an 11dp tab is still easy to hit.
     private static final float TOUCH_SLACK_DP = 10f;
     private static final float PAD_DP = 6.5f;
     private static final float GAP_DP = 5f;
     // Pill floating just below the top edge.
-    private static final float TOP_MARGIN_DP = 3f;
-    private static final float ICON_DP = 9f;
-    private static final float TEXT_SP = 9.5f;
+    private static final float TOP_MARGIN_DP = 1f;
+    private static final float ICON_DP = 10f;
+    private static final float TEXT_SP = 10.5f;
     /** Colors for one system theme. Battery colors: muted, still readable on the background. */
     private static final class Palette {
         final int background, outline, ink, dim, bell, good, mid, low, warm, hot;
+        final int bubbleInk = 0xFF1A1A1E;
 
         Palette(int background, int outline, int ink, int dim, int bell, int good, int mid, int low,
                 int warm, int hot) {
@@ -324,9 +325,10 @@ final class StatusLabel {
         }
     }
 
-    private static Palette palette() {
-        int night = Resources.getSystem().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
-        return night == Configuration.UI_MODE_NIGHT_NO ? LIGHT : DARK;
+    // The window's own configuration: WindowManager pushes dark/light switches to it.
+    private static Palette palette(Resources res) {
+        int night = res.getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+        return night == Configuration.UI_MODE_NIGHT_YES ? DARK : LIGHT;
     }
 
     private static String mobileLabel() {
@@ -352,7 +354,13 @@ final class StatusLabel {
         }
     }
 
-    /** Draws the tab right-aligned: [Wi-Fi] [LTE] [bell n] [flame] [battery%]. */
+    /**
+     * Draws ( [flame] [Wi-Fi] [LTE] [battery%] ) (n). The pill's right end and the battery
+     * are fixed; Wi-Fi and LTE sit left of the battery, and the rare heat flame goes on the
+     * far left, so it only grows the pill's outer end. The notification count is a small
+     * separate butter circle in its own fixed spot right of the pill, number only, and
+     * nothing at all when there are none.
+     */
     private static final class LabelView extends View {
         private final Paint bg = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint outline = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -360,7 +368,6 @@ final class StatusLabel {
         private final Paint arc = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint text = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Path shape = new Path();
-        private final Path bell = new Path();
         private final Path flame = new Path();
         private final RectF rect = new RectF();
         private final RectF oval = new RectF();
@@ -404,21 +411,32 @@ final class StatusLabel {
             return icon * 1.25f;
         }
 
+        // Mobile data label in a fixed-width slot, so LTE <-> 5G doesn't shift anything.
+        private float mobileSlot() {
+            return Math.max(text.measureText("LTE"), text.measureText("5G"));
+        }
+
         // Width of the pill's content for the current state.
-        private float contentWidth(String mobileText, String countText) {
+        private float contentWidth(String mobileText) {
             float content = batterySlot();
-            if (heat() != HEAT_NONE) content += gap + icon * 0.75f;
-            if (countText != null) content += gap + icon * 0.8f + gap * 0.4f + text.measureText(countText);
-            if (mobileText != null) content += gap + text.measureText(mobileText);
             if (wifiLevel >= 0) content += gap + icon;
+            if (mobileText != null) content += gap + mobileSlot();
+            if (heat() != HEAT_NONE) content += gap + icon * 0.75f;
             return content;
         }
 
-        // Widest possible content: the window keeps this size, so it never re-lays out (and
-        // never shifts) when items come and go.
-        private float maxContentWidth() {
-            return batterySlot() + gap + icon * 0.75f + gap + icon * 0.8f + gap * 0.4f + text.measureText("99")
-                    + gap + text.measureText("LTE") + gap + icon;
+        // Widest possible pill: everything shown.
+        private float maxPillWidth() {
+            return pad * 2 + batterySlot() + gap + icon + gap + mobileSlot() + gap + icon * 0.75f;
+        }
+
+        // Count circle: the pill's height, widening only for two digits.
+        private float bubbleWidth(String count) {
+            return Math.max(height, text.measureText(count) + pad * 1.2f);
+        }
+
+        private float bubbleGap() {
+            return gap * 0.7f;
         }
 
         private String mobileText() {
@@ -431,24 +449,29 @@ final class StatusLabel {
 
         @Override
         protected void onMeasure(int widthSpec, int heightSpec) {
-            float w = maxContentWidth() + pad * 2 + rightMargin;
+            float w = maxPillWidth() + bubbleGap() + bubbleWidth("99") + rightMargin;
             setMeasuredDimension((int) Math.ceil(w), (int) Math.ceil(top + height + slack));
+        }
+
+        @Override
+        protected void onConfigurationChanged(Configuration newConfig) {
+            super.onConfigurationChanged(newConfig);
+            invalidate(); // dark/light switch
         }
 
         @Override
         protected void onDraw(Canvas canvas) {
             if (battery < 0) return;
-            Palette p = palette();
+            Palette p = palette(getResources());
             bg.setColor(p.background);
             String mobileText = mobileText();
             String countText = countText();
             String batteryText = battery + "%";
 
-            float content = contentWidth(mobileText, countText);
             float h = height;
             canvas.translate(0, top);
-            float right = getWidth() - rightMargin;
-            float left = right - content - pad * 2;
+            float right = getWidth() - rightMargin - bubbleWidth("99") - bubbleGap();
+            float left = right - pad * 2 - contentWidth(mobileText);
             rect.set(left, 0, right, h);
             shape.reset();
             shape.addRoundRect(rect, radius, radius, Path.Direction.CW);
@@ -470,27 +493,34 @@ final class StatusLabel {
             x -= batterySlot();
             drawBattery(canvas, x, cy, level, p);
 
-            // Then right to left: heat warning, notifications, mobile data, Wi-Fi.
+            // Then right to left: LTE, Wi-Fi, and the heat flame on the far left.
+            if (mobileText != null) {
+                x -= gap + mobileSlot();
+                text.setColor(p.ink);
+                text.setTextAlign(Paint.Align.CENTER);
+                canvas.drawText(mobileText, x + mobileSlot() / 2f, baseline, text);
+                text.setTextAlign(Paint.Align.LEFT);
+            }
+            if (wifiLevel >= 0) {
+                x -= gap + icon;
+                drawWifi(canvas, x, cy, p);
+            }
             int heat = heat();
             if (heat != HEAT_NONE) {
                 x -= gap + icon * 0.75f;
                 drawFlame(canvas, x, cy, icon * 0.75f, heat == HEAT_HOT ? p.hot : p.warm);
             }
-            text.setColor(p.ink);
+
+            // Notification count: number only, in its own circle after the pill.
             if (countText != null) {
-                x -= gap + text.measureText(countText);
-                canvas.drawText(countText, x, baseline, text);
-                x -= gap * 0.4f + icon * 0.8f;
-                drawBell(canvas, x, cy, icon * 0.8f, p);
-            }
-            if (mobileText != null) {
-                x -= gap + text.measureText(mobileText);
-                text.setColor(p.ink);
-                canvas.drawText(mobileText, x, baseline, text);
-            }
-            if (wifiLevel >= 0) {
-                x -= gap + icon;
-                drawWifi(canvas, x, cy, p);
+                float bLeft = right + bubbleGap();
+                rect.set(bLeft, 0, bLeft + bubbleWidth(countText), h);
+                ink.setColor(p.bell);
+                canvas.drawRoundRect(rect, h / 2f, h / 2f, ink);
+                text.setColor(p.bubbleInk);
+                text.setTextAlign(Paint.Align.CENTER);
+                canvas.drawText(countText, rect.centerX(), baseline, text);
+                text.setTextAlign(Paint.Align.LEFT);
             }
         }
 
@@ -539,21 +569,6 @@ final class StatusLabel {
             flame.close();
             ink.setColor(color);
             canvas.drawPath(flame, ink);
-        }
-
-        // Small bell: domed body, flat rim, clapper.
-        private void drawBell(Canvas canvas, float x, float cy, float size, Palette p) {
-            float top = cy - size / 2f;
-            float bottom = cy + size * 0.32f;
-            bell.reset();
-            oval.set(x + size * 0.12f, top, x + size * 0.88f, bottom);
-            bell.addRoundRect(oval,
-                    new float[]{size * 0.38f, size * 0.38f, size * 0.38f, size * 0.38f, 0, 0, 0, 0},
-                    Path.Direction.CW);
-            bell.addRect(x, bottom - size * 0.12f, x + size, bottom, Path.Direction.CW);
-            ink.setColor(p.bell);
-            canvas.drawPath(bell, ink);
-            canvas.drawCircle(x + size / 2f, bottom + size * 0.12f, size * 0.12f, ink);
         }
     }
 }
