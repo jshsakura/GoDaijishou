@@ -237,7 +237,7 @@ final class NotificationBanner {
     static LinearLayout card(Context ui, Context system, String pkg, CharSequence title, CharSequence body,
                              boolean pinned) {
         float density = ui.getResources().getDisplayMetrics().density;
-        int pad = Math.round(14 * density);
+        int pad = Math.round(11 * density);
 
         LinearLayout card = new LinearLayout(ui);
         card.setOrientation(LinearLayout.HORIZONTAL);
@@ -251,7 +251,7 @@ final class NotificationBanner {
         card.setElevation(8 * density);
 
         ImageView icon = new ImageView(ui);
-        int iconSize = Math.round(32 * density);
+        int iconSize = Math.round(28 * density);
         LinearLayout.LayoutParams iconLp = new LinearLayout.LayoutParams(iconSize, iconSize);
         iconLp.setMarginEnd(Math.round(12 * density));
         icon.setImageDrawable(appIcon(system, pkg));
@@ -275,7 +275,7 @@ final class NotificationBanner {
         }
         texts.addView(app, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-        if (!TextUtils.isEmpty(title)) texts.addView(text(ui, title, 15, R.color.ft_ink, true, 1));
+        if (!TextUtils.isEmpty(title)) texts.addView(text(ui, title, 14, R.color.ft_ink, true, 1));
         if (!TextUtils.isEmpty(body)) texts.addView(text(ui, body, 13, R.color.ft_secondary, false, 2));
         return card;
     }

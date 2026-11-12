@@ -50,9 +50,6 @@ final class NotificationPanel {
     private static final int TYPE_OVERLAY = 2020;
     private static final int SCRIM = 0x99000000;
     private static final long ANIM_MS = 180;
-    // The list never takes more than this share of the screen, so there is always empty
-    // scrim below it to tap and close.
-    private static final float MAX_HEIGHT_RATIO = 0.7f;
     // NotificationStats.DISMISSAL_SHADE / DISMISS_SENTIMENT_NEUTRAL.
     private static final int DISMISSAL_SHADE = 3;
     private static final int SENTIMENT_NEUTRAL = 1;
@@ -92,6 +89,10 @@ final class NotificationPanel {
     // Apps with several notifications show as one card until opened.
     private static final java.util.Set<String> expanded = new java.util.HashSet<>();
     private static final int MAX_ACTIONS = 3;
+    // Cards whose button bar is pulled open (by notification key); closed by default.
+    private static final java.util.Set<String> actionsOpen = new java.util.HashSet<>();
+    private static ScrollView scrollView;
+    private static LinearLayout panelColumn;
 
     static void toggle() {
         if (root != null) close();
@@ -144,14 +145,19 @@ final class NotificationPanel {
             column.setClickable(true); // taps between cards don't close
             column.addView(header(density));
 
-            final int maxHeight = Math.round(ui.getResources().getDisplayMetrics().heightPixels * MAX_HEIGHT_RATIO);
+            final int reserved = Math.round(28 * density) + Math.round(44 * density); // handle + undo
             ScrollView scroll = new ScrollView(ui) {
                 @Override
                 protected void onMeasure(int widthSpec, int heightSpec) {
-                    super.onMeasure(widthSpec, MeasureSpec.makeMeasureSpec(maxHeight, MeasureSpec.AT_MOST));
+                    // Whatever the screen has left under the header, minus the handle and the
+                    // undo slot below: the list uses the full height, then scrolls.
+                    int left = Math.max(0, MeasureSpec.getSize(heightSpec) - reserved);
+                    super.onMeasure(widthSpec, MeasureSpec.makeMeasureSpec(left, MeasureSpec.AT_MOST));
                 }
             };
             scroll.setVerticalScrollBarEnabled(false);
+            scrollView = scroll;
+            panelColumn = column;
             list = new LinearLayout(ui);
             list.setOrientation(LinearLayout.VERTICAL);
             scroll.addView(list);
@@ -164,6 +170,12 @@ final class NotificationPanel {
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             column.addView(handle(density));
 
+            // Keep clear of the second screen's navigation bar (and anything at the top).
+            scrim.setOnApplyWindowInsetsListener((v, insets) -> {
+                android.graphics.Insets bars = insets.getInsets(android.view.WindowInsets.Type.systemBars());
+                v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+                return insets;
+            });
             FrameLayout.LayoutParams columnLp = new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP);
             scrim.addView(column, columnLp);
@@ -179,6 +191,7 @@ final class NotificationPanel {
             root = scrim;
             showingBlocked = false;
             expanded.clear();
+            actionsOpen.clear();
             fill();
             scrim.setAlpha(0f);
             column.setTranslationY(-24 * density);
@@ -511,7 +524,14 @@ final class NotificationPanel {
                 row.addView(split, new LinearLayout.LayoutParams(hair, Math.round(18 * density)));
             }
             TextView button = new TextView(ui);
-            button.setText(action.title);
+            android.graphics.drawable.Drawable actionIcon = actionIcon(action, density);
+            if (actionIcon != null) {
+                // The app's own icon says it shorter (close widget, refresh...); name for a11y.
+                button.setCompoundDrawablesRelative(null, actionIcon, null, null);
+                button.setContentDescription(action.title);
+            } else {
+                button.setText(action.title);
+            }
             button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
             button.setTypeface(Typeface.DEFAULT_BOLD);
             button.setTextColor(ui.getColor(R.color.ft_butter));
@@ -534,7 +554,14 @@ final class NotificationPanel {
         }
         if (shown == 0) return;
 
-        // Card becomes: [icon | texts | pill] / hairline / [buttons].
+        // Card becomes: [icon | texts | pill | chevron] / (hairline + buttons, pulled open).
+        android.widget.ImageView chevron = new android.widget.ImageView(ui);
+        android.graphics.drawable.Drawable chev = ui.getDrawable(R.drawable.ic_ft_chevron);
+        if (chev != null) {
+            chev = chev.mutate();
+            chev.setTint(ui.getColor(R.color.ft_secondary));
+            chevron.setImageDrawable(chev);
+        }
         LinearLayout content = new LinearLayout(ui);
         content.setOrientation(LinearLayout.HORIZONTAL);
         content.setGravity(Gravity.CENTER_VERTICAL);
@@ -547,16 +574,64 @@ final class NotificationPanel {
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(card.getPaddingLeft(), card.getPaddingTop(), card.getPaddingRight(),
                 Math.round(4 * density));
+        int chevSize = Math.round(18 * density);
+        LinearLayout.LayoutParams chevLp = new LinearLayout.LayoutParams(chevSize, chevSize);
+        chevLp.setMarginStart(Math.round(6 * density));
+        content.addView(chevron, chevLp);
         card.addView(content, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout box = new LinearLayout(ui);
+        box.setOrientation(LinearLayout.VERTICAL);
         View divider = new View(ui);
         divider.setBackgroundColor(line);
         LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, hair);
         dividerLp.topMargin = Math.round(12 * density);
         dividerLp.bottomMargin = Math.round(4 * density);
-        card.addView(divider, dividerLp);
-        card.addView(row, new LinearLayout.LayoutParams(
+        box.addView(divider, dividerLp);
+        box.addView(row, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        card.addView(box, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        card.setTag(new Object[]{e.key, box, chevron});
+        showActions(card, actionsOpen.contains(e.key), false);
+        chevron.setOnClickListener(v -> toggleActions(card));
+    }
+
+    // Opens/closes a card's button bar; the chevron points down when closed, up when open.
+    private static void showActions(View card, boolean open, boolean animate) {
+        Object[] tag = (Object[]) card.getTag();
+        View box = (View) tag[1];
+        View chevron = (View) tag[2];
+        if (animate && list != null) android.transition.TransitionManager.beginDelayedTransition(list);
+        box.setVisibility(open ? View.VISIBLE : View.GONE);
+        chevron.setRotation(open ? -90f : 90f);
+        ((LinearLayout) card).setPadding(card.getPaddingLeft(), card.getPaddingTop(), card.getPaddingRight(),
+                open ? Math.round(4 * card.getResources().getDisplayMetrics().density) : card.getPaddingTop());
+    }
+
+    private static void toggleActions(View card) {
+        if (!(card.getTag() instanceof Object[])) return;
+        String key = (String) ((Object[]) card.getTag())[0];
+        boolean open = !actionsOpen.remove(key);
+        if (open) actionsOpen.add(key);
+        showActions(card, open, true);
+    }
+
+    // The action's icon from the app, tinted butter; null if it has none or it can't load.
+    private static android.graphics.drawable.Drawable actionIcon(Notification.Action action, float density) {
+        try {
+            android.graphics.drawable.Icon icon = action.getIcon();
+            if (icon == null) return null;
+            android.graphics.drawable.Drawable d = icon.loadDrawable(SystemSettings.context());
+            if (d == null || d.getIntrinsicWidth() <= 0) return null;
+            d = d.mutate();
+            d.setTint(ui.getColor(R.color.ft_butter));
+            int size = Math.round(20 * density);
+            d.setBounds(0, 0, size, size);
+            return d;
+        } catch (Throwable t) {
+            return null;
+        }
     }
 
     // Fires the button like the shade does; screens it opens go to the second screen.
@@ -584,29 +659,70 @@ final class NotificationPanel {
     private static void bindGestures(View card, android.widget.ImageView hint, Entry e, List<Entry> targets,
                                      int slop, float density) {
         final float[] downX = new float[1];
+        final float[] downY = new float[1];
         final boolean[] dragging = new boolean[1];
+        final boolean[] pulled = new boolean[1];
+        // Long press opens/closes the card's buttons too (like expanding in the system shade).
+        final Runnable longPress = () -> {
+            pulled[0] = true;
+            card.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+            toggleActions(card);
+        };
         card.setOnTouchListener((v, ev) -> {
+            if (ev.getActionMasked() != MotionEvent.ACTION_DOWN && (dragging[0] || pulled[0]
+                    || Math.hypot(ev.getRawX() - downX[0], ev.getRawY() - downY[0]) > slop)) {
+                v.removeCallbacks(longPress);
+            }
             switch (ev.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
                     downX[0] = ev.getRawX();
+                    downY[0] = ev.getRawY();
                     dragging[0] = false;
+                    pulled[0] = false;
+                    if (v.getTag() instanceof Object[]) {
+                        v.postDelayed(longPress, ViewConfiguration.getLongPressTimeout());
+                    }
                     return true;
                 case MotionEvent.ACTION_MOVE: {
-                    float dx = allowed(targets, ev.getRawX() - downX[0]);
+                    float raw = ev.getRawX() - downX[0];
+                    boolean reveal = raw > 0 && revealsActions(v, targets);
+                    // Pinned card with buttons: a short, resisted right pull that opens them.
+                    float dx = reveal ? Math.min(raw * 0.5f, v.getWidth() / 4f) : allowed(targets, raw);
+                    float dy = ev.getRawY() - downY[0];
+                    // Pull down opens the card's buttons, pull up closes them; only while the
+                    // list can't scroll that way, so normal scrolling keeps working.
+                    if (!dragging[0] && !pulled[0] && v.getTag() instanceof Object[]
+                            && Math.abs(dy) > slop * 1.5f && Math.abs(dy) > Math.abs(ev.getRawX() - downX[0])) {
+                        boolean open = actionsOpen.contains((String) ((Object[]) v.getTag())[0]);
+                        boolean down = dy > 0;
+                        ScrollView sv = scrollView;
+                        if (sv != null && down != open && !sv.canScrollVertically(down ? -1 : 1)) {
+                            pulled[0] = true;
+                            v.getParent().requestDisallowInterceptTouchEvent(true);
+                            toggleActions(v);
+                        }
+                    }
+                    if (pulled[0]) return true;
                     if (Math.abs(dx) > slop) {
                         dragging[0] = true;
                         v.getParent().requestDisallowInterceptTouchEvent(true);
                     }
                     if (dragging[0]) {
                         v.setTranslationX(dx);
-                        showHint(hint, dx, density);
+                        showHint(hint, dx, density, reveal);
                     }
                     return true;
                 }
                 case MotionEvent.ACTION_UP:
+                    v.removeCallbacks(longPress);
+                    if (pulled[0]) return true;
                     if (dragging[0]) {
                         float moved = v.getTranslationX();
-                        if (Math.abs(moved) > v.getWidth() / 3f) {
+                        if (moved > 0 && revealsActions(v, targets)) {
+                            if (moved > v.getWidth() / 6f) toggleActions(v);
+                            v.animate().translationX(0f).setDuration(ANIM_MS)
+                                    .withEndAction(() -> showHint(hint, 0, density, false)).start();
+                        } else if (Math.abs(moved) > v.getWidth() / 3f) {
                             boolean block = moved < 0;
                             v.animate().translationX(Math.signum(moved) * v.getWidth()).alpha(0f)
                                     .setDuration(ANIM_MS)
@@ -624,6 +740,7 @@ final class NotificationPanel {
                     }
                     return true;
                 case MotionEvent.ACTION_CANCEL:
+                    v.removeCallbacks(longPress);
                     v.animate().translationX(0f).setDuration(ANIM_MS)
                             .withEndAction(() -> hint.setVisibility(View.INVISIBLE)).start();
                     return true;
@@ -634,6 +751,13 @@ final class NotificationPanel {
     }
 
     // Pinned notifications can't be dismissed, but can still be turned off (swipe left).
+    // Right swipe on a card nothing can dismiss, but that has buttons: opens/closes them.
+    private static boolean revealsActions(View card, List<Entry> targets) {
+        if (!(card.getTag() instanceof Object[])) return false;
+        for (Entry t : targets) if (t.clearable) return false;
+        return true;
+    }
+
     private static float allowed(List<Entry> targets, float dx) {
         if (dx <= 0) return dx;
         for (Entry t : targets) if (t.clearable) return dx;
@@ -642,6 +766,11 @@ final class NotificationPanel {
 
     // Icon and color only: grey trash for dismiss (right), red bell-off for never show (left).
     private static void showHint(android.widget.ImageView hint, float dx, float density) {
+        showHint(hint, dx, density, false);
+    }
+
+    // reveal: butter chevron (opens the card's buttons) instead of the trash.
+    private static void showHint(android.widget.ImageView hint, float dx, float density, boolean reveal) {
         if (dx == 0) {
             hint.setVisibility(View.INVISIBLE);
             ((View) hint.getParent()).setBackground(null);
@@ -649,10 +778,11 @@ final class NotificationPanel {
         }
         boolean block = dx < 0;
         hint.setVisibility(View.VISIBLE);
-        android.graphics.drawable.Drawable icon = ui.getDrawable(block ? R.drawable.ic_ft_bell_off : R.drawable.ic_ft_trash);
+        android.graphics.drawable.Drawable icon = ui.getDrawable(block ? R.drawable.ic_ft_bell_off
+                : reveal ? R.drawable.ic_ft_chevron : R.drawable.ic_ft_trash);
         if (icon != null) {
             icon = icon.mutate();
-            icon.setTint(ui.getColor(block ? R.color.ft_error : R.color.ft_secondary));
+            icon.setTint(ui.getColor(block ? R.color.ft_error : reveal ? R.color.ft_butter : R.color.ft_secondary));
             int size = Math.round(22 * density);
             icon.setBounds(0, 0, size, size);
             hint.setImageDrawable(icon);
@@ -669,15 +799,30 @@ final class NotificationPanel {
         ((View) hint.getParent()).setBackground(bg);
     }
 
+    // Folds up into the top edge while the scrim fades, then the window goes.
     static void close() {
         FrameLayout v = root;
         if (v == null) return;
         root = null;
         list = null;
-        try {
-            windowManager.removeView(v);
-        } catch (RuntimeException ignored) {
+        LinearLayout column = panelColumn;
+        panelColumn = null;
+        scrollView = null;
+        Runnable remove = () -> {
+            try {
+                windowManager.removeView(v);
+            } catch (RuntimeException ignored) {
+            }
+        };
+        if (column == null || !v.isAttachedToWindow()) {
+            remove.run();
+            return;
         }
+        v.setEnabled(false);
+        column.setPivotY(0f);
+        column.animate().scaleY(0.2f).alpha(0f).setDuration(ANIM_MS)
+                .setInterpolator(new android.view.animation.AccelerateInterpolator(1.5f)).start();
+        v.animate().alpha(0f).setDuration(ANIM_MS).withEndAction(remove).start();
     }
 
     // --- NotificationManagerService access ---
