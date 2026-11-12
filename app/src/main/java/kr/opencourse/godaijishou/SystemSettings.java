@@ -54,6 +54,8 @@ final class SystemSettings {
     static volatile boolean secondScreenOn = false;
 
     private static volatile boolean initialized = false;
+    // The settings have been read at least once this boot.
+    private static volatile boolean loaded = false;
     private static ContentResolver resolver;
     private static Handler handler;
     private static Context systemContext;
@@ -100,13 +102,22 @@ final class SystemSettings {
                         }
                     });
 
+            // Settings are in device-protected storage: readable from LOCKED_BOOT_COMPLETED on,
+            // so rotation and the rest apply on the lock screen right after boot. The screen
+            // events retry until the first read succeeds (the provider can't start any earlier).
             IntentFilter filter = new IntentFilter();
+            filter.addAction(Intent.ACTION_LOCKED_BOOT_COMPLETED);
+            filter.addAction(Intent.ACTION_SCREEN_ON);
+            filter.addAction(Intent.ACTION_USER_PRESENT);
             filter.addAction(Intent.ACTION_USER_UNLOCKED);
             filter.addAction(Intent.ACTION_BOOT_COMPLETED);
             context.registerReceiver(new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context c, Intent intent) {
-                    reload();
+                    String action = intent.getAction();
+                    boolean retryOnly = Intent.ACTION_SCREEN_ON.equals(action)
+                            || Intent.ACTION_USER_PRESENT.equals(action);
+                    if (!retryOnly || !loaded) reload();
                 }
             }, filter, null, handler);
 
@@ -175,6 +186,7 @@ final class SystemSettings {
     private static void updateSecondScreen(DisplayManager dm) {
         Display display = dm.getDisplay(MainModule.SECOND_SCREEN_DISPLAY_ID);
         boolean on = display != null && display.getState() == Display.STATE_ON;
+        if (!loaded) reload(); // second screen coming up early in boot: try the settings again
         if (on != secondScreenOn) {
             secondScreenOn = on;
             for (Runnable l : listeners) l.run();
@@ -186,6 +198,7 @@ final class SystemSettings {
         try {
             cursor = resolver.query(SettingsProvider.CONTENT_URI, null, null, null, null);
             if (cursor == null || !cursor.moveToFirst()) return; // keep current values
+            loaded = true;
             boolean rotation = readFlag(cursor, AppPreferences.KEY_FORCE_ROTATION);
             boolean powerMenu = readFlag(cursor, AppPreferences.KEY_POWER_MENU_SECOND_SCREEN);
             boolean topOff = readFlag(cursor, AppPreferences.KEY_TOP_SCREEN_OFF);
