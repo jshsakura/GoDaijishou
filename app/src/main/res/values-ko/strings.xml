@@ -2,13 +2,13 @@
     <string name="app_name">GoDaijishou</string>
 
     <!-- Selector Activity -->
-    <string name="launcher_daijishou">다이지쇼</string>
+    <string name="launcher_daijishou">다이지쇼 (Daijishou)</string>
     <string name="launcher_esde">ES-DE</string>
-    <string name="launcher_pegasus">페가수스</string>
+    <string name="launcher_pegasus">페가수스 (Pegasus)</string>
     <!-- Toast Messages -->
     <string name="toast_app_not_installed">%s 앱이 설치되지 않았습니다.</string>
 
-    <string name="launcher_stock">LG 기본값</string>
+    <string name="launcher_stock">LG 기본값 (LG Default)</string>
     <string name="main_reboot_permission_denied">재부팅 권한이 거부되었습니다</string>
 
     <!-- Bottom screen only mode (black top screen) -->
