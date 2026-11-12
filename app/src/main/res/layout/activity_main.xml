@@ -287,7 +287,7 @@
                 <ImageView
                     style="@style/Ft.RowIcon"
                     android:importantForAccessibility="no"
-                    android:src="@drawable/ic_ft_gauge" />
+                    android:src="@drawable/ic_ft_cpu" />
 
                 <LinearLayout style="@style/Ft.RowText">
 
