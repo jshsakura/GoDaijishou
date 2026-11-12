@@ -323,12 +323,15 @@ final class StatusLabel {
         }
     }
 
-    // Exactly the battery part of the pill, a few dp taller. A tap there does nothing (so a
-    // near miss on an app's close button never opens the list); only a pull down does.
+    // Pull-down strip along the top edge: the right third of the screen (it holds the label),
+    // as tall as the label plus a few dp. Only a downward pull opens the list. A plain tap is
+    // handed on to whatever is underneath (an app's close button keeps working): the strip
+    // steps aside for a moment and the tap is replayed at the same spot.
     private static void attachGrip(Context ui, LabelView v, float density) {
         try {
+            int width = ui.getResources().getDisplayMetrics().widthPixels / 3;
             WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
-                    Math.round(v.pad * 2 + v.batterySlot()),
+                    width,
                     Math.round(v.top + v.height + GRIP_SLACK_DP * density),
                     TYPE_OVERLAY,
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
@@ -337,29 +340,35 @@ final class StatusLabel {
                             | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                     PixelFormat.TRANSLUCENT);
             lp.gravity = Gravity.TOP | Gravity.END;
-            lp.x = Math.round(v.rightMargin + v.bubbleWidth("99") + v.bubbleGap());
             lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
             lp.setTitle("GoDaijishou:StatusLabelGrip");
             View g = new View(ui);
             final float pull = PULL_DP * density;
+            final float tapSlop = android.view.ViewConfiguration.get(ui).getScaledTouchSlop();
             final float[] down = new float[2];
             final boolean[] fired = new boolean[1];
+            final boolean[] moved = new boolean[1];
             g.setOnTouchListener((x, ev) -> {
                 switch (ev.getActionMasked()) {
                     case android.view.MotionEvent.ACTION_DOWN:
                         down[0] = ev.getRawX();
                         down[1] = ev.getRawY();
                         fired[0] = false;
+                        moved[0] = false;
                         return true;
                     case android.view.MotionEvent.ACTION_MOVE: {
                         float dy = ev.getRawY() - down[1];
                         float dx = Math.abs(ev.getRawX() - down[0]);
+                        if (Math.abs(dy) > tapSlop || dx > tapSlop) moved[0] = true;
                         if (!fired[0] && dy > pull && dy > dx * 1.5f) {
                             fired[0] = true;
                             if (!NotificationPanel.isOpen()) NotificationPanel.toggle();
                         }
                         return true;
                     }
+                    case android.view.MotionEvent.ACTION_UP:
+                        if (!fired[0] && !moved[0]) passTap(g, lp, down[0], down[1]);
+                        return true;
                     default:
                         return true;
                 }
@@ -369,6 +378,40 @@ final class StatusLabel {
         } catch (Throwable ignored) {
             grip = null;
         }
+    }
+
+    // Replays a tap under the strip: strip untouchable, tap injected on this display, strip back.
+    private static void passTap(View g, WindowManager.LayoutParams lp, float x, float y) {
+        try {
+            lp.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+            windowManager.updateViewLayout(g, lp);
+        } catch (RuntimeException e) {
+            return;
+        }
+        final int display = g.getDisplay() != null ? g.getDisplay().getDisplayId() : MainModule.SECOND_SCREEN_DISPLAY_ID;
+        g.postDelayed(() -> {
+            try {
+                long t = android.os.SystemClock.uptimeMillis();
+                inject(android.view.MotionEvent.obtain(t, t, android.view.MotionEvent.ACTION_DOWN, x, y, 0), display);
+                inject(android.view.MotionEvent.obtain(t, t + 40, android.view.MotionEvent.ACTION_UP, x, y, 0), display);
+            } catch (Throwable ignored) {
+            }
+            g.postDelayed(() -> {
+                lp.flags &= ~WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+                try {
+                    if (g.isAttachedToWindow()) windowManager.updateViewLayout(g, lp);
+                } catch (RuntimeException ignored) {
+                }
+            }, 150);
+        }, 32);
+    }
+
+    private static void inject(android.view.MotionEvent ev, int display) throws Exception {
+        ev.setSource(android.view.InputDevice.SOURCE_TOUCHSCREEN);
+        XposedHelpers.callMethod(ev, "setDisplayId", display);
+        Object im = XposedHelpers.callStaticMethod(Class.forName("android.hardware.input.InputManager"), "getInstance");
+        XposedHelpers.callMethod(im, "injectInputEvent", ev, 0 /* INJECT_INPUT_EVENT_MODE_ASYNC */);
+        ev.recycle();
     }
 
     private static void detach() {
