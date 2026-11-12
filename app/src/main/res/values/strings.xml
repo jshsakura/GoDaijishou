@@ -85,6 +85,6 @@
     <string name="scope_dialog_open">Open LSPosed</string>
     <string name="scope_system">• System Framework</string>
     <string name="scope_systemui">• System UI (com.android.systemui)</string>
-    <string name="scope_systemui_keyboard">• System UI (com.android.systemui)\n• Your keyboard app (e.g. Gboard)</string>
+    <string name="scope_systemui_keyboard">• System UI (com.android.systemui)\n• LG keyboard (com.lge.ime)</string>
     <string name="scope_popupcamera">• LG pop-up camera (com.lge.popupcamera)</string>
 </resources>
