@@ -62,6 +62,15 @@ final class NotificationPanel {
     private static FrameLayout root;
     private static LinearLayout list;
     private static Context ui;
+    // Panel mode: current notifications, or the channels that are turned off.
+    private static boolean showingBlocked = false;
+    private static android.widget.ImageView blockedToggle;
+    // Undo for the last "never show": a single icon under the list for a few seconds.
+    private static FrameLayout undoSlot;
+    private static final long UNDO_MS = 4000;
+    private static final Runnable hideUndo = () -> {
+        if (undoSlot != null) undoSlot.removeAllViews();
+    };
 
     private NotificationPanel() {
     }
@@ -145,6 +154,9 @@ final class NotificationPanel {
             column.addView(scroll, new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
+            undoSlot = new FrameLayout(ui);
+            column.addView(undoSlot, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             column.addView(handle(density));
 
             FrameLayout.LayoutParams columnLp = new FrameLayout.LayoutParams(
@@ -160,6 +172,7 @@ final class NotificationPanel {
             lp.setTitle("GoDaijishou:NotificationPanel");
 
             root = scrim;
+            showingBlocked = false;
             fill();
             scrim.setAlpha(0f);
             column.setTranslationY(-24 * density);
@@ -245,24 +258,22 @@ final class NotificationPanel {
         clearLp.setMarginEnd(Math.round(8 * density));
         row.addView(clear, clearLp);
 
+        int buttonSize = Math.round(30 * density);
+        // Turned-off notifications: switches the list to them (and back).
+        blockedToggle = iconButton(R.drawable.ic_ft_bell_off, false, density);
+        blockedToggle.setOnClickListener(v -> {
+            showingBlocked = !showingBlocked;
+            styleIconButton(blockedToggle, R.drawable.ic_ft_bell_off, showingBlocked, density);
+            fill();
+        });
+        LinearLayout.LayoutParams toggleLp = new LinearLayout.LayoutParams(buttonSize, buttonSize);
+        toggleLp.setMarginEnd(Math.round(8 * density));
+        row.addView(blockedToggle, toggleLp);
+
         // Close button: always reachable, whatever the list covers.
-        android.widget.ImageView close = new android.widget.ImageView(ui);
-        android.graphics.drawable.Drawable x = ui.getDrawable(R.drawable.ic_ft_close);
-        if (x != null) {
-            x = x.mutate();
-            x.setTint(ui.getColor(R.color.ft_ink));
-            close.setImageDrawable(x);
-        }
-        int closeSize = Math.round(30 * density);
-        int closePad = Math.round(6 * density);
-        close.setPadding(closePad, closePad, closePad, closePad);
-        GradientDrawable closeBg = new GradientDrawable();
-        closeBg.setShape(GradientDrawable.OVAL);
-        closeBg.setColor(ui.getColor(R.color.ft_surface));
-        closeBg.setStroke(Math.max(1, Math.round(density)), ui.getColor(R.color.ft_line));
-        close.setBackground(closeBg);
+        android.widget.ImageView close = iconButton(R.drawable.ic_ft_close, false, density);
         close.setOnClickListener(v -> close());
-        row.addView(close, new LinearLayout.LayoutParams(closeSize, closeSize));
+        row.addView(close, new LinearLayout.LayoutParams(buttonSize, buttonSize));
 
         // Swiping the header up also closes.
         final float[] downY = new float[1];
@@ -325,10 +336,41 @@ final class NotificationPanel {
         view.setGravity(Gravity.CENTER_VERTICAL);
     }
 
-    // Rebuilds the cards from the current notification list.
+    // Round icon button: outlined, or filled butter when active.
+    private static android.widget.ImageView iconButton(int iconRes, boolean active, float density) {
+        android.widget.ImageView button = new android.widget.ImageView(ui);
+        int pad = Math.round(6 * density);
+        button.setPadding(pad, pad, pad, pad);
+        styleIconButton(button, iconRes, active, density);
+        return button;
+    }
+
+    private static void styleIconButton(android.widget.ImageView button, int iconRes, boolean active, float density) {
+        android.graphics.drawable.Drawable icon = ui.getDrawable(iconRes);
+        if (icon != null) {
+            icon = icon.mutate();
+            icon.setTint(ui.getColor(active ? R.color.ft_on_butter : R.color.ft_ink));
+            button.setImageDrawable(icon);
+        }
+        GradientDrawable bg = new GradientDrawable();
+        bg.setShape(GradientDrawable.OVAL);
+        if (active) {
+            bg.setColor(ui.getColor(R.color.ft_butter));
+        } else {
+            bg.setColor(ui.getColor(R.color.ft_surface));
+            bg.setStroke(Math.max(1, Math.round(density)), ui.getColor(R.color.ft_line));
+        }
+        button.setBackground(bg);
+    }
+
+    // Rebuilds the list for the current mode.
     private static void fill() {
         if (list == null) return;
         list.removeAllViews();
+        if (showingBlocked) {
+            fillBlocked();
+            return;
+        }
         float density = ui.getResources().getDisplayMetrics().density;
         int gap = Math.round(8 * density);
         List<Entry> entries = snapshot();
@@ -359,11 +401,10 @@ final class NotificationPanel {
             card.setElevation(0);
             // Behind the card: what the current swipe direction will do.
             FrameLayout slot = new FrameLayout(ui);
-            TextView hint = new TextView(ui);
-            hint.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-            hint.setTypeface(Typeface.DEFAULT_BOLD);
-            int hp = Math.round(18 * density);
+            android.widget.ImageView hint = new android.widget.ImageView(ui);
+            int hp = Math.round(20 * density);
             hint.setPadding(hp, 0, hp, 0);
+            hint.setScaleType(android.widget.ImageView.ScaleType.CENTER_INSIDE);
             hint.setVisibility(View.INVISIBLE);
             slot.addView(hint, new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -380,7 +421,7 @@ final class NotificationPanel {
     // Tap opens. Swipe right: dismiss (clearable only). Swipe left: never show this kind
     // again (turns the notification's channel off) and dismiss. Past a third of the width
     // the action runs; the hint behind the card shows which one.
-    private static void bindGestures(View card, TextView hint, Entry e, int slop, float density) {
+    private static void bindGestures(View card, android.widget.ImageView hint, Entry e, int slop, float density) {
         final float[] downX = new float[1];
         final boolean[] dragging = new boolean[1];
         card.setOnTouchListener((v, ev) -> {
@@ -436,20 +477,33 @@ final class NotificationPanel {
         return dx > 0 && !e.clearable ? 0 : dx;
     }
 
-    private static void showHint(TextView hint, float dx, float density) {
+    // Icon and color only: grey trash for dismiss (right), red bell-off for never show (left).
+    private static void showHint(android.widget.ImageView hint, float dx, float density) {
         if (dx == 0) {
             hint.setVisibility(View.INVISIBLE);
+            ((View) hint.getParent()).setBackground(null);
             return;
         }
         boolean block = dx < 0;
         hint.setVisibility(View.VISIBLE);
-        hint.setText(block ? R.string.notifications_block : R.string.notifications_dismiss);
-        hint.setGravity((block ? Gravity.END : Gravity.START) | Gravity.CENTER_VERTICAL);
+        android.graphics.drawable.Drawable icon = ui.getDrawable(block ? R.drawable.ic_ft_bell_off : R.drawable.ic_ft_trash);
+        if (icon != null) {
+            icon = icon.mutate();
+            icon.setTint(ui.getColor(block ? R.color.ft_error : R.color.ft_secondary));
+            int size = Math.round(22 * density);
+            icon.setBounds(0, 0, size, size);
+            hint.setImageDrawable(icon);
+        }
+        // Icon sits on the side the card uncovers.
+        hint.setScaleType(android.widget.ImageView.ScaleType.CENTER);
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) hint.getLayoutParams();
+        lp.gravity = (block ? Gravity.END : Gravity.START) | Gravity.CENTER_VERTICAL;
+        lp.width = ViewGroup.LayoutParams.WRAP_CONTENT;
+        hint.setLayoutParams(lp);
         GradientDrawable bg = new GradientDrawable();
         bg.setCornerRadius(16 * density);
         bg.setColor(ui.getColor(block ? R.color.ft_red_tint : R.color.ft_surface));
-        hint.setBackground(bg);
-        hint.setTextColor(ui.getColor(block ? R.color.ft_error : R.color.ft_secondary));
+        ((View) hint.getParent()).setBackground(bg);
     }
 
     static void close() {
@@ -546,14 +600,140 @@ final class NotificationPanel {
     private static void block(Entry e) {
         if (e.channelId == null) return;
         try {
-            Object nms = NotificationBanner.service();
-            Object binder = XposedHelpers.getObjectField(nms, "mService");
+            Object binder = binder();
             NotificationChannel channel = (NotificationChannel) XposedHelpers.callMethod(binder,
                     "getNotificationChannelForPackage", e.pkg, e.uid, e.channelId, null, false);
             if (channel == null) return;
+            int previous = channel.getImportance();
             channel.setImportance(NotificationManager.IMPORTANCE_NONE);
             XposedHelpers.callMethod(binder, "updateNotificationChannelForPackage", e.pkg, e.uid, channel);
+            showUndo(e.pkg, e.uid, e.channelId, previous);
         } catch (Throwable ignored) {
+        }
+    }
+
+    private static Object binder() {
+        return XposedHelpers.getObjectField(NotificationBanner.service(), "mService");
+    }
+
+    /** Turns a channel back on, at the given importance (or the app's own default). */
+    private static void unblock(String pkg, int uid, String channelId, int importance) {
+        try {
+            Object binder = binder();
+            NotificationChannel channel = (NotificationChannel) XposedHelpers.callMethod(binder,
+                    "getNotificationChannelForPackage", pkg, uid, channelId, null, false);
+            if (channel == null) return;
+            if (importance <= NotificationManager.IMPORTANCE_NONE) importance = originalImportance(channel);
+            channel.setImportance(importance);
+            XposedHelpers.callMethod(binder, "updateNotificationChannelForPackage", pkg, uid, channel);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    // What the app itself asked for when it created the channel; default if unknown.
+    private static int originalImportance(NotificationChannel channel) {
+        try {
+            int original = (int) XposedHelpers.callMethod(channel, "getOriginalImportance");
+            if (original > NotificationManager.IMPORTANCE_NONE) return original;
+        } catch (Throwable ignored) {
+        }
+        return NotificationManager.IMPORTANCE_DEFAULT;
+    }
+
+    // One round butter undo icon under the list for a few seconds.
+    private static void showUndo(String pkg, int uid, String channelId, int previous) {
+        if (undoSlot == null) return;
+        float density = ui.getResources().getDisplayMetrics().density;
+        undoSlot.removeAllViews();
+        android.widget.ImageView undo = iconButton(R.drawable.ic_ft_undo, true, density);
+        int size = Math.round(36 * density);
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(size, size, Gravity.CENTER);
+        lp.topMargin = Math.round(4 * density);
+        undoSlot.addView(undo, lp);
+        undo.setOnClickListener(v -> {
+            unblock(pkg, uid, channelId, previous);
+            undoSlot.removeAllViews();
+        });
+        SystemSettings.handler().removeCallbacks(hideUndo);
+        SystemSettings.handler().postDelayed(hideUndo, UNDO_MS);
+    }
+
+    // --- Turned-off channels ---
+
+    private static final class Blocked {
+        String pkg;
+        int uid;
+        String channelId;
+        CharSequence name;
+    }
+
+    // Every channel at importance NONE, across installed apps. Cheap per-app count first,
+    // channel list only for apps that have blocked ones.
+    private static List<Blocked> blockedChannels() {
+        List<Blocked> out = new ArrayList<>();
+        try {
+            Object binder = binder();
+            android.content.pm.PackageManager pm = SystemSettings.context().getPackageManager();
+            for (android.content.pm.ApplicationInfo app : pm.getInstalledApplications(0)) {
+                try {
+                    int count = (int) XposedHelpers.callMethod(binder, "getBlockedChannelCount", app.packageName, app.uid);
+                    if (count <= 0) continue;
+                    Object slice = XposedHelpers.callMethod(binder, "getNotificationChannelsForPackage",
+                            app.packageName, app.uid, false);
+                    List<?> channels = (List<?>) XposedHelpers.callMethod(slice, "getList");
+                    for (Object o : channels) {
+                        NotificationChannel c = (NotificationChannel) o;
+                        if (c.getImportance() != NotificationManager.IMPORTANCE_NONE) continue;
+                        Blocked b = new Blocked();
+                        b.pkg = app.packageName;
+                        b.uid = app.uid;
+                        b.channelId = c.getId();
+                        b.name = c.getName();
+                        out.add(b);
+                    }
+                } catch (Throwable ignored) {
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return out;
+    }
+
+    // Rows: app card with the channel name; bell button on the right turns it back on.
+    private static void fillBlocked() {
+        float density = ui.getResources().getDisplayMetrics().density;
+        int gap = Math.round(8 * density);
+        List<Blocked> blocked = blockedChannels();
+        if (blocked.isEmpty()) {
+            android.widget.ImageView empty = new android.widget.ImageView(ui);
+            android.graphics.drawable.Drawable icon = ui.getDrawable(R.drawable.ic_ft_bell_off);
+            if (icon != null) {
+                icon = icon.mutate();
+                icon.setTint(ui.getColor(R.color.ft_line));
+                empty.setImageDrawable(icon);
+            }
+            int p = Math.round(24 * density);
+            empty.setPadding(p, p, p, p);
+            list.addView(empty, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, Math.round(84 * density)));
+            return;
+        }
+        for (Blocked b : blocked) {
+            LinearLayout card = NotificationBanner.card(ui, SystemSettings.context(), b.pkg, b.name, null);
+            card.setElevation(0);
+            android.widget.ImageView on = iconButton(R.drawable.ic_ft_bell, true, density);
+            int size = Math.round(32 * density);
+            LinearLayout.LayoutParams onLp = new LinearLayout.LayoutParams(size, size);
+            onLp.setMarginStart(Math.round(10 * density));
+            card.addView(on, onLp);
+            on.setOnClickListener(v -> {
+                unblock(b.pkg, b.uid, b.channelId, NotificationManager.IMPORTANCE_NONE);
+                fill();
+            });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.bottomMargin = gap;
+            list.addView(card, lp);
         }
     }
 
