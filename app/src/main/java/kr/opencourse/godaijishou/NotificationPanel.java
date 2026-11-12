@@ -155,10 +155,8 @@ final class NotificationPanel {
                 }
             };
             scroll.setVerticalScrollBarEnabled(false);
-            // Cards scroll up under the floating header and fade out at the top edge.
+            // Cards scroll up under the header band and disappear behind it.
             scroll.setClipToPadding(false);
-            scroll.setVerticalFadingEdgeEnabled(true);
-            scroll.setFadingEdgeLength(Math.round(28 * density));
             scrollView = scroll;
             panelColumn = column;
             list = new LinearLayout(ui);
@@ -172,7 +170,7 @@ final class NotificationPanel {
             View head = header(density);
             stack.addView(head, new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP));
-            int headerSpace = Math.round((32 + 10) * density);
+            int headerSpace = Math.round((32 + 8 + 8) * density); // band + gap
             scroll.setPadding(0, headerSpace, 0, 0);
             column.addView(stack, new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -246,6 +244,13 @@ final class NotificationPanel {
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
         int pillHeight = Math.round(32 * density);
+        // Solid band behind the pills: cards passing under it are hidden, never seen through.
+        GradientDrawable band = new GradientDrawable();
+        band.setColor(ui.getColor(R.color.ft_ground));
+        band.setCornerRadius(18 * density);
+        row.setBackground(band);
+        int bandPad = Math.round(4 * density);
+        row.setPadding(bandPad, bandPad, bandPad, bandPad);
 
         TextView title = new TextView(ui);
         title.setText(R.string.notifications_title);
