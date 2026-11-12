@@ -6,6 +6,7 @@
         android:name="kr.opencourse.godaijishou.permission.SYSTEM_ACTION"
         android:protectionLevel="signature" />
     <uses-permission android:name="kr.opencourse.godaijishou.permission.SYSTEM_ACTION" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- Package visibility for checking other apps -->
     <queries>
@@ -49,6 +50,20 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Performance profile: requested by the system_server panel, re-applied at boot (root).
+             DEVICE_POWER: only the system can send it. -->
+        <receiver
+            android:name=".PerfProfileReceiver"
+            android:directBootAware="true"
+            android:exported="true"
+            android:permission="android.permission.DEVICE_POWER">
+            <intent-filter>
+                <action android:name="kr.opencourse.godaijishou.SET_PERF_PROFILE" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <provider
             android:name=".SettingsProvider"

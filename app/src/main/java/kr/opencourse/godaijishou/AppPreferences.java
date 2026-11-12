@@ -28,6 +28,8 @@ public class AppPreferences {
     public static final String KEY_BATTERY_STRIP = "battery_strip";
     // Hide the status label while the second screen's top app is fullscreen (system_server hook).
     public static final String KEY_LABEL_HIDE_FULLSCREEN = "label_hide_fullscreen";
+    // CPU/GPU performance profile (PerfProfile.NORMAL / ECO / PERFORMANCE), applied by the app as root.
+    public static final String KEY_PERF_PROFILE = "perf_profile";
     // Keep USB debugging (adb) on across reboots (system_server hook).
     public static final String KEY_USB_DEBUG_PIN = "usb_debug_pin";
 
