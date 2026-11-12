@@ -130,6 +130,7 @@ final class NotificationPanel {
             }, new android.content.IntentFilter(android.content.Intent.ACTION_CLOSE_SYSTEM_DIALOGS),
                     null, SystemSettings.handler());
         } catch (Throwable t) {
+            ModuleLog.w(t);
             homeWatch = false;
         }
     }
@@ -245,6 +246,7 @@ final class NotificationPanel {
             column.animate().translationY(0f).alpha(1f).setDuration(260)
                     .setInterpolator(new android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f)).start();
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
             root = null;
         }
     }
@@ -797,6 +799,7 @@ final class NotificationPanel {
             d.setBounds(0, 0, size, size);
             return d;
         } catch (Throwable t) {
+            ModuleLog.w(t);
             return null;
         }
     }
@@ -816,6 +819,7 @@ final class NotificationPanel {
                         e.key, index, action, visibility(e.key), false);
             }
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
         }
         if (opensScreen) close();
     }
@@ -1039,6 +1043,7 @@ final class NotificationPanel {
                 }
             }
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
         }
         // Newest first, like the shade.
         Collections.reverse(out);
@@ -1070,6 +1075,7 @@ final class NotificationPanel {
                         Process.SYSTEM_UID, Process.myPid(), e.key, visibility(e.key));
             }
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
         }
     }
 
@@ -1082,6 +1088,7 @@ final class NotificationPanel {
                         DISMISSAL_SHADE, SENTIMENT_NEUTRAL, visibility(e.key));
             }
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
         }
     }
 
@@ -1102,6 +1109,7 @@ final class NotificationPanel {
                 XposedHelpers.callMethod(binder, "updateNotificationChannelForPackage", e.pkg, e.uid, channel);
                 restores.add(() -> unblock(e.pkg, e.uid, e.channelId, previous));
             } catch (Throwable ignored) {
+                ModuleLog.w(ignored);
             }
         }
         if (!restores.isEmpty()) showUndo(restores);
@@ -1122,6 +1130,7 @@ final class NotificationPanel {
             channel.setImportance(importance);
             XposedHelpers.callMethod(binder, "updateNotificationChannelForPackage", pkg, uid, channel);
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
         }
     }
 
@@ -1131,6 +1140,7 @@ final class NotificationPanel {
             int original = (int) XposedHelpers.callMethod(channel, "getOriginalImportance");
             if (original > NotificationManager.IMPORTANCE_NONE) return original;
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
         }
         return NotificationManager.IMPORTANCE_DEFAULT;
     }
@@ -1186,9 +1196,11 @@ final class NotificationPanel {
                         out.add(b);
                     }
                 } catch (Throwable ignored) {
+                    ModuleLog.w(ignored);
                 }
             }
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
         }
         return out;
     }
@@ -1238,6 +1250,7 @@ final class NotificationPanel {
                     android.app.ActivityManager.class, "getCurrentUser");
             if (d != null) XposedHelpers.callMethod(d, "onClearAll", Process.SYSTEM_UID, Process.myPid(), user);
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
         }
     }
 }

@@ -72,6 +72,7 @@ final class RetroArchHook {
             Display display = activity.getWindowManager().getDefaultDisplay();
             return display != null ? display.getDisplayId() : -1;
         } catch (Throwable t) {
+            ModuleLog.w(t);
             return -1;
         }
     }
@@ -99,6 +100,7 @@ final class RetroArchHook {
                 window.setFormat(surfaceFormatToggle
                         ? PixelFormat.RGBA_8888 : PixelFormat.RGBX_8888);
             } catch (Throwable ignored) {
+                ModuleLog.w(ignored);
                 // No failure here may affect RetroArch.
             }
         }, 300);

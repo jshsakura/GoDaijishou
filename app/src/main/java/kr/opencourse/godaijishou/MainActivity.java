@@ -113,6 +113,7 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.btn_notice_lsposed).setOnClickListener(v -> openLsposed());
         usbChargeOnlySwitch = findViewById(R.id.switch_usb_charge_only);
         bindSystemHookSwitch(R.id.row_usb_charge_only, usbChargeOnlySwitch, AppPreferences.KEY_USB_CHARGE_ONLY);
+        bindSystemHookSwitch(R.id.row_debug_log, findViewById(R.id.switch_debug_log), AppPreferences.KEY_DEBUG_LOG);
 
         // These need an extra LSPosed scope: turning one on explains which, unless that
         // hook is already known to be loaded this boot.

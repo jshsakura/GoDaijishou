@@ -63,6 +63,7 @@ final class FingerprintHook {
                         param.setResult(XposedHelpers.newInstance(r.getClass(), copy));
                     }
                 } catch (Throwable ignored) {
+                    ModuleLog.w(ignored);
                 }
             }
         };
@@ -73,6 +74,7 @@ final class FingerprintHook {
                 XposedBridge.hookAllMethods(c, "hasSystemFeature", has);
                 XposedBridge.hookAllMethods(c, "getSystemAvailableFeatures", list);
             } catch (Throwable ignored) {
+                ModuleLog.w(ignored);
                 // Not on this build: the others cover it.
             }
         }
@@ -82,6 +84,7 @@ final class FingerprintHook {
         try {
             return FEATURE.equals(XposedHelpers.getObjectField(info, "name"));
         } catch (Throwable t) {
+            ModuleLog.w(t);
             return false;
         }
     }
@@ -93,6 +96,7 @@ final class FingerprintHook {
         try {
             service = XposedHelpers.findClass(SERVICE, cl);
         } catch (Throwable t) {
+            ModuleLog.w(t);
             return;
         }
         List<Class<?>> classes = new ArrayList<>();
@@ -121,6 +125,7 @@ final class FingerprintHook {
                         }
                     });
                 } catch (Throwable ignored) {
+                    ModuleLog.w(ignored);
                 }
             }
         }

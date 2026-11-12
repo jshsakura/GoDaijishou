@@ -46,6 +46,7 @@ final class PerfProfile {
             if (profile != null) intent.putExtra(EXTRA_PROFILE, profile.intValue());
             system.sendBroadcastAsUser(intent, Process.myUserHandle());
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
         }
     }
 
@@ -97,6 +98,7 @@ final class PerfProfile {
             su.getInputStream().readAllBytes();
             return su.waitFor() == 0;
         } catch (Throwable t) {
+            ModuleLog.w(t);
             return false;
         }
     }

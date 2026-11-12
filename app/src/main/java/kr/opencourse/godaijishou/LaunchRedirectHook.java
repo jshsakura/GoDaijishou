@@ -43,6 +43,7 @@ final class LaunchRedirectHook {
                         try {
                             redirect(param);
                         } catch (Throwable ignored) {
+                            ModuleLog.w(ignored);
                             // Leave the system's choice as is.
                         }
                     }
@@ -79,6 +80,7 @@ final class LaunchRedirectHook {
         try {
             return !(boolean) XposedHelpers.callMethod(activity, "occludesParent");
         } catch (Throwable noMethod) {
+            ModuleLog.w(noMethod);
             return !XposedHelpers.getBooleanField(activity, "fullscreen");
         }
     }

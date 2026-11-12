@@ -65,6 +65,7 @@ final class RotationHook {
                         try {
                             XposedHelpers.setIntField(param.thisObject, "mUserRotation", forcedRotation());
                         } catch (Throwable ignored) {
+                            ModuleLog.w(ignored);
                         }
                     }
                 });
@@ -85,6 +86,7 @@ final class RotationHook {
                         try {
                             displayRotation = XposedHelpers.getObjectField(param.thisObject, "mDisplayRotation");
                         } catch (Throwable t) {
+                            ModuleLog.w(t);
                             return;
                         }
                         if (shouldForce(displayRotation)) param.setResult(false);
@@ -100,6 +102,7 @@ final class RotationHook {
         try {
             return XposedHelpers.getBooleanField(displayRotation, "isDefaultDisplay");
         } catch (Throwable t) {
+            ModuleLog.w(t);
             return false;
         }
     }
@@ -113,6 +116,7 @@ final class RotationHook {
             return (int) XposedHelpers.callMethod(displayContent, "getDisplayId")
                     == MainModule.SECOND_SCREEN_DISPLAY_ID;
         } catch (Throwable t) {
+            ModuleLog.w(t);
             return false;
         }
     }
@@ -158,6 +162,7 @@ final class RotationHook {
                         }
                     });
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
             // Setup failed: rotation behavior stays untouched.
         }
     }
@@ -166,6 +171,7 @@ final class RotationHook {
         try {
             XposedHelpers.callMethod(windowManagerService, "updateRotation", true, false);
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
         }
     }
 }

@@ -176,6 +176,7 @@ final class StatusLabel {
                                 if ((int) XposedHelpers.callMethod(policy, "getDisplayId")
                                         != MainModule.SECOND_SCREEN_DISPLAY_ID) return;
                             } catch (Throwable t) {
+                                ModuleLog.w(t);
                                 return;
                             }
                             secondPolicy = policy;
@@ -184,6 +185,7 @@ final class StatusLabel {
                         try {
                             now = XposedHelpers.getBooleanField(policy, "mTopIsFullscreen");
                         } catch (Throwable t) {
+                            ModuleLog.w(t);
                             return;
                         }
                         if (now != fullscreen) {
@@ -271,6 +273,7 @@ final class StatusLabel {
                     }, handler);
             networkRegistered = true;
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
             // Retried on the next apply().
         }
     }
@@ -288,6 +291,7 @@ final class StatusLabel {
             });
             thermalRegistered = true;
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
             // Retried on the next apply().
         }
     }
@@ -331,6 +335,7 @@ final class StatusLabel {
             view = v;
             attachGrip(ui, v, density);
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
             // Never let the label disturb system_server.
         }
     }
@@ -402,6 +407,7 @@ final class StatusLabel {
             windowManager.addView(g, lp);
             grip = g;
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
             grip = null;
         }
     }
@@ -414,6 +420,7 @@ final class StatusLabel {
             Object sbm = context.getSystemService("statusbar");
             if (sbm != null) XposedHelpers.callMethod(sbm, "disable", hold ? DISABLE_EXPAND : 0);
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
         }
     }
 
@@ -432,6 +439,7 @@ final class StatusLabel {
             Object sbm = context.getSystemService("statusbar");
             if (sbm != null) XposedHelpers.callMethod(sbm, "collapsePanels");
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
         }
     }
 
@@ -450,6 +458,7 @@ final class StatusLabel {
                 inject(android.view.MotionEvent.obtain(t, t, android.view.MotionEvent.ACTION_DOWN, x, y, 0), display);
                 inject(android.view.MotionEvent.obtain(t, t + 40, android.view.MotionEvent.ACTION_UP, x, y, 0), display);
             } catch (Throwable ignored) {
+                ModuleLog.w(ignored);
             }
             g.postDelayed(() -> {
                 lp.flags &= ~WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
@@ -474,6 +483,7 @@ final class StatusLabel {
             android.app.KeyguardManager km = system.getSystemService(android.app.KeyguardManager.class);
             return km != null && km.isKeyguardLocked();
         } catch (Throwable t) {
+            ModuleLog.w(t);
             return false;
         }
     }
@@ -521,6 +531,7 @@ final class StatusLabel {
                     return "LTE";
             }
         } catch (Throwable t) {
+            ModuleLog.w(t);
             return "LTE";
         }
     }

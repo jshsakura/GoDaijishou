@@ -76,6 +76,7 @@ final class SystemActions {
                     perform(context, intent.getStringExtra(EXTRA_OP),
                             intent.getIntExtra(EXTRA_DISPLAY, Display.DEFAULT_DISPLAY));
                 } catch (Throwable ignored) {
+                    ModuleLog.w(ignored);
                     // A failed action must never disturb system_server.
                 }
             }
@@ -114,6 +115,7 @@ final class SystemActions {
             Object usb = context.getSystemService(Context.USB_SERVICE);
             if (usb != null) XposedHelpers.callMethod(usb, "setCurrentFunctions", 0L);
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
         }
     }
 
@@ -153,6 +155,7 @@ final class SystemActions {
             try {
                 save(context, hw);
             } catch (Throwable ignored) {
+                ModuleLog.w(ignored);
             } finally {
                 hw.recycle();
             }

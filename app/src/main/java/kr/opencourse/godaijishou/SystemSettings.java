@@ -157,6 +157,7 @@ final class SystemSettings {
             handler.post(SystemSettings::loadCache);
             handler.post(SystemSettings::reload);
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
             // Init failed: every feature stays disabled and system behavior is untouched.
         }
     }
@@ -165,6 +166,7 @@ final class SystemSettings {
         try {
             install.run();
         } catch (Throwable ignored) {
+            ModuleLog.install(ignored);
             // That feature stays off; the rest keeps working.
         }
     }
@@ -234,10 +236,12 @@ final class SystemSettings {
             saveCache();
             saveNavBar(readFlag(cursor, AppPreferences.KEY_SLIM_NAV_PILL),
                     readFlag(cursor, AppPreferences.KEY_HIDE_IME_NAV_STRIP));
+            saveGlobal(ModuleLog.KEY, readFlag(cursor, AppPreferences.KEY_DEBUG_LOG) ? "1" : "0");
             if (changed) {
                 for (Runnable l : listeners) l.run();
             }
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
             // Provider not readable yet (e.g. before unlock): keep current values.
         } finally {
             if (cursor != null) cursor.close();
@@ -263,6 +267,7 @@ final class SystemSettings {
                 Settings.Global.putString(resolver, CACHE_KEY, value);
             }
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
         }
     }
 
@@ -275,6 +280,17 @@ final class SystemSettings {
             String value = (slimPill ? "1" : "0") + (imeStripOff ? "1" : "0");
             if (!value.equals(Settings.Global.getString(resolver, NAVBAR_KEY))) {
                 Settings.Global.putString(resolver, NAVBAR_KEY, value);
+            }
+        } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
+        }
+    }
+
+    // Diagnostic log switch for every process (ModuleLog reads it).
+    private static void saveGlobal(String key, String value) {
+        try {
+            if (!value.equals(Settings.Global.getString(resolver, key))) {
+                Settings.Global.putString(resolver, key, value);
             }
         } catch (Throwable ignored) {
         }
@@ -299,6 +315,7 @@ final class SystemSettings {
             if (colon > 0) perfProfile = Integer.parseInt(value.substring(colon + 1));
             for (Runnable l : listeners) l.run();
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
             // Settings store not up yet this early: the provider read comes later anyway.
         }
     }

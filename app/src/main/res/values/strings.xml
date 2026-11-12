@@ -40,6 +40,8 @@
     <string name="row_lsposed_desc">Enable the module, pick \"Select recommended\" from the ⋮ menu of its scope, then reboot: every feature applies.</string>
     <string name="row_reboot_title">Reboot</string>
     <string name="row_reboot_desc">Needed only after enabling the module or changing its scope. Switches above apply instantly.</string>
+    <string name="row_debug_log_title">Diagnostic log</string>
+    <string name="row_debug_log_desc">Writes the errors the module runs into to the LSPosed log. Turn it on only while tracking down a problem. Hooks that fail to install are always logged.</string>
     <string name="row_usb_charge_only_title">Connect USB as charging only</string>
     <string name="row_usb_charge_only_desc">On: each USB connection comes up as charging only. Off: file transfer (MTP), as stock. You can still pick another mode by hand after connecting.</string>
     <string name="notice_reboot_title">Reboot required</string>

@@ -37,6 +37,7 @@ final class PowerMenuHook {
                         try {
                             SystemSettings.init((Context) XposedHelpers.getObjectField(param.thisObject, "mContext"));
                         } catch (Throwable ignored) {
+                            ModuleLog.w(ignored);
                         }
                     }
                 });
@@ -53,6 +54,7 @@ final class PowerMenuHook {
                             if (!isSecondScreenOn(context)) return;
                             if (launchMenu(context)) param.setResult(null);
                         } catch (Throwable ignored) {
+                            ModuleLog.w(ignored);
                             // Fall through to the stock menu.
                         }
                     }
@@ -81,6 +83,7 @@ final class PowerMenuHook {
                     intent, options, current);
             return true;
         } catch (Throwable t) {
+            ModuleLog.w(t);
             return false;
         }
     }

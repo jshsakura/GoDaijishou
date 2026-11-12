@@ -86,6 +86,7 @@ final class NavBarHook {
                     boolean shortBar = imeStripOff() && v.getHeight() > 0 && v.getHeight() < stock;
                     XposedHelpers.setIntField(v, "mFullgestureNavHeight", shortBar ? v.getHeight() : stock);
                 } catch (Throwable ignored) {
+                    ModuleLog.w(ignored);
                 }
                 boolean slim = slimPill(v.getContext());
                 for (String f : SIZE_FIELDS) {
@@ -103,6 +104,7 @@ final class NavBarHook {
                         float factor = f.equals("mHandleHeight") || f.equals("mRadius") ? THICKNESS : WIDTH;
                         XposedHelpers.setFloatField(v, f, slim ? base * factor : base);
                     } catch (Throwable ignored) {
+                        ModuleLog.w(ignored);
                         // Field not on this build: that dimension stays stock.
                     }
                 }
@@ -123,6 +125,7 @@ final class NavBarHook {
                     SettingsProvider.CONTENT_URI, null, "hook:systemui", null, null)) {
                 // nothing to read
             } catch (Throwable ignored) {
+                ModuleLog.w(ignored);
             }
         }, "GoDaijishou-report").start();
     }
@@ -138,6 +141,7 @@ final class NavBarHook {
         try {
             impl = Class.forName("android.inputmethodservice.NavigationBarController$Impl");
         } catch (Throwable t) {
+            ModuleLog.w(t);
             return;
         }
         XposedBridge.hookAllMethods(impl, "getSystemInsets", new XC_MethodHook() {
@@ -154,6 +158,7 @@ final class NavBarHook {
                     Object frame = XposedHelpers.getObjectField(param.thisObject, "mNavigationBarFrame");
                     if (frame instanceof View) ((View) frame).setVisibility(View.GONE);
                 } catch (Throwable ignored) {
+                    ModuleLog.w(ignored);
                 }
             }
         };
@@ -181,6 +186,7 @@ final class NavBarHook {
             try {
                 XposedHelpers.findAndHookMethod(Resources.class, name, int.class, swap);
             } catch (Throwable ignored) {
+                ModuleLog.w(ignored);
             }
         }
     }
@@ -212,6 +218,7 @@ final class NavBarHook {
                     Class.forName("android.app.ActivityThread"), "currentApplication");
             return (Context) thread;
         } catch (Throwable t) {
+            ModuleLog.w(t);
             return null;
         }
     }
@@ -225,6 +232,7 @@ final class NavBarHook {
             slimPill = v != null && v.length() > 0 && v.charAt(0) == '1';
             imeStripOff = v != null && v.length() > 1 && v.charAt(1) == '1';
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
             // Settings not reachable yet: ask again next time.
         }
     }
@@ -251,6 +259,7 @@ final class NavBarHook {
                         }
                     });
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
             observing = false;
         }
     }

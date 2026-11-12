@@ -40,6 +40,8 @@ public class AppPreferences {
     public static final String KEY_PERF_PROFILE = "perf_profile";
     // Bring each USB connection up as charging only instead of file transfer (system_server hook).
     public static final String KEY_USB_CHARGE_ONLY = "usb_charge_only";
+    // Write the hooks' swallowed failures to the LSPosed log (every hooked process).
+    public static final String KEY_DEBUG_LOG = "debug_log";
 
     // App-only state, kept apart from the provider-exposed settings.
     private static final String MODE_PREF_FILE_NAME = "Godaijishou_mode_prefs";
