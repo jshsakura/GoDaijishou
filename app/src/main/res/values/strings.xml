@@ -72,4 +72,6 @@
     <string name="perf_eco">Eco</string>
     <string name="perf_normal">Normal</string>
     <string name="perf_turbo">Turbo</string>
+    <string name="main_hide_swivel_warnings_switch">Hide swivel warnings</string>
+    <string name="main_hide_swivel_warnings_desc">Skips LG\'s swivel-mode camera notices (camera may look cropped, swivel down to use the camera). Tick com.lge.popupcamera in the LSPosed scope.</string>
 </resources>

@@ -47,6 +47,7 @@ public class SettingsProvider extends ContentProvider {
         String usbPin = prefs.getBoolean(AppPreferences.KEY_USB_DEBUG_PIN, false) ? "1" : "0";
         String batteryStrip = prefs.getBoolean(AppPreferences.KEY_BATTERY_STRIP, false) ? "1" : "0";
         String labelHideFullscreen = prefs.getBoolean(AppPreferences.KEY_LABEL_HIDE_FULLSCREEN, false) ? "1" : "0";
+        String hideSwivel = prefs.getBoolean(AppPreferences.KEY_HIDE_SWIVEL_WARNINGS, false) ? "1" : "0";
         String perfProfile = String.valueOf(prefs.getInt(AppPreferences.KEY_PERF_PROFILE, PerfProfile.NORMAL));
 
         MatrixCursor cursor = new MatrixCursor(new String[]{
@@ -60,10 +61,11 @@ public class SettingsProvider extends ContentProvider {
                 AppPreferences.KEY_VOLUME_OVERLAY,
                 AppPreferences.KEY_BATTERY_STRIP,
                 AppPreferences.KEY_LABEL_HIDE_FULLSCREEN,
-                AppPreferences.KEY_PERF_PROFILE
+                AppPreferences.KEY_PERF_PROFILE,
+                AppPreferences.KEY_HIDE_SWIVEL_WARNINGS
         });
         cursor.addRow(new Object[]{targetPackage, targetActivity, forceRotation, powerMenu, topOff, noTop, usbPin, volume,
-                batteryStrip, labelHideFullscreen, perfProfile});
+                batteryStrip, labelHideFullscreen, perfProfile, hideSwivel});
         return cursor;
     }
 

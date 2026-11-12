@@ -25,6 +25,8 @@ public class MainModule implements IXposedHookLoadPackage {
         ClassLoader cl = lpparam.classLoader;
         if (LauncherHook.TARGET_PACKAGE.equals(pkg)) {
             safely(LauncherHook::install);
+        } else if (SwivelWarningHook.TARGET_PACKAGE.equals(pkg)) {
+            safely(SwivelWarningHook::install);
         } else if (RetroArchHook.isTarget(pkg)) {
             safely(RetroArchHook::install);
         } else if ("android".equals(pkg)) {

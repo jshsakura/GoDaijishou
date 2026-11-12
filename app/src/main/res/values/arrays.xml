@@ -4,6 +4,8 @@
         <item>com.lge.secondlauncher</item>
         <!-- System framework, for rotation forcing (optional) -->
         <item>android</item>
+        <!-- LG pop-up camera: swivel-mode camera notices (optional) -->
+        <item>com.lge.popupcamera</item>
         <!-- RetroArch second screen black screen recovery (optional) -->
         <item>com.retroarch</item>
         <item>com.retroarch.aarch64</item>

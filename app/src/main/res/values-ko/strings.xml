@@ -72,4 +72,6 @@
     <string name="perf_eco">에코</string>
     <string name="perf_normal">일반</string>
     <string name="perf_turbo">터보</string>
+    <string name="main_hide_swivel_warnings_switch">스위블 경고 끄기</string>
+    <string name="main_hide_swivel_warnings_desc">스위블 모드에서 카메라를 열 때마다 뜨는 LG 안내(카메라 화면이 잘려 보이거나, 스위블 다운해 주세요)를 띄우지 않습니다. LSPosed 범위에서 com.lge.popupcamera를 체크해야 합니다.</string>
 </resources>

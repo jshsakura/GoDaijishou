@@ -114,6 +114,8 @@ public class MainActivity extends AppCompatActivity {
         usbDebugSwitch = findViewById(R.id.switch_usb_debug);
         bindSystemHookSwitch(R.id.row_usb_debug, usbDebugSwitch, AppPreferences.KEY_USB_DEBUG_PIN);
 
+        bindSystemHookSwitch(R.id.row_hide_swivel_warnings, findViewById(R.id.switch_hide_swivel_warnings),
+                AppPreferences.KEY_HIDE_SWIVEL_WARNINGS);
         buildPerfProfileButtons();
 
         findViewById(R.id.row_reboot).setOnClickListener(v -> confirmReboot());
