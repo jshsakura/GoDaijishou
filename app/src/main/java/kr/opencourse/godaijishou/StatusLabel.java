@@ -140,6 +140,18 @@ final class StatusLabel {
             }
         }, new IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED), null, h);
 
+        // Lock screen: the pull-down strip steps aside (it sat over the PIN / pattern pad, and
+        // a lock screen may ignore touches on a window that something covers).
+        IntentFilter lock = new IntentFilter(Intent.ACTION_SCREEN_OFF);
+        lock.addAction(Intent.ACTION_USER_PRESENT);
+        lock.addAction(Intent.ACTION_SCREEN_ON);
+        context.registerReceiver(new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context c, Intent intent) {
+                apply();
+            }
+        }, lock, null, h);
+
         // Setting toggled or swivel opened/closed.
         SystemSettings.addListener(StatusLabel::apply);
         h.post(StatusLabel::apply);
@@ -208,7 +220,7 @@ final class StatusLabel {
         if (view != null) {
             boolean hidden = SystemSettings.labelHideFullscreen && fullscreen;
             view.setVisibility(hidden ? View.GONE : View.VISIBLE);
-            if (grip != null) grip.setVisibility(hidden ? View.GONE : View.VISIBLE);
+            if (grip != null) grip.setVisibility(hidden || locked() ? View.GONE : View.VISIBLE);
             if (hidden) NotificationPanel.close();
         }
     }
@@ -425,6 +437,15 @@ final class StatusLabel {
         Object im = XposedHelpers.callStaticMethod(Class.forName("android.hardware.input.InputManager"), "getInstance");
         XposedHelpers.callMethod(im, "injectInputEvent", ev, 0 /* INJECT_INPUT_EVENT_MODE_ASYNC */);
         ev.recycle();
+    }
+
+    private static boolean locked() {
+        try {
+            android.app.KeyguardManager km = system.getSystemService(android.app.KeyguardManager.class);
+            return km != null && km.isKeyguardLocked();
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     private static void detach() {

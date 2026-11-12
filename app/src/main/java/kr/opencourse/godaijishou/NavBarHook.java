@@ -21,16 +21,16 @@ import de.robv.android.xposed.XposedHelpers;
  * Bottom of the screen, two independent options.
  *
  * Slim gesture pill (scope: com.android.systemui)
- *   The home pill is drawn thinner (2/3) and narrower (2/3), in the stock color and spot.
+ *   The home pill is drawn thinner (2/3) and narrower (2/3), in the stock color and spot
+ *   (LG's NavigationHandle size fields are scaled; its own drawing does the rest).
  *   Only the drawing changes; the gesture area and the gestures themselves are the system's.
  *
  * Keyboard bottom strip off (scope: com.android.systemui + the keyboard app)
  *   With gesture navigation the keyboard sits on a strip as tall as the old 3-button bar,
  *   holding the "hide keyboard" and switcher buttons. The strip's height is the framework
- *   dimen navigation_bar_frame_height; in SystemUI (the bar's window) and in the keyboard
- *   (which draws that strip) it is answered with the plain gesture-bar height instead, so the
- *   strip shrinks to the pill's own area. Read once per process: takes effect after a reboot
- *   (or after the keyboard / SystemUI restart).
+ *   dimen navigation_bar_frame_height; in the keyboard (which draws that strip) it is answered
+ *   with 0. Not in SystemUI: LG places the gesture pill from that height, and a smaller value
+ *   pushed the pill out of view. Read once per process: after a keyboard restart / reboot.
  */
 final class NavBarHook {
 
@@ -54,7 +54,6 @@ final class NavBarHook {
     // --- SystemUI ---
 
     static void installSystemUi(ClassLoader cl) {
-        installImeStrip();
         Class<?> handle = XposedHelpers.findClass(HANDLE, cl);
         XposedBridge.hookAllConstructors(handle, new XC_MethodHook() {
             @Override
@@ -65,33 +64,37 @@ final class NavBarHook {
                 reportLoaded(v.getContext());
             }
         });
+        // LG draws the pill from its own size fields (mHandleWidth / mHandleMaxWidth /
+        // mHandleHeight / mRadius): scale those just before each draw and let LG's onDraw
+        // place and color it as usual. Originals are kept, so turning the option off restores.
         XposedHelpers.findAndHookMethod(handle, "onDraw", Canvas.class, new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
                 View v = (View) param.thisObject;
-                if (!slimPill(v.getContext())) return;
-                try {
-                    drawSlim(v, (Canvas) param.args[0]);
-                    param.setResult(null);
-                } catch (Throwable ignored) {
-                    // Unknown layout of the class: leave the stock pill.
+                boolean slim = slimPill(v.getContext());
+                for (String f : SIZE_FIELDS) {
+                    try {
+                        Object orig = XposedHelpers.getAdditionalInstanceField(v, "gdj_" + f);
+                        float now = XposedHelpers.getFloatField(v, f);
+                        float scaled = orig instanceof Float ? (Float) orig * (f.equals("mHandleHeight")
+                                || f.equals("mRadius") ? THICKNESS : WIDTH) : Float.NaN;
+                        // Remember the stock value (again whenever LG reset it to a new one).
+                        if (!(orig instanceof Float) || (now != (Float) orig && now != scaled)) {
+                            orig = now;
+                            XposedHelpers.setAdditionalInstanceField(v, "gdj_" + f, now);
+                        }
+                        float base = (Float) orig;
+                        float factor = f.equals("mHandleHeight") || f.equals("mRadius") ? THICKNESS : WIDTH;
+                        XposedHelpers.setFloatField(v, f, slim ? base * factor : base);
+                    } catch (Throwable ignored) {
+                        // Field not on this build: that dimension stays stock.
+                    }
                 }
             }
         });
     }
 
-    // Same place and color as the stock pill, 2/3 as thick and as wide.
-    private static void drawSlim(View v, Canvas canvas) {
-        Paint paint = (Paint) XposedHelpers.getObjectField(v, "mPaint");
-        float radius = ((Number) XposedHelpers.getObjectField(v, "mRadius")).floatValue();
-        float bottom = ((Number) XposedHelpers.getObjectField(v, "mBottom")).floatValue();
-        float stockHeight = radius * 2f;
-        float h = Math.max(1f, stockHeight * THICKNESS);
-        float w = v.getWidth() * WIDTH;
-        float x = (v.getWidth() - w) / 2f;
-        float centerY = v.getHeight() - bottom - stockHeight / 2f;
-        canvas.drawRoundRect(x, centerY - h / 2f, x + w, centerY + h / 2f, h / 2f, h / 2f, paint);
-    }
+    private static final String[] SIZE_FIELDS = {"mHandleWidth", "mHandleMaxWidth", "mHandleHeight", "mRadius"};
 
     // Tells the app "the SystemUI hook is loaded this boot" (the app warns when it isn't).
     private static boolean reported = false;

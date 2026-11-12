@@ -14,7 +14,7 @@
     <!-- Bottom screen only mode (black top screen) -->
     <string name="main_no_top_screen_switch">No top screen</string>
     <string name="main_no_top_screen_desc">The top panel stays off and every window, dialog, volume bar and message opens on the bottom screen.</string>
-    <string name="main_top_blackout_switch">Bottom screen only (black top screen)</string>
+    <string name="main_top_blackout_switch">Bottom screen only</string>
     <string name="main_top_blackout_desc">While the swivel is open, the top panel is powered off and anything that would open there appears on the bottom screen instead (needs System Framework).</string>
     <string name="main_volume_overlay_switch">Volume overlay</string>
     <string name="main_battery_strip_switch">Status label</string>
