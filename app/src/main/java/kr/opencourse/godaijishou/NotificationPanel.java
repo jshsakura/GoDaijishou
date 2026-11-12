@@ -86,7 +86,12 @@ final class NotificationPanel {
         CharSequence text;
         PendingIntent contentIntent;
         boolean clearable;
+        Notification.Action[] actions;
     }
+
+    // Apps with several notifications show as one card until opened.
+    private static final java.util.Set<String> expanded = new java.util.HashSet<>();
+    private static final int MAX_ACTIONS = 3;
 
     static void toggle() {
         if (root != null) close();
@@ -173,6 +178,7 @@ final class NotificationPanel {
 
             root = scrim;
             showingBlocked = false;
+            expanded.clear();
             fill();
             scrim.setAlpha(0f);
             column.setTranslationY(-24 * density);
@@ -395,33 +401,155 @@ final class NotificationPanel {
             return;
         }
         int slop = ViewConfiguration.get(ui).getScaledTouchSlop();
+        // Group by app, keeping newest-first order (the first entry of a group is its newest).
+        java.util.LinkedHashMap<String, List<Entry>> groups = new java.util.LinkedHashMap<>();
         for (Entry e : entries) {
-            LinearLayout card = NotificationBanner.card(ui, SystemSettings.context(), e.pkg, e.title, e.text,
-                    !e.clearable);
-            card.setElevation(0);
-            // Behind the card: what the current swipe direction will do.
-            FrameLayout slot = new FrameLayout(ui);
-            android.widget.ImageView hint = new android.widget.ImageView(ui);
-            int hp = Math.round(20 * density);
-            hint.setPadding(hp, 0, hp, 0);
-            hint.setScaleType(android.widget.ImageView.ScaleType.CENTER_INSIDE);
-            hint.setVisibility(View.INVISIBLE);
-            slot.addView(hint, new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            slot.addView(card, new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            lp.bottomMargin = gap;
-            list.addView(slot, lp);
-            bindGestures(card, hint, e, slop, density);
+            groups.computeIfAbsent(e.pkg + "|" + e.userId, k -> new ArrayList<>()).add(e);
         }
+        for (java.util.Map.Entry<String, List<Entry>> g : groups.entrySet()) {
+            List<Entry> members = g.getValue();
+            if (members.size() == 1) {
+                addCard(members.get(0), members, 0, null, false, gap, slop, density);
+            } else if (expanded.contains(g.getKey())) {
+                for (int i = 0; i < members.size(); i++) {
+                    Entry e = members.get(i);
+                    addCard(e, java.util.Collections.singletonList(e),
+                            i == 0 ? members.size() : 0, g.getKey(), true, gap, slop, density);
+                }
+            } else {
+                // Collapsed: the newest card stands for the app; swipes act on all of them.
+                addCard(members.get(0), members, members.size(), g.getKey(), false, gap, slop, density);
+            }
+        }
+    }
+
+    // One card in its swipe slot. count > 0 adds the group's count pill (tap: fold/unfold).
+    private static void addCard(Entry shown, List<Entry> targets, int count, String groupKey,
+                                boolean open, int gap, int slop, float density) {
+        boolean pinned = true;
+        for (Entry t : targets) pinned &= !t.clearable;
+        LinearLayout card = NotificationBanner.card(ui, SystemSettings.context(), shown.pkg, shown.title,
+                shown.text, pinned);
+        card.setElevation(0);
+        if (targets.size() == 1) addActions(card, shown, density);
+        if (count > 0) {
+            TextView pill = countPill(count, open, density);
+            pill.setOnClickListener(v -> {
+                if (!expanded.remove(groupKey)) expanded.add(groupKey);
+                fill();
+            });
+            LinearLayout.LayoutParams pillLp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, Math.round(26 * density));
+            pillLp.setMarginStart(Math.round(10 * density));
+            card.addView(pill, pillLp);
+        }
+        // Behind the card: what the current swipe direction will do.
+        FrameLayout slot = new FrameLayout(ui);
+        android.widget.ImageView hint = new android.widget.ImageView(ui);
+        int hp = Math.round(20 * density);
+        hint.setPadding(hp, 0, hp, 0);
+        hint.setScaleType(android.widget.ImageView.ScaleType.CENTER_INSIDE);
+        hint.setVisibility(View.INVISIBLE);
+        slot.addView(hint, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        slot.addView(card, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.bottomMargin = gap;
+        list.addView(slot, lp);
+        bindGestures(card, hint, shown, targets, slop, density);
+    }
+
+    // Count of a folded app: filled butter when folded, outlined once unfolded.
+    private static TextView countPill(int count, boolean open, float density) {
+        TextView pill = new TextView(ui);
+        pill.setText(String.valueOf(Math.min(count, 99)));
+        pill.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        pill.setTypeface(Typeface.DEFAULT_BOLD);
+        pill.setGravity(Gravity.CENTER);
+        pill.setMinWidth(Math.round(26 * density));
+        int p = Math.round(8 * density);
+        pill.setPadding(p, 0, p, 0);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setCornerRadius(13 * density);
+        if (open) {
+            bg.setColor(ui.getColor(R.color.ft_surface));
+            bg.setStroke(Math.max(1, Math.round(density)), ui.getColor(R.color.ft_line));
+            pill.setTextColor(ui.getColor(R.color.ft_secondary));
+        } else {
+            bg.setColor(ui.getColor(R.color.ft_butter));
+            pill.setTextColor(ui.getColor(R.color.ft_on_butter));
+        }
+        pill.setBackground(bg);
+        return pill;
+    }
+
+    // The notification's own buttons (mark read, play/pause...). Ones that need typing
+    // (reply) are left out: the panel has no keyboard.
+    private static void addActions(LinearLayout card, Entry e, float density) {
+        if (e.actions == null || e.actions.length == 0) return;
+        LinearLayout row = new LinearLayout(ui);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        int shown = 0;
+        for (int i = 0; i < e.actions.length && shown < MAX_ACTIONS; i++) {
+            Notification.Action action = e.actions[i];
+            if (action == null || action.actionIntent == null || TextUtils.isEmpty(action.title)) continue;
+            if (action.getRemoteInputs() != null && action.getRemoteInputs().length > 0) continue;
+            TextView chip = new TextView(ui);
+            chip.setText(action.title);
+            chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+            chip.setTypeface(Typeface.DEFAULT_BOLD);
+            chip.setTextColor(ui.getColor(R.color.ft_ink));
+            chip.setSingleLine(true);
+            chip.setEllipsize(TextUtils.TruncateAt.END);
+            chip.setGravity(Gravity.CENTER);
+            int ph = Math.round(10 * density);
+            chip.setPadding(ph, 0, ph, 0);
+            GradientDrawable bg = new GradientDrawable();
+            bg.setCornerRadius(13 * density);
+            bg.setColor(ui.getColor(R.color.ft_surface));
+            bg.setStroke(Math.max(1, Math.round(density)), ui.getColor(R.color.ft_line));
+            chip.setBackground(bg);
+            int index = i;
+            chip.setOnClickListener(v -> runAction(e, index, action));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Math.round(28 * density), 1f);
+            if (shown > 0) lp.setMarginStart(Math.round(6 * density));
+            row.addView(chip, lp);
+            shown++;
+        }
+        if (shown == 0) return;
+        LinearLayout texts = (LinearLayout) card.getChildAt(1);
+        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        rowLp.topMargin = Math.round(8 * density);
+        texts.addView(row, rowLp);
+    }
+
+    // Fires the button like the shade does; screens it opens go to the second screen.
+    private static void runAction(Entry e, int index, Notification.Action action) {
+        boolean opensScreen = false;
+        try {
+            opensScreen = action.actionIntent.isActivity();
+            Bundle options = ActivityOptions.makeBasic()
+                    .setLaunchDisplayId(MainModule.SECOND_SCREEN_DISPLAY_ID)
+                    .toBundle();
+            action.actionIntent.send(SystemSettings.context(), 0, null, null, null, null, options);
+            Object d = delegate();
+            if (d != null) {
+                XposedHelpers.callMethod(d, "onNotificationActionClick", Process.SYSTEM_UID, Process.myPid(),
+                        e.key, index, action, visibility(e.key), false);
+            }
+        } catch (Throwable ignored) {
+        }
+        if (opensScreen) close();
     }
 
     // Tap opens. Swipe right: dismiss (clearable only). Swipe left: never show this kind
     // again (turns the notification's channel off) and dismiss. Past a third of the width
     // the action runs; the hint behind the card shows which one.
-    private static void bindGestures(View card, android.widget.ImageView hint, Entry e, int slop, float density) {
+    private static void bindGestures(View card, android.widget.ImageView hint, Entry e, List<Entry> targets,
+                                     int slop, float density) {
         final float[] downX = new float[1];
         final boolean[] dragging = new boolean[1];
         card.setOnTouchListener((v, ev) -> {
@@ -431,7 +559,7 @@ final class NotificationPanel {
                     dragging[0] = false;
                     return true;
                 case MotionEvent.ACTION_MOVE: {
-                    float dx = allowed(e, ev.getRawX() - downX[0]);
+                    float dx = allowed(targets, ev.getRawX() - downX[0]);
                     if (Math.abs(dx) > slop) {
                         dragging[0] = true;
                         v.getParent().requestDisallowInterceptTouchEvent(true);
@@ -450,8 +578,8 @@ final class NotificationPanel {
                             v.animate().translationX(Math.signum(moved) * v.getWidth()).alpha(0f)
                                     .setDuration(ANIM_MS)
                                     .withEndAction(() -> {
-                                        if (block) block(e);
-                                        dismiss(e);
+                                        if (block) block(targets);
+                                        for (Entry t : targets) dismiss(t);
                                     }).start();
                         } else {
                             v.animate().translationX(0f).setDuration(ANIM_MS)
@@ -473,8 +601,10 @@ final class NotificationPanel {
     }
 
     // Pinned notifications can't be dismissed, but can still be turned off (swipe left).
-    private static float allowed(Entry e, float dx) {
-        return dx > 0 && !e.clearable ? 0 : dx;
+    private static float allowed(List<Entry> targets, float dx) {
+        if (dx <= 0) return dx;
+        for (Entry t : targets) if (t.clearable) return dx;
+        return 0;
     }
 
     // Icon and color only: grey trash for dismiss (right), red bell-off for never show (left).
@@ -545,6 +675,7 @@ final class NotificationPanel {
                     e.text = text;
                     e.contentIntent = n.contentIntent;
                     e.clearable = sbn.isClearable();
+                    e.actions = n.actions;
                     out.add(e);
                 }
             }
@@ -597,19 +728,24 @@ final class NotificationPanel {
 
     // Turns off the notification's channel ("never show this kind again"), like long-press
     // > turn off in the shade. Goes through the service binder; system_server may call it.
-    private static void block(Entry e) {
-        if (e.channelId == null) return;
-        try {
-            Object binder = binder();
-            NotificationChannel channel = (NotificationChannel) XposedHelpers.callMethod(binder,
-                    "getNotificationChannelForPackage", e.pkg, e.uid, e.channelId, null, false);
-            if (channel == null) return;
-            int previous = channel.getImportance();
-            channel.setImportance(NotificationManager.IMPORTANCE_NONE);
-            XposedHelpers.callMethod(binder, "updateNotificationChannelForPackage", e.pkg, e.uid, channel);
-            showUndo(e.pkg, e.uid, e.channelId, previous);
-        } catch (Throwable ignored) {
+    private static void block(List<Entry> targets) {
+        List<Runnable> restores = new ArrayList<>();
+        java.util.Set<String> done = new java.util.HashSet<>();
+        for (Entry e : targets) {
+            if (e.channelId == null || !done.add(e.pkg + "|" + e.uid + "|" + e.channelId)) continue;
+            try {
+                Object binder = binder();
+                NotificationChannel channel = (NotificationChannel) XposedHelpers.callMethod(binder,
+                        "getNotificationChannelForPackage", e.pkg, e.uid, e.channelId, null, false);
+                if (channel == null) continue;
+                int previous = channel.getImportance();
+                channel.setImportance(NotificationManager.IMPORTANCE_NONE);
+                XposedHelpers.callMethod(binder, "updateNotificationChannelForPackage", e.pkg, e.uid, channel);
+                restores.add(() -> unblock(e.pkg, e.uid, e.channelId, previous));
+            } catch (Throwable ignored) {
+            }
         }
+        if (!restores.isEmpty()) showUndo(restores);
     }
 
     private static Object binder() {
@@ -641,7 +777,7 @@ final class NotificationPanel {
     }
 
     // One round butter undo icon under the list for a few seconds.
-    private static void showUndo(String pkg, int uid, String channelId, int previous) {
+    private static void showUndo(List<Runnable> restores) {
         if (undoSlot == null) return;
         float density = ui.getResources().getDisplayMetrics().density;
         undoSlot.removeAllViews();
@@ -651,7 +787,7 @@ final class NotificationPanel {
         lp.topMargin = Math.round(4 * density);
         undoSlot.addView(undo, lp);
         undo.setOnClickListener(v -> {
-            unblock(pkg, uid, channelId, previous);
+            for (Runnable r : restores) r.run();
             undoSlot.removeAllViews();
         });
         SystemSettings.handler().removeCallbacks(hideUndo);
