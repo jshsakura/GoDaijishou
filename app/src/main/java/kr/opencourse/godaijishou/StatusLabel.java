@@ -42,7 +42,7 @@ final class StatusLabel {
     // WindowManager.LayoutParams.TYPE_VOLUME_OVERLAY (hidden): above apps and system bars.
     private static final int TYPE_OVERLAY = 2020;
     private static final float HEIGHT_DP = 16f;
-    private static final float RIGHT_MARGIN_DP = 14f;
+    private static final float RIGHT_MARGIN_DP = 8f;
     // Transparent slack under the tab so an 11dp tab is still easy to hit.
     private static final float TOUCH_SLACK_DP = 10f;
     private static final float PAD_DP = 6.5f;
