@@ -110,9 +110,35 @@ final class NotificationPanel {
         if (root != null) fill();
     }
 
+    // Home / recents gesture (swipe up on the gesture bar) closes the panel, like the shade:
+    // the system announces it with CLOSE_SYSTEM_DIALOGS. Ignored right after opening (our own
+    // pull may collapse the stock shade, which can send the same broadcast).
+    private static boolean homeWatch = false;
+    private static long openedAt = 0;
+
+    private static void watchHome(Context system) {
+        if (homeWatch) return;
+        homeWatch = true;
+        try {
+            system.registerReceiver(new android.content.BroadcastReceiver() {
+                @Override
+                public void onReceive(Context c, android.content.Intent intent) {
+                    if (root == null) return;
+                    if (android.os.SystemClock.uptimeMillis() - openedAt < 600) return;
+                    close();
+                }
+            }, new android.content.IntentFilter(android.content.Intent.ACTION_CLOSE_SYSTEM_DIALOGS),
+                    null, SystemSettings.handler());
+        } catch (Throwable t) {
+            homeWatch = false;
+        }
+    }
+
     private static void open() {
         try {
             Context system = SystemSettings.context();
+            watchHome(system);
+            openedAt = android.os.SystemClock.uptimeMillis();
             Display display = system.getSystemService(DisplayManager.class)
                     .getDisplay(MainModule.SECOND_SCREEN_DISPLAY_ID);
             if (display == null) return;
