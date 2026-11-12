@@ -590,11 +590,6 @@ final class NotificationPanel {
             Notification.Action action = e.actions[i];
             if (action == null || action.actionIntent == null || TextUtils.isEmpty(action.title)) continue;
             if (action.getRemoteInputs() != null && action.getRemoteInputs().length > 0) continue;
-            if (shown > 0) {
-                View split = new View(ui);
-                split.setBackgroundColor(line);
-                row.addView(split, new LinearLayout.LayoutParams(hair, Math.round(18 * density)));
-            }
             TextView button = new TextView(ui);
             android.graphics.drawable.Drawable actionIcon = actionIcon(action, density);
             if (actionIcon != null) {
@@ -606,22 +601,30 @@ final class NotificationPanel {
             }
             button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
             button.setTypeface(Typeface.DEFAULT_BOLD);
-            button.setTextColor(ui.getColor(R.color.ft_butter));
+            button.setTextColor(ui.getColor(R.color.ft_ink));
             button.setSingleLine(true);
             button.setEllipsize(TextUtils.TruncateAt.END);
             button.setGravity(Gravity.CENTER);
             int ph = Math.round(8 * density);
             button.setPadding(ph, 0, ph, 0);
-            // Pressed: a soft tint over the button.
+            // Each button its own outlined box on the ground color; brighter while pressed.
             android.graphics.drawable.StateListDrawable press = new android.graphics.drawable.StateListDrawable();
             GradientDrawable pressed = new GradientDrawable();
             pressed.setCornerRadius(10 * density);
-            pressed.setColor(ui.getColor(R.color.ft_press));
+            pressed.setColor(ui.getColor(R.color.ft_line));
+            pressed.setStroke(hair, ui.getColor(R.color.ft_secondary));
+            GradientDrawable normal = new GradientDrawable();
+            normal.setCornerRadius(10 * density);
+            normal.setColor(ui.getColor(R.color.ft_ground));
+            normal.setStroke(hair, line);
             press.addState(new int[]{android.R.attr.state_pressed}, pressed);
+            press.addState(new int[]{}, normal);
             button.setBackground(press);
             int index = i;
             button.setOnClickListener(v -> runAction(e, index, action));
-            row.addView(button, new LinearLayout.LayoutParams(0, Math.round(38 * density), 1f));
+            LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(0, Math.round(34 * density), 1f);
+            if (shown > 0) blp.setMarginStart(Math.round(6 * density));
+            row.addView(button, blp);
             shown++;
         }
         if (shown == 0) return;
@@ -644,8 +647,6 @@ final class NotificationPanel {
             content.addView(child, lp);
         }
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(card.getPaddingLeft(), card.getPaddingTop(), card.getPaddingRight(),
-                Math.round(4 * density));
         int chevSize = Math.round(18 * density);
         LinearLayout.LayoutParams chevLp = new LinearLayout.LayoutParams(chevSize, chevSize);
         chevLp.setMarginStart(Math.round(6 * density));
@@ -657,8 +658,8 @@ final class NotificationPanel {
         View divider = new View(ui);
         divider.setBackgroundColor(line);
         LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, hair);
-        dividerLp.topMargin = Math.round(12 * density);
-        dividerLp.bottomMargin = Math.round(4 * density);
+        dividerLp.topMargin = Math.round(10 * density);
+        dividerLp.bottomMargin = Math.round(8 * density);
         box.addView(divider, dividerLp);
         box.addView(row, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -678,7 +679,7 @@ final class NotificationPanel {
         box.setVisibility(open ? View.VISIBLE : View.GONE);
         chevron.setRotation(open ? -90f : 90f);
         ((LinearLayout) card).setPadding(card.getPaddingLeft(), card.getPaddingTop(), card.getPaddingRight(),
-                open ? Math.round(4 * card.getResources().getDisplayMetrics().density) : card.getPaddingTop());
+                card.getPaddingTop());
     }
 
     private static void toggleActions(View card) {
@@ -697,8 +698,8 @@ final class NotificationPanel {
             android.graphics.drawable.Drawable d = icon.loadDrawable(SystemSettings.context());
             if (d == null || d.getIntrinsicWidth() <= 0) return null;
             d = d.mutate();
-            d.setTint(ui.getColor(R.color.ft_butter));
-            int size = Math.round(20 * density);
+            d.setTint(ui.getColor(R.color.ft_ink));
+            int size = Math.round(18 * density);
             d.setBounds(0, 0, size, size);
             return d;
         } catch (Throwable t) {
