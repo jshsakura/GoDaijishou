@@ -48,7 +48,7 @@ final class StatusLabel {
     private static final float PAD_DP = 6.5f;
     private static final float GAP_DP = 5f;
     // Pill floating just below the top edge.
-    private static final float TOP_MARGIN_DP = 6f;
+    private static final float TOP_MARGIN_DP = 3f;
     private static final float ICON_DP = 9f;
     private static final float TEXT_SP = 9.5f;
     /** Colors for one system theme. Battery colors: muted, still readable on the background. */
