@@ -768,11 +768,9 @@ final class NotificationPanel {
                                 pulled[0] = true;
                                 v.getParent().requestDisallowInterceptTouchEvent(true);
                                 toggleActions(v);
-                            } else if (!down) {
-                                // Pushing up with nothing left to scroll: push the panel away.
-                                pulled[0] = true;
-                                close();
                             }
+                            // Otherwise it's just a scroll that hit the end: never closes the panel
+                            // (closing is the header swipe, ✕ or back).
                         }
                     }
                     if (pulled[0]) return true;
