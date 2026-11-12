@@ -53,9 +53,10 @@ final class StatusLabel {
     private static final float TEXT_SP = 9.5f;
     /** Colors for one system theme. Battery colors: muted, still readable on the background. */
     private static final class Palette {
-        final int background, outline, ink, dim, bell, good, mid, low;
+        final int background, outline, ink, dim, bell, good, mid, low, warm, hot;
 
-        Palette(int background, int outline, int ink, int dim, int bell, int good, int mid, int low) {
+        Palette(int background, int outline, int ink, int dim, int bell, int good, int mid, int low,
+                int warm, int hot) {
             this.background = background;
             this.outline = outline;
             this.ink = ink;
@@ -64,6 +65,8 @@ final class StatusLabel {
             this.good = good;
             this.mid = mid;
             this.low = low;
+            this.warm = warm;
+            this.hot = hot;
         }
     }
 
@@ -71,13 +74,19 @@ final class StatusLabel {
     // The hairline outline keeps the pill's shape visible on black backgrounds.
     private static final Palette DARK = new Palette(
             0x8C121216, 0x40FFFFFF, 0xE6ECECF0, 0x52ECECF0, 0xE6FFC23D,
-            0xFF8FD1AE, 0xFFEBCB80, 0xFFE89A92);
+            0xFF8FD1AE, 0xFFEBCB80, 0xFFE89A92,
+            0xFFF2A65A, 0xFFF26B5E);
     // Inverted for light mode; battery colors deepened so they hold up on a light tab.
     private static final Palette LIGHT = new Palette(
             0x99F4F4F7, 0x24000000, 0xE61A1A1E, 0x521A1A1E, 0xFFC68A10,
-            0xFF3E9C6D, 0xFFB0821A, 0xFFC65A50);
+            0xFF3E9C6D, 0xFFB0821A, 0xFFC65A50,
+            0xFFD0771C, 0xFFCC3B30);
     private static final int HIGH = 50;
     private static final int LOW = 20;
+    // Heat warning: battery temperature in tenths of a degree, or the system thermal status.
+    private static final int WARM_TENTHS = 400; // 40.0 °C
+    private static final int HOT_TENTHS = 450;  // 45.0 °C
+    private static final int HEAT_NONE = 0, HEAT_WARM = 1, HEAT_HOT = 2;
 
     private static Context system;
     private static Handler handler;
@@ -89,6 +98,8 @@ final class StatusLabel {
     private static int wifiLevel = -1;     // 0..3, -1 = no Wi-Fi
     private static boolean mobile = false; // a cellular data network is up
     private static int notifications = 0;
+    private static int batteryTenths = 0;  // battery temperature, tenths of °C
+    private static int thermalStatus = 0;  // PowerManager.THERMAL_STATUS_*
     // Whether the second screen's top app hides the status bar; written from the WM hook.
     private static volatile boolean fullscreen = false;
     private static volatile Object secondPolicy; // DisplayPolicy of the second screen, once found
@@ -107,6 +118,7 @@ final class StatusLabel {
                 if (raw < 0 || scale <= 0) return;
                 int status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
                 battery = Math.round(raw * 100f / scale);
+                batteryTenths = intent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0);
                 charging = status == BatteryManager.BATTERY_STATUS_CHARGING
                         || status == BatteryManager.BATTERY_STATUS_FULL;
                 refresh();
@@ -179,7 +191,10 @@ final class StatusLabel {
     private static void apply() {
         boolean want = SystemSettings.batteryStrip
                 && (SystemSettings.secondScreenOn || SystemSettings.noTopScreen);
-        if (want) registerNetwork();
+        if (want) {
+            registerNetwork();
+            registerThermal();
+        }
         if (want && view == null) attach();
         else if (!want && view != null) detach();
         if (view != null) {
@@ -237,6 +252,33 @@ final class StatusLabel {
         } catch (Throwable ignored) {
             // Retried on the next apply().
         }
+    }
+
+    private static boolean thermalRegistered = false;
+
+    // The system's own heat level (CPU/skin sensors), on top of the battery temperature.
+    private static void registerThermal() {
+        if (thermalRegistered) return;
+        try {
+            android.os.PowerManager pm = system.getSystemService(android.os.PowerManager.class);
+            pm.addThermalStatusListener(handler::post, status -> {
+                thermalStatus = status;
+                refresh();
+            });
+            thermalRegistered = true;
+        } catch (Throwable ignored) {
+            // Retried on the next apply().
+        }
+    }
+
+    private static int heat() {
+        if (thermalStatus >= android.os.PowerManager.THERMAL_STATUS_SEVERE || batteryTenths >= HOT_TENTHS) {
+            return HEAT_HOT;
+        }
+        if (thermalStatus >= android.os.PowerManager.THERMAL_STATUS_MODERATE || batteryTenths >= WARM_TENTHS) {
+            return HEAT_WARM;
+        }
+        return HEAT_NONE;
     }
 
     private static void attach() {
@@ -310,7 +352,7 @@ final class StatusLabel {
         }
     }
 
-    /** Draws the tab right-aligned: [Wi-Fi] [LTE] [bell n] [battery%]. */
+    /** Draws the tab right-aligned: [Wi-Fi] [LTE] [bell n] [flame] [battery%]. */
     private static final class LabelView extends View {
         private final Paint bg = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint outline = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -319,6 +361,7 @@ final class StatusLabel {
         private final Paint text = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Path shape = new Path();
         private final Path bell = new Path();
+        private final Path flame = new Path();
         private final RectF rect = new RectF();
         private final RectF oval = new RectF();
         private final float pad;
@@ -364,6 +407,7 @@ final class StatusLabel {
         // Width of the pill's content for the current state.
         private float contentWidth(String mobileText, String countText) {
             float content = batterySlot();
+            if (heat() != HEAT_NONE) content += gap + icon * 0.75f;
             if (countText != null) content += gap + icon * 0.8f + gap * 0.4f + text.measureText(countText);
             if (mobileText != null) content += gap + text.measureText(mobileText);
             if (wifiLevel >= 0) content += gap + icon;
@@ -373,7 +417,7 @@ final class StatusLabel {
         // Widest possible content: the window keeps this size, so it never re-lays out (and
         // never shifts) when items come and go.
         private float maxContentWidth() {
-            return batterySlot() + gap + icon * 0.8f + gap * 0.4f + text.measureText("99")
+            return batterySlot() + gap + icon * 0.75f + gap + icon * 0.8f + gap * 0.4f + text.measureText("99")
                     + gap + text.measureText("LTE") + gap + icon;
         }
 
@@ -426,7 +470,12 @@ final class StatusLabel {
             x -= batterySlot();
             drawBattery(canvas, x, cy, level, p);
 
-            // Then right to left: notifications, mobile data, Wi-Fi.
+            // Then right to left: heat warning, notifications, mobile data, Wi-Fi.
+            int heat = heat();
+            if (heat != HEAT_NONE) {
+                x -= gap + icon * 0.75f;
+                drawFlame(canvas, x, cy, icon * 0.75f, heat == HEAT_HOT ? p.hot : p.warm);
+            }
             text.setColor(p.ink);
             if (countText != null) {
                 x -= gap + text.measureText(countText);
@@ -473,6 +522,23 @@ final class StatusLabel {
             canvas.drawRect(x + inset, cy - h / 2f + inset, fillRight, cy + h / 2f - inset, ink);
             ink.setColor(p.ink);
             canvas.drawRect(x + w, cy - h * 0.2f, x + w + icon * 0.12f, cy + h * 0.2f, ink);
+        }
+
+        // Flame: a teardrop with a pointed tip and a round base.
+        private void drawFlame(Canvas canvas, float x, float cy, float size, int color) {
+            float w = size;
+            float h = size * 1.25f;
+            float top = cy - h / 2f;
+            float bottom = cy + h / 2f;
+            float cx = x + w / 2f;
+            flame.reset();
+            flame.moveTo(cx + w * 0.08f, top);
+            flame.cubicTo(cx + w * 0.62f, top + h * 0.38f, x + w * 1.02f, top + h * 0.62f, cx + w * 0.38f, bottom - h * 0.08f);
+            flame.cubicTo(cx + w * 0.2f, bottom + h * 0.02f, cx - w * 0.2f, bottom + h * 0.02f, cx - w * 0.38f, bottom - h * 0.08f);
+            flame.cubicTo(x - w * 0.02f, top + h * 0.6f, cx - w * 0.36f, top + h * 0.36f, cx + w * 0.08f, top);
+            flame.close();
+            ink.setColor(color);
+            canvas.drawPath(flame, ink);
         }
 
         // Small bell: domed body, flat rim, clapper.
