@@ -171,6 +171,7 @@ final class NotificationPanel {
             stack.addView(undoSlot, undoLp);
             // The panel takes the whole screen; the list scrolls inside it.
             column.addView(stack, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+            column.addView(handle(density));
 
             // Keep clear of the second screen's navigation bar (and anything at the top).
             scrim.setOnApplyWindowInsetsListener((v, insets) -> {
@@ -196,14 +197,12 @@ final class NotificationPanel {
             actionsOpen.clear();
             fill();
             scrim.setAlpha(0f);
-            column.setPivotY(0f);
-            column.setScaleY(0.92f);
-            column.setTranslationY(-16 * density);
+            column.setTranslationY(-48 * density);
             column.setAlpha(0f);
             windowManager.addView(scrim, lp);
             scrim.requestFocus();
             scrim.animate().alpha(1f).setDuration(ANIM_MS).start();
-            column.animate().scaleY(1f).translationY(0f).alpha(1f).setDuration(260)
+            column.animate().translationY(0f).alpha(1f).setDuration(260)
                     .setInterpolator(new android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f)).start();
         } catch (Throwable ignored) {
             root = null;
@@ -289,19 +288,8 @@ final class NotificationPanel {
         tools.addView(close, new LinearLayout.LayoutParams(buttonSize, buttonSize));
         row.addView(tools, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, pillHeight));
 
-        // Swiping the header up also closes.
-        final float[] downY = new float[1];
-        row.setOnTouchListener((v, ev) -> {
-            if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                downY[0] = ev.getRawY();
-                return true;
-            }
-            if (ev.getActionMasked() == MotionEvent.ACTION_UP
-                    && downY[0] - ev.getRawY() > 24 * density) {
-                close();
-            }
-            return true;
-        });
+        // The header drags the panel up too, like the handle.
+        row.setOnTouchListener(dragToClose(density, false));
         return row;
     }
 
@@ -440,6 +428,77 @@ final class NotificationPanel {
                 .setInterpolator(new android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f));
         ViewGroup scene = scrollView != null ? scrollView : list;
         android.transition.TransitionManager.beginDelayedTransition(scene, set);
+    }
+
+    // Grab bar at the bottom: drag it up and the panel follows the finger; let go past a
+    // quarter (or flick) and it goes, otherwise it springs back. A tap closes too.
+    private static View handle(float density) {
+        FrameLayout area = new FrameLayout(ui);
+        View bar = new View(ui);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(ui.getColor(R.color.ft_secondary));
+        bg.setCornerRadius(100 * density);
+        bar.setBackground(bg);
+        bar.setAlpha(0.7f);
+        area.addView(bar, new FrameLayout.LayoutParams(
+                Math.round(44 * density), Math.round(5 * density), Gravity.CENTER));
+        area.setOnTouchListener(dragToClose(density, true));
+        area.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                Math.round(32 * density)));
+        return area;
+    }
+
+    private static View.OnTouchListener dragToClose(float density, boolean tapCloses) {
+        final float[] downY = new float[1];
+        final boolean[] dragging = new boolean[1];
+        final android.view.VelocityTracker[] tracker = new android.view.VelocityTracker[1];
+        final int slop = android.view.ViewConfiguration.get(ui).getScaledTouchSlop();
+        return (v, ev) -> {
+            LinearLayout column = panelColumn;
+            View scrim = root;
+            if (column == null || scrim == null) return true;
+            if (tracker[0] == null) tracker[0] = android.view.VelocityTracker.obtain();
+            tracker[0].addMovement(ev);
+            float dy = Math.min(0f, ev.getRawY() - downY[0]);
+            switch (ev.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    downY[0] = ev.getRawY();
+                    dragging[0] = false;
+                    column.animate().cancel();
+                    return true;
+                case MotionEvent.ACTION_MOVE:
+                    if (!dragging[0] && -dy > slop) dragging[0] = true;
+                    if (dragging[0]) {
+                        column.setTranslationY(dy);
+                        float h = Math.max(1, column.getHeight());
+                        scrim.setAlpha(Math.max(0f, 1f + dy / h));
+                    }
+                    return true;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL: {
+                    tracker[0].computeCurrentVelocity(1000);
+                    float vy = tracker[0].getYVelocity();
+                    tracker[0].recycle();
+                    tracker[0] = null;
+                    boolean cancel = ev.getActionMasked() == MotionEvent.ACTION_CANCEL;
+                    if (!dragging[0]) {
+                        if (!cancel && tapCloses) close();
+                        return true;
+                    }
+                    float h = Math.max(1, column.getHeight());
+                    if (!cancel && (-dy > h / 4f || vy < -1200 * density / 2.625f)) {
+                        close();
+                    } else {
+                        column.animate().translationY(0f).setDuration(220)
+                                .setInterpolator(new android.view.animation.PathInterpolator(0.2f, 0f, 0f, 1f)).start();
+                        scrim.animate().alpha(1f).setDuration(220).start();
+                    }
+                    return true;
+                }
+                default:
+                    return true;
+            }
+        };
     }
 
     // Rebuilds the list for the current mode.
@@ -890,12 +949,12 @@ final class NotificationPanel {
             return;
         }
         v.setEnabled(false);
-        column.setPivotY(0f);
-        float density = ui.getResources().getDisplayMetrics().density;
         column.animate().cancel();
-        column.animate().scaleY(0.92f).translationY(-16 * density).alpha(0f).setDuration(200)
+        v.animate().cancel();
+        // Slides up off the top from wherever a drag left it, like pushing a shade back.
+        column.animate().translationY(-column.getHeight()).setDuration(240)
                 .setInterpolator(new android.view.animation.PathInterpolator(0.4f, 0f, 1f, 1f)).start();
-        v.animate().alpha(0f).setDuration(220).withEndAction(remove).start();
+        v.animate().alpha(0f).setDuration(240).withEndAction(remove).start();
     }
 
     // --- NotificationManagerService access ---
