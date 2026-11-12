@@ -34,6 +34,8 @@ public class AppPreferences {
     public static final String KEY_SLIM_NAV_PILL = "slim_nav_pill";
     // Collapse the strip under the keyboard (hide-keyboard / switcher buttons) (scope SystemUI + keyboard).
     public static final String KEY_HIDE_IME_NAV_STRIP = "hide_ime_nav_strip";
+    // Report no fingerprint sensor, so nothing offers fingerprint / passkeys (system_server hook).
+    public static final String KEY_FINGERPRINT_OFF = "fingerprint_off";
     // CPU/GPU performance profile (PerfProfile.NORMAL / ECO / PERFORMANCE), applied by the app as root.
     public static final String KEY_PERF_PROFILE = "perf_profile";
     // Keep USB debugging (adb) on across reboots (system_server hook).

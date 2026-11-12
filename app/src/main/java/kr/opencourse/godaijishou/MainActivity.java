@@ -120,6 +120,8 @@ public class MainActivity extends AppCompatActivity {
                 AppPreferences.KEY_SLIM_NAV_PILL);
         bindSystemHookSwitch(R.id.row_hide_ime_nav_strip, findViewById(R.id.switch_hide_ime_nav_strip),
                 AppPreferences.KEY_HIDE_IME_NAV_STRIP);
+        bindSystemHookSwitch(R.id.row_fingerprint_off, findViewById(R.id.switch_fingerprint_off),
+                AppPreferences.KEY_FINGERPRINT_OFF);
         buildPerfProfileButtons();
 
         findViewById(R.id.row_reboot).setOnClickListener(v -> confirmReboot());
@@ -144,6 +146,8 @@ public class MainActivity extends AppCompatActivity {
     };
 
     private TextView[] perfButtons;
+    // Selected fills, in PERF_PROFILES order: deep green, neutral grey, deep red.
+    private static final int[] SELECTED_FILL = {0xFF23885A, 0xFF55555F, 0xFFC9443A};
 
     // Three equal segments across the card: icon + name.
     private void buildPerfProfileButtons() {
@@ -196,7 +200,9 @@ public class MainActivity extends AppCompatActivity {
             int[] def = PERF_PROFILES[i];
             boolean on = current == def[0];
             int color = getColor(def[2]);
-            int ink = on ? getColor(R.color.ft_on_butter) : color;
+            // Selected: white on a deeper shade of its color (the app is dark), so white reads
+            // well on all three, grey "normal" included.
+            int ink = on ? 0xFFFFFFFF : color;
             android.graphics.drawable.Drawable icon = getDrawable(def[1]).mutate();
             icon.setTint(ink);
             int size = Math.round(18 * density);
@@ -206,7 +212,7 @@ public class MainActivity extends AppCompatActivity {
             android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
             bg.setCornerRadius(14 * density);
             if (on) {
-                bg.setColor(color);
+                bg.setColor(SELECTED_FILL[i]);
             } else {
                 bg.setColor(getColor(R.color.ft_surface));
                 bg.setStroke(Math.max(1, Math.round(density)), getColor(R.color.ft_line));

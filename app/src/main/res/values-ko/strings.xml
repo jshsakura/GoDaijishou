@@ -78,4 +78,6 @@
     <string name="main_slim_nav_pill_desc">하단 제스처 바를 더 얇고 짧게 그리고, 평소엔 숨겼다가 화면 아래쪽을 터치하면 잠깐 나타납니다. 제스처 동작은 그대로입니다. LSPosed에서 시스템 UI를 체크하세요.</string>
     <string name="main_hide_ime_nav_strip_switch">키보드 아래 여백 줄이기</string>
     <string name="main_hide_ime_nav_strip_desc">키보드 밑의 키보드 내리기/전환 버튼 줄을 없애 제스처 바 높이만 남깁니다. LSPosed에서 시스템 UI와 쓰는 키보드 앱을 체크하고 재부팅하세요.</string>
+    <string name="main_fingerprint_off_switch">지문 센서 끄기</string>
+    <string name="main_fingerprint_off_desc">시스템에 지문 센서가 없다고 알려서 패스키·생체 인증 창이 지문을 요구하지 않고 화면 잠금(PIN/패턴)으로 넘어갑니다. 등록된 지문은 지워지지 않습니다. 재부팅 후 적용됩니다.</string>
 </resources>

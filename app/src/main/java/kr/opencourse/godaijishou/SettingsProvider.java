@@ -50,6 +50,7 @@ public class SettingsProvider extends ContentProvider {
         String hideSwivel = prefs.getBoolean(AppPreferences.KEY_HIDE_SWIVEL_WARNINGS, false) ? "1" : "0";
         String slimPill = prefs.getBoolean(AppPreferences.KEY_SLIM_NAV_PILL, false) ? "1" : "0";
         String imeStrip = prefs.getBoolean(AppPreferences.KEY_HIDE_IME_NAV_STRIP, false) ? "1" : "0";
+        String fingerprintOff = prefs.getBoolean(AppPreferences.KEY_FINGERPRINT_OFF, false) ? "1" : "0";
         String perfProfile = String.valueOf(prefs.getInt(AppPreferences.KEY_PERF_PROFILE, PerfProfile.NORMAL));
 
         MatrixCursor cursor = new MatrixCursor(new String[]{
@@ -66,10 +67,11 @@ public class SettingsProvider extends ContentProvider {
                 AppPreferences.KEY_PERF_PROFILE,
                 AppPreferences.KEY_HIDE_SWIVEL_WARNINGS,
                 AppPreferences.KEY_SLIM_NAV_PILL,
-                AppPreferences.KEY_HIDE_IME_NAV_STRIP
+                AppPreferences.KEY_HIDE_IME_NAV_STRIP,
+                AppPreferences.KEY_FINGERPRINT_OFF
         });
         cursor.addRow(new Object[]{targetPackage, targetActivity, forceRotation, powerMenu, topOff, noTop, usbPin, volume,
-                batteryStrip, labelHideFullscreen, perfProfile, hideSwivel, slimPill, imeStrip});
+                batteryStrip, labelHideFullscreen, perfProfile, hideSwivel, slimPill, imeStrip, fingerprintOff});
         return cursor;
     }
 

@@ -78,4 +78,6 @@
     <string name="main_slim_nav_pill_desc">Draws the gesture pill thinner and shorter, hidden until you touch near the bottom edge. Gestures work as before. Check System UI in LSPosed.</string>
     <string name="main_hide_ime_nav_strip_switch">Smaller gap under the keyboard</string>
     <string name="main_hide_ime_nav_strip_desc">Removes the hide-keyboard / switcher row under the keyboard, leaving only the gesture bar\'s height. Check System UI and your keyboard app in LSPosed, then reboot.</string>
+    <string name="main_fingerprint_off_switch">Turn off the fingerprint sensor</string>
+    <string name="main_fingerprint_off_desc">Tells the system there is no fingerprint sensor, so passkeys and biometric prompts use the screen lock (PIN / pattern) instead. Enrolled fingerprints are kept. Applies after a reboot.</string>
 </resources>

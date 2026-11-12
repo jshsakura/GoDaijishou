@@ -49,6 +49,8 @@ final class SystemSettings {
     static volatile boolean labelHideFullscreen = false;
     // Current performance profile (PerfProfile.*), for the panel's highlight.
     static volatile int perfProfile = PerfProfile.NORMAL;
+    // Report no fingerprint sensor (FingerprintHook).
+    static volatile boolean fingerprintOff = false;
     // Swivel state, kept current by a display listener so hooks never query DisplayManager
     // (the rotation hooks run under the WindowManager lock).
     static volatile boolean secondScreenOn = false;
@@ -208,6 +210,7 @@ final class SystemSettings {
             boolean volume = readFlag(cursor, AppPreferences.KEY_VOLUME_OVERLAY);
             boolean strip = readFlag(cursor, AppPreferences.KEY_BATTERY_STRIP);
             boolean hideFullscreen = readFlag(cursor, AppPreferences.KEY_LABEL_HIDE_FULLSCREEN);
+            fingerprintOff = readFlag(cursor, AppPreferences.KEY_FINGERPRINT_OFF);
             boolean changed = rotation != forceRotation || powerMenu != powerMenuOnSecondScreen
                     || topOff != topScreenOff || noTop != noTopScreen
                     || usbPin != usbDebugPinned || volume != volumeOverlay
@@ -245,12 +248,12 @@ final class SystemSettings {
     // right rotation from the first frame, not only from LOCKED_BOOT_COMPLETED on.
     private static final String CACHE_KEY = "godaijishou_flags";
     private static final String[] CACHE_ORDER = {"rotation", "powerMenu", "topOff", "noTop", "usbPin",
-            "volume", "strip", "hideFullscreen"};
+            "volume", "strip", "hideFullscreen", "fingerprintOff"};
 
     private static void saveCache() {
         try {
             boolean[] f = {forceRotation, powerMenuOnSecondScreen, topScreenOff, noTopScreen,
-                    usbDebugPinned, volumeOverlay, batteryStrip, labelHideFullscreen};
+                    usbDebugPinned, volumeOverlay, batteryStrip, labelHideFullscreen, fingerprintOff};
             StringBuilder b = new StringBuilder();
             for (boolean v : f) b.append(v ? '1' : '0');
             b.append(':').append(perfProfile);
@@ -281,7 +284,7 @@ final class SystemSettings {
         if (loaded) return;
         try {
             String value = Settings.Global.getString(resolver, CACHE_KEY);
-            if (value == null || value.length() < CACHE_ORDER.length) return;
+            if (value == null || value.indexOf(':') < 8) return;
             forceRotation = value.charAt(0) == '1';
             powerMenuOnSecondScreen = value.charAt(1) == '1';
             topScreenOff = value.charAt(2) == '1';
@@ -290,6 +293,7 @@ final class SystemSettings {
             volumeOverlay = value.charAt(5) == '1';
             batteryStrip = value.charAt(6) == '1';
             labelHideFullscreen = value.charAt(7) == '1';
+            fingerprintOff = value.length() > 8 && value.charAt(8) == '1';
             int colon = value.indexOf(':');
             if (colon > 0) perfProfile = Integer.parseInt(value.substring(colon + 1));
             for (Runnable l : listeners) l.run();

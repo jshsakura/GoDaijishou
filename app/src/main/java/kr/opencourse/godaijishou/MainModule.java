@@ -41,6 +41,7 @@ public class MainModule implements IXposedHookLoadPackage {
             safely(() -> LaunchRedirectHook.install(cl));
             safely(() -> NotificationBanner.install(cl));
             safely(() -> StatusLabel.installFullscreenHook(cl));
+            safely(() -> FingerprintHook.install(cl));
         } else if (!BuildConfig.APPLICATION_ID.equals(pkg)) {
             // Anything else in the scope is a keyboard app: only the bottom strip option.
             safely(NavBarHook::installIme);
