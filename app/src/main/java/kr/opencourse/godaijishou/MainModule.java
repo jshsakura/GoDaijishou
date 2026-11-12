@@ -52,6 +52,7 @@ public class MainModule implements IXposedHookLoadPackage {
         try {
             install.run();
         } catch (Throwable ignored) {
+            ModuleLog.install(ignored);
             // That feature stays off; the rest of the module keeps working.
         }
     }

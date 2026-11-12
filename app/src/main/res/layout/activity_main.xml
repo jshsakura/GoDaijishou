@@ -491,7 +491,7 @@
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/row_usb_debug"
+            android:id="@+id/row_usb_charge_only"
             style="@style/Ft.Row">
 
             <ImageView
@@ -503,15 +503,40 @@
 
                 <TextView
                     style="@style/Ft.RowTitle"
-                    android:text="@string/row_usb_debug_title" />
+                    android:text="@string/row_usb_charge_only_title" />
 
                 <TextView
                     style="@style/Ft.RowDesc"
-                    android:text="@string/row_usb_debug_desc" />
+                    android:text="@string/row_usb_charge_only_desc" />
             </LinearLayout>
 
             <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/switch_usb_debug"
+                android:id="@+id/switch_usb_charge_only"
+                style="@style/Ft.Switch" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/row_debug_log"
+            style="@style/Ft.Row">
+
+            <ImageView
+                style="@style/Ft.RowIcon"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_ft_wrench" />
+
+            <LinearLayout style="@style/Ft.RowText">
+
+                <TextView
+                    style="@style/Ft.RowTitle"
+                    android:text="@string/row_debug_log_title" />
+
+                <TextView
+                    style="@style/Ft.RowDesc"
+                    android:text="@string/row_debug_log_desc" />
+            </LinearLayout>
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_debug_log"
                 style="@style/Ft.Switch" />
         </LinearLayout>
 

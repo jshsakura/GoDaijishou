@@ -73,6 +73,7 @@ final class NotificationBanner {
             target = XposedHelpers.findClass(NMS_LG, classLoader);
             target.getDeclaredMethod("buzzBeepBlinkLocked", record);
         } catch (Throwable notLg) {
+            ModuleLog.w(notLg);
             target = XposedHelpers.findClass(NMS, classLoader);
         }
         XposedHelpers.findAndHookMethod(target, "buzzBeepBlinkLocked", record, new XC_MethodHook() {
@@ -85,6 +86,7 @@ final class NotificationBanner {
                     Item item = Item.from(param.args[0], (Integer) param.getResult());
                     if (item != null) SystemSettings.handler().post(() -> show(item));
                 } catch (Throwable ignored) {
+                    ModuleLog.w(ignored);
                 }
             }
         });
@@ -104,6 +106,7 @@ final class NotificationBanner {
                     try {
                         service = XposedHelpers.getObjectField(param.thisObject, "this$0");
                     } catch (Throwable t) {
+                        ModuleLog.w(t);
                         return;
                     }
                 }
@@ -134,6 +137,7 @@ final class NotificationBanner {
                 }
             }
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
             return;
         }
         StatusLabel.setNotificationCount(count);
@@ -210,6 +214,7 @@ final class NotificationBanner {
             SystemSettings.handler().removeCallbacks(hideRunnable);
             SystemSettings.handler().postDelayed(hideRunnable, SHOW_MS);
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
             // Never let the banner disturb system_server.
         }
     }
@@ -337,6 +342,7 @@ final class NotificationBanner {
                     .toBundle();
             item.contentIntent.send(SystemSettings.context(), 0, null, null, null, null, options);
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
         }
     }
 

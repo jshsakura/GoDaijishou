@@ -63,6 +63,7 @@ final class SystemVolumeOverlay {
                 try {
                     show(stream, value);
                 } catch (Throwable ignored) {
+                    ModuleLog.w(ignored);
                     // Never let the overlay disturb system_server.
                 }
             }

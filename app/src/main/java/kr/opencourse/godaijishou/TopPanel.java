@@ -53,6 +53,7 @@ final class TopPanel {
                 XposedHelpers.callStaticMethod(sc, "setDisplayPowerMode", token, mode);
             }
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
             // Unsupported: the app falls back to the black overlay.
         }
     }

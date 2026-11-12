@@ -47,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
     private SwitchMaterial batteryStripSwitch;
     private SwitchMaterial labelHideFullscreenSwitch;
     private SwitchMaterial noTopScreenSwitch;
-    private SwitchMaterial usbDebugSwitch;
+    private SwitchMaterial usbChargeOnlySwitch;
     private View rebootNotice;
 
     // Prevents the listener from firing when setChecked() only syncs the UI.
@@ -111,8 +111,9 @@ public class MainActivity extends AppCompatActivity {
 
         findViewById(R.id.row_lsposed).setOnClickListener(v -> openLsposed());
         findViewById(R.id.btn_notice_lsposed).setOnClickListener(v -> openLsposed());
-        usbDebugSwitch = findViewById(R.id.switch_usb_debug);
-        bindSystemHookSwitch(R.id.row_usb_debug, usbDebugSwitch, AppPreferences.KEY_USB_DEBUG_PIN);
+        usbChargeOnlySwitch = findViewById(R.id.switch_usb_charge_only);
+        bindSystemHookSwitch(R.id.row_usb_charge_only, usbChargeOnlySwitch, AppPreferences.KEY_USB_CHARGE_ONLY);
+        bindSystemHookSwitch(R.id.row_debug_log, findViewById(R.id.switch_debug_log), AppPreferences.KEY_DEBUG_LOG);
 
         // These need an extra LSPosed scope: turning one on explains which, unless that
         // hook is already known to be loaded this boot.
@@ -268,7 +269,7 @@ public class MainActivity extends AppCompatActivity {
         boolean needsSystemHook = forceRotationSwitch.isChecked() || powerMenuSwitch.isChecked()
                 || noTopScreenSwitch.isChecked() || topBlackoutSwitch.isChecked()
                 || volumeOverlaySwitch.isChecked() || batteryStripSwitch.isChecked()
-                || usbDebugSwitch.isChecked();
+                || usbChargeOnlySwitch.isChecked();
         boolean needReboot = (needsSystemHook || prefs.getBoolean(AppPreferences.KEY_FINGERPRINT_OFF, false))
                 && !AppPreferences.isSystemHookActive(this);
         // SystemUI features: same notice while the SystemUI hook hasn't reported this boot.

@@ -97,8 +97,8 @@ final class StatusLabel {
     private static Handler handler;
     private static WindowManager windowManager;
     private static LabelView view;
-    // Invisible strip over the battery only: a downward swipe there opens the notification
-    // list. The label itself takes no touches, so app buttons under it (close X etc.) work.
+    // Invisible strip along the top right: a tap on the pill or a downward pull opens the
+    // notification list. Other taps are passed on, so app buttons under it (close X etc.) work.
     private static View grip;
 
     private static int battery = -1;       // 0..100, -1 until the first battery broadcast
@@ -176,6 +176,7 @@ final class StatusLabel {
                                 if ((int) XposedHelpers.callMethod(policy, "getDisplayId")
                                         != MainModule.SECOND_SCREEN_DISPLAY_ID) return;
                             } catch (Throwable t) {
+                                ModuleLog.w(t);
                                 return;
                             }
                             secondPolicy = policy;
@@ -184,6 +185,7 @@ final class StatusLabel {
                         try {
                             now = XposedHelpers.getBooleanField(policy, "mTopIsFullscreen");
                         } catch (Throwable t) {
+                            ModuleLog.w(t);
                             return;
                         }
                         if (now != fullscreen) {
@@ -271,6 +273,7 @@ final class StatusLabel {
                     }, handler);
             networkRegistered = true;
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
             // Retried on the next apply().
         }
     }
@@ -288,6 +291,7 @@ final class StatusLabel {
             });
             thermalRegistered = true;
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
             // Retried on the next apply().
         }
     }
@@ -331,14 +335,15 @@ final class StatusLabel {
             view = v;
             attachGrip(ui, v, density);
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
             // Never let the label disturb system_server.
         }
     }
 
     // Pull-down strip along the top edge: the right third of the screen (it holds the label),
-    // as tall as the label plus a few dp. Only a downward pull opens the list. A plain tap is
-    // handed on to whatever is underneath (an app's close button keeps working): the strip
-    // steps aside for a moment and the tap is replayed at the same spot.
+    // as tall as the label plus a few dp. A tap on the pill or a downward pull opens the list.
+    // Any other tap is handed on to whatever is underneath (an app's close button keeps
+    // working): the strip steps aside for a moment and the tap is replayed at the same spot.
     private static void attachGrip(Context ui, LabelView v, float density) {
         try {
             int width = ui.getResources().getDisplayMetrics().widthPixels / 3;
@@ -367,6 +372,9 @@ final class StatusLabel {
                         down[1] = ev.getRawY();
                         fired[0] = false;
                         moved[0] = false;
+                        // The same touch is a pull from the top edge for the system too: keep
+                        // the stock shade from expanding while this strip owns the finger.
+                        holdStockShade(g.getContext(), true);
                         return true;
                     case android.view.MotionEvent.ACTION_MOVE: {
                         float dy = ev.getRawY() - down[1];
@@ -375,16 +383,22 @@ final class StatusLabel {
                         if (!fired[0] && dy > pull && dy > dx * 1.5f) {
                             fired[0] = true;
                             if (!NotificationPanel.isOpen()) NotificationPanel.toggle();
-                            // The same pull is a swipe from the top edge for the system too,
-                            // which drops the stock shade: put it back up, now and once more
-                            // when its own animation has started.
                             collapseStockShade(g.getContext());
-                            g.postDelayed(() -> collapseStockShade(g.getContext()), 250);
                         }
                         return true;
                     }
                     case android.view.MotionEvent.ACTION_UP:
-                        if (!fired[0] && !moved[0]) passTap(g, lp, down[0], down[1]);
+                        if (!fired[0] && !moved[0]) {
+                            if (v.hitsPill(down[0], down[1])) {
+                                if (!NotificationPanel.isOpen()) NotificationPanel.toggle();
+                            } else {
+                                passTap(g, lp, down[0], down[1]);
+                            }
+                        }
+                        releaseStockShade(g);
+                        return true;
+                    case android.view.MotionEvent.ACTION_CANCEL:
+                        releaseStockShade(g);
                         return true;
                     default:
                         return true;
@@ -393,8 +407,31 @@ final class StatusLabel {
             windowManager.addView(g, lp);
             grip = g;
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
             grip = null;
         }
+    }
+
+    // StatusBarManager.DISABLE_EXPAND (hidden): the stock shade can't be pulled down.
+    private static final int DISABLE_EXPAND = 0x00010000;
+
+    private static void holdStockShade(Context context, boolean hold) {
+        try {
+            Object sbm = context.getSystemService("statusbar");
+            if (sbm != null) XposedHelpers.callMethod(sbm, "disable", hold ? DISABLE_EXPAND : 0);
+        } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
+        }
+    }
+
+    // Collapse whatever slipped through, then let the stock shade work again once its own
+    // animation would have started.
+    private static void releaseStockShade(View g) {
+        collapseStockShade(g.getContext());
+        g.postDelayed(() -> {
+            collapseStockShade(g.getContext());
+            holdStockShade(g.getContext(), false);
+        }, 250);
     }
 
     private static void collapseStockShade(Context context) {
@@ -402,6 +439,7 @@ final class StatusLabel {
             Object sbm = context.getSystemService("statusbar");
             if (sbm != null) XposedHelpers.callMethod(sbm, "collapsePanels");
         } catch (Throwable ignored) {
+            ModuleLog.w(ignored);
         }
     }
 
@@ -420,6 +458,7 @@ final class StatusLabel {
                 inject(android.view.MotionEvent.obtain(t, t, android.view.MotionEvent.ACTION_DOWN, x, y, 0), display);
                 inject(android.view.MotionEvent.obtain(t, t + 40, android.view.MotionEvent.ACTION_UP, x, y, 0), display);
             } catch (Throwable ignored) {
+                ModuleLog.w(ignored);
             }
             g.postDelayed(() -> {
                 lp.flags &= ~WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
@@ -444,6 +483,7 @@ final class StatusLabel {
             android.app.KeyguardManager km = system.getSystemService(android.app.KeyguardManager.class);
             return km != null && km.isKeyguardLocked();
         } catch (Throwable t) {
+            ModuleLog.w(t);
             return false;
         }
     }
@@ -491,6 +531,7 @@ final class StatusLabel {
                     return "LTE";
             }
         } catch (Throwable t) {
+            ModuleLog.w(t);
             return "LTE";
         }
     }
@@ -540,6 +581,17 @@ final class StatusLabel {
             arc.setStrokeWidth(Math.max(1f, 1.1f * density));
             text.setTextSize(TEXT_SP * scaled);
             text.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        }
+
+        // A screen point on the pill or its count bubble (they share the right end).
+        boolean hitsPill(float rawX, float rawY) {
+            int[] at = new int[2];
+            getLocationOnScreen(at);
+            float right = getWidth() - rightMargin - bubbleWidth("99") - bubbleGap();
+            float left = right - pad * 2 - contentWidth(mobileText());
+            float x = rawX - at[0];
+            float y = rawY - at[1];
+            return x >= left && y <= top + height + GRIP_SLACK_DP * getResources().getDisplayMetrics().density;
         }
 
         // The battery slot (glyph + "100%"-wide number) sits at a fixed spot on the right;

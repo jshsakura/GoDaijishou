@@ -39,6 +39,7 @@ final class SwivelWarningHook {
             int idx = c.getColumnIndex(AppPreferences.KEY_HIDE_SWIVEL_WARNINGS);
             return idx >= 0 && "1".equals(c.getString(idx));
         } catch (Throwable t) {
+            ModuleLog.w(t);
             return false;
         }
     }
