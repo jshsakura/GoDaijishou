@@ -28,9 +28,9 @@ import de.robv.android.xposed.XposedHelpers;
  * Keyboard bottom strip off (scope: com.android.systemui + the keyboard app)
  *   With gesture navigation the keyboard sits on a strip as tall as the old 3-button bar,
  *   holding the "hide keyboard" and switcher buttons. The strip's height is the framework
- *   dimen navigation_bar_frame_height; in the keyboard (which draws that strip) it is answered
- *   with 0. Not in SystemUI: LG places the gesture pill from that height, and a smaller value
- *   pushed the pill out of view. Read once per process: after a keyboard restart / reboot.
+ *   keyboard's own NavigationBarController: it is told there is no bottom inset and its frame
+ *   is hidden. SystemUI is left alone (LG places the gesture pill from the bar's height).
+ *   Takes effect when the keyboard restarts (or after a reboot).
  */
 final class NavBarHook {
 
@@ -113,42 +113,37 @@ final class NavBarHook {
 
     // --- Keyboard strip (SystemUI and keyboard processes) ---
 
-    // In the keyboard's own process the strip goes completely (the keys reach the bottom
-    // edge); SystemUI keeps the gesture bar's height so the pill still has its place.
-    private static volatile boolean keyboardProcess = false;
-
+    // Keyboard process: the keyboard draws that strip itself (NavigationBarController$Impl,
+    // a NavigationBarFrame sized to the system's bottom inset). Answer "no bottom inset" and
+    // hide the frame: no strip, no buttons, keys down to the gesture area. Back still closes
+    // the keyboard.
     static void installIme() {
-        keyboardProcess = true;
-        installImeStrip();
-    }
-
-    private static void installImeStrip() {
-        Resources sys = Resources.getSystem();
-        final int frame = sys.getIdentifier("navigation_bar_frame_height", "dimen", "android");
-        final int frameLand = sys.getIdentifier("navigation_bar_frame_height_landscape", "dimen", "android");
-        final int bar = sys.getIdentifier("navigation_bar_height", "dimen", "android");
-        if (frame == 0 || bar == 0) return;
-        XC_MethodHook swap = new XC_MethodHook() {
+        Class<?> impl;
+        try {
+            impl = Class.forName("android.inputmethodservice.NavigationBarController$Impl");
+        } catch (Throwable t) {
+            return;
+        }
+        XposedBridge.hookAllMethods(impl, "getSystemInsets", new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
-                int id = (Integer) param.args[0];
-                if (id != frame && (frameLand == 0 || id != frameLand)) return;
+                if (imeStripOff()) param.setResult(android.graphics.Insets.NONE);
+            }
+        });
+        XC_MethodHook hideFrame = new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) {
                 if (!imeStripOff()) return;
-                // The gesture bar's own height: the strip collapses to the pill's area.
-                if (keyboardProcess) {
-                    // No strip at all under the keys.
-                    param.setResult(param.method.getName().equals("getDimension") ? (Object) 0f : (Object) 0);
-                } else {
-                    param.args[0] = bar;
+                try {
+                    Object frame = XposedHelpers.getObjectField(param.thisObject, "mNavigationBarFrame");
+                    if (frame instanceof View) ((View) frame).setVisibility(View.GONE);
+                } catch (Throwable ignored) {
                 }
             }
         };
-        for (String name : new String[]{"getDimensionPixelSize", "getDimensionPixelOffset", "getDimension"}) {
-            try {
-                XposedHelpers.findAndHookMethod(Resources.class, name, int.class, swap);
-            } catch (Throwable ignored) {
-            }
-        }
+        XposedBridge.hookAllMethods(impl, "installNavigationBarFrameIfNecessary", hideFrame);
+        XposedBridge.hookAllMethods(impl, "onViewInitialized", hideFrame);
+        XposedBridge.hookAllMethods(impl, "onWindowShown", hideFrame);
     }
 
     // --- Settings ---
