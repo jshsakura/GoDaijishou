@@ -58,12 +58,13 @@ final class PerfProfile {
                 littleMax = 1_400_000; bigMax = 1_100_000; primeMax = 1_100_000; gpuMax = 300_000_000L;
                 littleMin = 0; bigMin = 0;
                 break;
-            case PERFORMANCE:
+            case PERFORMANCE: // a notch above stock: same top clocks (the chip's own table, no
+                // overclock), higher floors so it ramps up at once, thermal mitigation relaxed
                 littleMax = STOCK; bigMax = STOCK; primeMax = STOCK; gpuMax = STOCK;
                 littleMin = 1_000_000; bigMin = 1_200_000;
                 break;
-            default: // NORMAL: a little under stock
-                littleMax = STOCK; bigMax = 1_950_000; primeMax = 2_000_000; gpuMax = 500_000_000L;
+            default: // NORMAL: exactly stock (every cluster and the GPU back to their full range)
+                littleMax = STOCK; bigMax = STOCK; primeMax = STOCK; gpuMax = STOCK;
                 littleMin = 0; bigMin = 0;
                 break;
         }
