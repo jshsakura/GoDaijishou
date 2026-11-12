@@ -30,6 +30,10 @@ public class AppPreferences {
     public static final String KEY_LABEL_HIDE_FULLSCREEN = "label_hide_fullscreen";
     // Skip LG's swivel-mode camera notices (scope com.lge.popupcamera).
     public static final String KEY_HIDE_SWIVEL_WARNINGS = "hide_swivel_warnings";
+    // Thinner, narrower gesture pill that hides until the bottom edge is touched (scope SystemUI).
+    public static final String KEY_SLIM_NAV_PILL = "slim_nav_pill";
+    // Collapse the strip under the keyboard (hide-keyboard / switcher buttons) (scope SystemUI + keyboard).
+    public static final String KEY_HIDE_IME_NAV_STRIP = "hide_ime_nav_strip";
     // CPU/GPU performance profile (PerfProfile.NORMAL / ECO / PERFORMANCE), applied by the app as root.
     public static final String KEY_PERF_PROFILE = "perf_profile";
     // Keep USB debugging (adb) on across reboots (system_server hook).

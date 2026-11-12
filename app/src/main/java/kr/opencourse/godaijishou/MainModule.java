@@ -9,6 +9,8 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
  *
  *   com.lge.secondlauncher        -> LauncherHook  (second home -> chosen launcher)
  *   com.retroarch(.aarch64/.ra32) -> RetroArchHook (black screen recovery on return)
+ *   com.android.systemui          -> NavBarHook (slim pill, keyboard bottom strip)
+ *   any keyboard app              -> NavBarHook (keyboard bottom strip)
  *   android (system framework)    -> RotationHook  (rotation forced by the auto-rotate toggle)
  *                                    PowerMenuHook (power menu on the second screen)
  *                                    LaunchRedirectHook (top-display launches -> second screen)
@@ -29,6 +31,8 @@ public class MainModule implements IXposedHookLoadPackage {
             safely(SwivelWarningHook::install);
         } else if (RetroArchHook.isTarget(pkg)) {
             safely(RetroArchHook::install);
+        } else if (NavBarHook.SYSTEMUI.equals(pkg)) {
+            safely(() -> NavBarHook.installSystemUi(cl));
         } else if ("android".equals(pkg)) {
             // Each system hook is independent: one missing method on a firmware must not
             // keep the others from installing.
@@ -37,6 +41,9 @@ public class MainModule implements IXposedHookLoadPackage {
             safely(() -> LaunchRedirectHook.install(cl));
             safely(() -> NotificationBanner.install(cl));
             safely(() -> StatusLabel.installFullscreenHook(cl));
+        } else if (!BuildConfig.APPLICATION_ID.equals(pkg)) {
+            // Anything else in the scope is a keyboard app: only the bottom strip option.
+            safely(NavBarHook::installIme);
         }
     }
 

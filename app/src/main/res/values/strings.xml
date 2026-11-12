@@ -74,4 +74,8 @@
     <string name="perf_turbo">Turbo</string>
     <string name="main_hide_swivel_warnings_switch">Hide swivel warnings</string>
     <string name="main_hide_swivel_warnings_desc">Skips LG\'s swivel-mode camera notices (camera may look cropped, swivel down to use the camera). Tick com.lge.popupcamera in the LSPosed scope.</string>
+    <string name="main_slim_nav_pill_switch">Slim gesture pill, auto-hide</string>
+    <string name="main_slim_nav_pill_desc">Draws the gesture pill thinner and shorter, hidden until you touch near the bottom edge. Gestures work as before. Check System UI in LSPosed.</string>
+    <string name="main_hide_ime_nav_strip_switch">Smaller gap under the keyboard</string>
+    <string name="main_hide_ime_nav_strip_desc">Removes the hide-keyboard / switcher row under the keyboard, leaving only the gesture bar\'s height. Check System UI and your keyboard app in LSPosed, then reboot.</string>
 </resources>

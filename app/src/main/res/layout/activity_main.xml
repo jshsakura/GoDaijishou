@@ -336,6 +336,56 @@
         </LinearLayout>
 
         <LinearLayout
+            android:id="@+id/row_slim_nav_pill"
+            style="@style/Ft.Row">
+
+            <ImageView
+                style="@style/Ft.RowIcon"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_ft_gauge" />
+
+            <LinearLayout style="@style/Ft.RowText">
+
+                <TextView
+                    style="@style/Ft.RowTitle"
+                    android:text="@string/main_slim_nav_pill_switch" />
+
+                <TextView
+                    style="@style/Ft.RowDesc"
+                    android:text="@string/main_slim_nav_pill_desc" />
+            </LinearLayout>
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_slim_nav_pill"
+                style="@style/Ft.Switch" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/row_hide_ime_nav_strip"
+            style="@style/Ft.Row">
+
+            <ImageView
+                style="@style/Ft.RowIcon"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_ft_gauge" />
+
+            <LinearLayout style="@style/Ft.RowText">
+
+                <TextView
+                    style="@style/Ft.RowTitle"
+                    android:text="@string/main_hide_ime_nav_strip_switch" />
+
+                <TextView
+                    style="@style/Ft.RowDesc"
+                    android:text="@string/main_hide_ime_nav_strip_desc" />
+            </LinearLayout>
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_hide_ime_nav_strip"
+                style="@style/Ft.Switch" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/row_force_rotation"
             style="@style/Ft.Row">
 

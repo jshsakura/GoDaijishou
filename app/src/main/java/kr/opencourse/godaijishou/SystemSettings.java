@@ -228,6 +228,8 @@ final class SystemSettings {
                 }
             }
             saveCache();
+            saveNavBar(readFlag(cursor, AppPreferences.KEY_SLIM_NAV_PILL),
+                    readFlag(cursor, AppPreferences.KEY_HIDE_IME_NAV_STRIP));
             if (changed) {
                 for (Runnable l : listeners) l.run();
             }
@@ -255,6 +257,20 @@ final class SystemSettings {
             String value = b.toString();
             if (!value.equals(Settings.Global.getString(resolver, CACHE_KEY))) {
                 Settings.Global.putString(resolver, CACHE_KEY, value);
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    // Bottom-bar options for SystemUI and the keyboard apps (NavBarHook). Settings.Global is
+    // readable by every app; our provider isn't visible to a keyboard (package visibility).
+    static final String NAVBAR_KEY = "godaijishou_navbar";
+
+    private static void saveNavBar(boolean slimPill, boolean imeStripOff) {
+        try {
+            String value = (slimPill ? "1" : "0") + (imeStripOff ? "1" : "0");
+            if (!value.equals(Settings.Global.getString(resolver, NAVBAR_KEY))) {
+                Settings.Global.putString(resolver, NAVBAR_KEY, value);
             }
         } catch (Throwable ignored) {
         }

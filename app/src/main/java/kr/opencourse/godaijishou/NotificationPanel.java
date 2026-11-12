@@ -96,6 +96,10 @@ final class NotificationPanel {
     // Per card: what a tap on its right end does (fold the group / open the buttons).
     private static final java.util.Map<View, Runnable> rightTap = new java.util.WeakHashMap<>();
 
+    static boolean isOpen() {
+        return root != null;
+    }
+
     static void toggle() {
         if (root != null) close();
         else open();

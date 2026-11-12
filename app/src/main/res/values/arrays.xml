@@ -4,6 +4,13 @@
         <item>com.lge.secondlauncher</item>
         <!-- System framework, for rotation forcing (optional) -->
         <item>android</item>
+        <!-- SystemUI: slim gesture pill, keyboard bottom strip (optional) -->
+        <item>com.android.systemui</item>
+        <!-- Keyboards: keyboard bottom strip (optional; tick the one you use) -->
+        <item>com.google.android.inputmethod.latin</item>
+        <item>com.lge.ime</item>
+        <item>com.samsung.android.honeyboard</item>
+        <item>com.touchtype.swiftkey</item>
         <!-- LG pop-up camera: swivel-mode camera notices (optional) -->
         <item>com.lge.popupcamera</item>
         <!-- RetroArch second screen black screen recovery (optional) -->

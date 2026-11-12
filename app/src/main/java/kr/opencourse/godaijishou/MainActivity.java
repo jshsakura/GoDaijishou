@@ -116,6 +116,10 @@ public class MainActivity extends AppCompatActivity {
 
         bindSystemHookSwitch(R.id.row_hide_swivel_warnings, findViewById(R.id.switch_hide_swivel_warnings),
                 AppPreferences.KEY_HIDE_SWIVEL_WARNINGS);
+        bindSystemHookSwitch(R.id.row_slim_nav_pill, findViewById(R.id.switch_slim_nav_pill),
+                AppPreferences.KEY_SLIM_NAV_PILL);
+        bindSystemHookSwitch(R.id.row_hide_ime_nav_strip, findViewById(R.id.switch_hide_ime_nav_strip),
+                AppPreferences.KEY_HIDE_IME_NAV_STRIP);
         buildPerfProfileButtons();
 
         findViewById(R.id.row_reboot).setOnClickListener(v -> confirmReboot());

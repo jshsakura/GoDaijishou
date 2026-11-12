@@ -43,8 +43,12 @@ final class StatusLabel {
     private static final int TYPE_OVERLAY = 2020;
     private static final float HEIGHT_DP = 16f;
     private static final float RIGHT_MARGIN_DP = 8f;
-    // Transparent slack under the tab so an 11dp tab is still easy to hit.
-    private static final float TOUCH_SLACK_DP = 10f;
+    // The window is not touchable any more: no slack under the pill.
+    private static final float TOUCH_SLACK_DP = 0f;
+    // Pull-down grip over the battery: a little taller than the pill, and the finger has to
+    // travel this far down (mostly vertically) before the list opens.
+    private static final float GRIP_SLACK_DP = 6f;
+    private static final float PULL_DP = 14f;
     private static final float PAD_DP = 6.5f;
     private static final float GAP_DP = 5f;
     // Pill floating just below the top edge.
@@ -93,6 +97,9 @@ final class StatusLabel {
     private static Handler handler;
     private static WindowManager windowManager;
     private static LabelView view;
+    // Invisible strip over the battery only: a downward swipe there opens the notification
+    // list. The label itself takes no touches, so app buttons under it (close X etc.) work.
+    private static View grip;
 
     private static int battery = -1;       // 0..100, -1 until the first battery broadcast
     private static boolean charging = false;
@@ -201,6 +208,7 @@ final class StatusLabel {
         if (view != null) {
             boolean hidden = SystemSettings.labelHideFullscreen && fullscreen;
             view.setVisibility(hidden ? View.GONE : View.VISIBLE);
+            if (grip != null) grip.setVisibility(hidden ? View.GONE : View.VISIBLE);
             if (hidden) NotificationPanel.close();
         }
     }
@@ -291,13 +299,13 @@ final class StatusLabel {
             Context ui = system.createPackageContext(BuildConfig.APPLICATION_ID, 0).createDisplayContext(display);
             float density = ui.getResources().getDisplayMetrics().density;
 
-            // Sized to the tab (plus a little transparent touch slack below and to the right),
-            // so it takes taps only in the top-right corner; tapping opens the notification list.
+            // Drawing only: never touchable, so whatever sits under it keeps its taps.
             WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
                     WindowManager.LayoutParams.WRAP_CONTENT,
                     WindowManager.LayoutParams.WRAP_CONTENT,
                     TYPE_OVERLAY,
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                            | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
                             | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                             | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                             | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
@@ -307,16 +315,72 @@ final class StatusLabel {
             lp.setTitle("GoDaijishou:StatusLabel");
 
             LabelView v = new LabelView(ui);
-            v.setOnClickListener(x -> NotificationPanel.toggle());
             windowManager.addView(v, lp);
             view = v;
+            attachGrip(ui, v, density);
         } catch (Throwable ignored) {
             // Never let the label disturb system_server.
         }
     }
 
+    // Exactly the battery part of the pill, a few dp taller. A tap there does nothing (so a
+    // near miss on an app's close button never opens the list); only a pull down does.
+    private static void attachGrip(Context ui, LabelView v, float density) {
+        try {
+            WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
+                    Math.round(v.pad * 2 + v.batterySlot()),
+                    Math.round(v.top + v.height + GRIP_SLACK_DP * density),
+                    TYPE_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                            | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                            | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                            | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                    PixelFormat.TRANSLUCENT);
+            lp.gravity = Gravity.TOP | Gravity.END;
+            lp.x = Math.round(v.rightMargin + v.bubbleWidth("99") + v.bubbleGap());
+            lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+            lp.setTitle("GoDaijishou:StatusLabelGrip");
+            View g = new View(ui);
+            final float pull = PULL_DP * density;
+            final float[] down = new float[2];
+            final boolean[] fired = new boolean[1];
+            g.setOnTouchListener((x, ev) -> {
+                switch (ev.getActionMasked()) {
+                    case android.view.MotionEvent.ACTION_DOWN:
+                        down[0] = ev.getRawX();
+                        down[1] = ev.getRawY();
+                        fired[0] = false;
+                        return true;
+                    case android.view.MotionEvent.ACTION_MOVE: {
+                        float dy = ev.getRawY() - down[1];
+                        float dx = Math.abs(ev.getRawX() - down[0]);
+                        if (!fired[0] && dy > pull && dy > dx * 1.5f) {
+                            fired[0] = true;
+                            if (!NotificationPanel.isOpen()) NotificationPanel.toggle();
+                        }
+                        return true;
+                    }
+                    default:
+                        return true;
+                }
+            });
+            windowManager.addView(g, lp);
+            grip = g;
+        } catch (Throwable ignored) {
+            grip = null;
+        }
+    }
+
     private static void detach() {
         NotificationPanel.close();
+        View g = grip;
+        grip = null;
+        if (g != null) {
+            try {
+                windowManager.removeView(g);
+            } catch (RuntimeException ignored) {
+            }
+        }
         LabelView v = view;
         view = null;
         try {
