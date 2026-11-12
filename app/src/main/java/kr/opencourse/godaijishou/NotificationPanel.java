@@ -93,6 +93,8 @@ final class NotificationPanel {
     private static final java.util.Set<String> actionsOpen = new java.util.HashSet<>();
     private static ScrollView scrollView;
     private static LinearLayout panelColumn;
+    // Per card: what a tap on its right end does (fold the group / open the buttons).
+    private static final java.util.Map<View, Runnable> rightTap = new java.util.WeakHashMap<>();
 
     static void toggle() {
         if (root != null) close();
@@ -557,11 +559,13 @@ final class NotificationPanel {
         card.setElevation(0);
         if (count > 0) {
             TextView pill = countPill(count, open, density);
-            pill.setOnClickListener(v -> {
+            Runnable toggleGroup = () -> {
                 if (!expanded.remove(groupKey)) expanded.add(groupKey);
                 smoothly();
                 fill();
-            });
+            };
+            pill.setOnClickListener(v -> toggleGroup.run());
+            rightTap.put(card, toggleGroup);
             LinearLayout.LayoutParams pillLp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, Math.round(26 * density));
             pillLp.setMarginStart(Math.round(10 * density));
@@ -701,6 +705,7 @@ final class NotificationPanel {
         card.setTag(new Object[]{e.key, box, chevron, card.getPaddingBottom()});
         showActions(card, actionsOpen.contains(e.key), false);
         chevron.setOnClickListener(v -> toggleActions(card));
+        if (!rightTap.containsKey(card)) rightTap.put(card, () -> toggleActions(card));
     }
 
     // Opens/closes a card's button bar; the chevron points down when closed, up when open.
@@ -853,8 +858,15 @@ final class NotificationPanel {
                                     .withEndAction(() -> hint.setVisibility(View.INVISIBLE)).start();
                         }
                     } else {
-                        click(e);
-                        close();
+                        // The right end of the card (count / chevron) is a wide target of its
+                        // own: folds or unfolds instead of opening the app.
+                        Runnable right = rightTap.get(v);
+                        if (right != null && ev.getX() > v.getWidth() - 80 * density) {
+                            right.run();
+                        } else {
+                            click(e);
+                            close();
+                        }
                     }
                     return true;
                 case MotionEvent.ACTION_CANCEL:

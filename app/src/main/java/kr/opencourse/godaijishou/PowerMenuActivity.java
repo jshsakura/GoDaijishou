@@ -30,7 +30,7 @@ public class PowerMenuActivity extends Activity {
 
     private static final float DIM_AMOUNT = 0.6f;
     // Side margin as a share of the screen width; the tiles split what is left.
-    private static final float SIDE_MARGIN_RATIO = 0.08f;
+    private static final float SIDE_MARGIN_RATIO = 0.05f;
     private static final int MAX_TILE_DP = 108;
     private static final int TILE_MARGIN_DP = 5;
     // The menu window is hidden at once; this only covers the frame that removes it.
@@ -100,14 +100,25 @@ public class PowerMenuActivity extends Activity {
             lp.height = tile;
             lp.setMargins(margin, margin, margin, margin);
             item.setLayoutParams(lp);
-            // Labels shrink with the tile instead of being cut.
+            // Icon and name sit together in the middle with room around them, scaled to
+            // the tile (on the narrow bottom screen tiles are ~70dp, not 108dp).
+            int inset = Math.round(tile * 0.14f);
+            item.setPadding(inset, inset, inset, inset);
             for (int j = 0; j < ((ViewGroup) item).getChildCount(); j++) {
                 View child = ((ViewGroup) item).getChildAt(j);
                 if (child instanceof TextView) {
                     TextView label = (TextView) child;
-                    label.setMaxWidth(tile - margin * 2);
-                    label.setTextSize(TypedValue.COMPLEX_UNIT_SP, tile < 96 * density ? 12 : 14);
+                    ViewGroup.MarginLayoutParams llp = (ViewGroup.MarginLayoutParams) label.getLayoutParams();
+                    llp.topMargin = Math.round(tile * 0.07f);
+                    label.setLayoutParams(llp);
+                    label.setMaxWidth(tile - inset * 2);
+                    label.setTextSize(TypedValue.COMPLEX_UNIT_PX, Math.min(14 * density * getResources().getConfiguration().fontScale,
+                            tile * 0.15f));
                     label.setEllipsize(TextUtils.TruncateAt.END);
+                } else {
+                    ViewGroup.LayoutParams ilp = child.getLayoutParams();
+                    ilp.width = ilp.height = Math.round(tile * 0.3f);
+                    child.setLayoutParams(ilp);
                 }
             }
         }
