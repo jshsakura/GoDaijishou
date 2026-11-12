@@ -43,7 +43,7 @@
     <string name="row_usb_debug_title">USB 디버깅 연결 유지</string>
     <string name="row_usb_debug_desc">재부팅하면 윙이 adb를 끄고 USB를 파일 전송으로만 올립니다. USB 디버깅을 계속 켜 둡니다. 파일 전송도 그대로 됩니다.</string>
     <string name="notice_reboot_title">재부팅이 필요해요</string>
-    <string name="notice_reboot_desc">시스템 프레임워크 기능(회전 강제, 하단 전원 메뉴)이 켜져 있지만 이번 부팅에서 훅이 로드되지 않았습니다. LSPosed에서 \"시스템 프레임워크\"를 체크한 뒤 재부팅하세요.</string>
+    <string name="notice_reboot_desc">시스템 프레임워크 기능(회전 강제, 전원 메뉴)이 켜져 있지만 이번 부팅에서 훅이 로드되지 않았습니다. LSPosed에서 \"시스템 프레임워크\"를 체크한 뒤 재부팅하세요.</string>
     <string name="reboot_confirm_title">지금 재부팅할까요?</string>
     <string name="reboot_confirm_msg">기기를 지금 다시 시작합니다.</string>
     <string name="cancel">취소</string>
@@ -52,8 +52,8 @@
 
 
     <!-- Second screen power menu -->
-    <string name="main_power_menu_switch">하단 전원 메뉴</string>
-    <string name="main_power_menu_desc">스위블이 열려 있을 때 전원키를 길게 누르면 하단 화면에 전원 메뉴가 뜹니다. 메뉴가 두 번 뜨지 않도록 Classic PowerMenu는 꺼주세요.</string>
+    <string name="main_power_menu_switch">전원 메뉴</string>
+    <string name="main_power_menu_desc">전원키를 길게 누르면 화면 가운데에 전원 메뉴가 오버레이로 뜹니다. 메뉴가 두 번 뜨지 않도록 Classic PowerMenu는 꺼주세요.</string>
     <string name="power_off">전원 끄기</string>
     <string name="power_restart">다시 시작</string>
     <string name="power_recovery">리커버리</string>

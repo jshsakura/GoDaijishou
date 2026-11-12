@@ -43,7 +43,7 @@
     <string name="row_usb_debug_title">Keep USB debugging connected</string>
     <string name="row_usb_debug_desc">After a reboot the Wing drops adb and leaves USB as file transfer only. This keeps USB debugging on; file transfer keeps working.</string>
     <string name="notice_reboot_title">Reboot required</string>
-    <string name="notice_reboot_desc">A System Framework feature (rotation forcing / second screen power menu) is on, but its hook is not loaded in this boot. Check \"System Framework\" in LSPosed, then reboot.</string>
+    <string name="notice_reboot_desc">A System Framework feature (rotation forcing / power menu) is on, but its hook is not loaded in this boot. Check \"System Framework\" in LSPosed, then reboot.</string>
     <string name="reboot_confirm_title">Reboot now?</string>
     <string name="reboot_confirm_msg">The device will restart now.</string>
     <string name="cancel">Cancel</string>
@@ -52,8 +52,8 @@
 
 
     <!-- Second screen power menu -->
-    <string name="main_power_menu_switch">Power menu on the bottom screen</string>
-    <string name="main_power_menu_desc">While the swivel is open, holding the power key opens the power menu on the bottom screen. Turn off Classic PowerMenu to avoid two menus.</string>
+    <string name="main_power_menu_switch">Power menu</string>
+    <string name="main_power_menu_desc">Holding the power key opens the power menu as an overlay in the middle of the screen. Turn off Classic PowerMenu to avoid two menus.</string>
     <string name="power_off">Power off</string>
     <string name="power_restart">Restart</string>
     <string name="power_recovery">Recovery</string>
