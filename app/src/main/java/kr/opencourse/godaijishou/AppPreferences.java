@@ -38,7 +38,7 @@ public class AppPreferences {
     public static final String KEY_FINGERPRINT_OFF = "fingerprint_off";
     // CPU/GPU performance profile (PerfProfile.NORMAL / ECO / PERFORMANCE), applied by the app as root.
     public static final String KEY_PERF_PROFILE = "perf_profile";
-    // Bring each USB connection up as charging only instead of file transfer (system_server hook).
+    // USB mode on connection: false = file transfer (MTP), true = charging only (system_server hook).
     public static final String KEY_USB_CHARGE_ONLY = "usb_charge_only";
     // Write the hooks' swallowed failures to the LSPosed log (every hooked process).
     public static final String KEY_DEBUG_LOG = "debug_log";

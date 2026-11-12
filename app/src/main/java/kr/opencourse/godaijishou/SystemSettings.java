@@ -39,7 +39,7 @@ final class SystemSettings {
     static volatile boolean topScreenOff = false;
     // "No top screen": top panel always off, every launch goes to the second screen.
     static volatile boolean noTopScreen = false;
-    // USB connections come up as charging only.
+    // USB mode: charging only (true) or file transfer (false).
     static volatile boolean usbChargeOnly = false;
     // Volume overlay drawn by system_server.
     static volatile boolean volumeOverlay = false;
@@ -85,14 +85,17 @@ final class SystemSettings {
             safely(() -> SystemVolumeOverlay.install(context, handler));
             // Status label on the second screen (same: drawn here, no permission).
             safely(() -> StatusLabel.install(context, handler));
-            // USB charging only: each new connection comes up without file transfer.
+            // USB mode (file transfer or charging only): set as the default whenever the choice
+            // changes, and again on each new connection, so the developer option's default
+            // configuration can't put the other one back.
+            addListener(() -> SystemActions.applyUsbMode(context, false));
             context.registerReceiver(new BroadcastReceiver() {
                 private boolean wasConnected;
 
                 @Override
                 public void onReceive(Context c, Intent intent) {
                     boolean connected = intent.getBooleanExtra("connected", false);
-                    if (connected && !wasConnected) SystemActions.chargeOnlyUsb(context);
+                    if (connected && !wasConnected) SystemActions.applyUsbMode(context, true);
                     wasConnected = connected;
                 }
             }, new IntentFilter("android.hardware.usb.action.USB_STATE"), null, handler);
@@ -169,6 +172,11 @@ final class SystemSettings {
             ModuleLog.install(ignored);
             // That feature stays off; the rest keeps working.
         }
+    }
+
+    /** The real settings have been read this boot (not just the cached copy). */
+    static boolean loaded() {
+        return loaded;
     }
 
     /** Background handler for hook work that must stay off the caller's thread. */

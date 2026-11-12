@@ -47,7 +47,6 @@ public class MainActivity extends AppCompatActivity {
     private SwitchMaterial batteryStripSwitch;
     private SwitchMaterial labelHideFullscreenSwitch;
     private SwitchMaterial noTopScreenSwitch;
-    private SwitchMaterial usbChargeOnlySwitch;
     private View rebootNotice;
 
     // Prevents the listener from firing when setChecked() only syncs the UI.
@@ -111,8 +110,7 @@ public class MainActivity extends AppCompatActivity {
 
         findViewById(R.id.row_lsposed).setOnClickListener(v -> openLsposed());
         findViewById(R.id.btn_notice_lsposed).setOnClickListener(v -> openLsposed());
-        usbChargeOnlySwitch = findViewById(R.id.switch_usb_charge_only);
-        bindSystemHookSwitch(R.id.row_usb_charge_only, usbChargeOnlySwitch, AppPreferences.KEY_USB_CHARGE_ONLY);
+        buildUsbModeButtons();
         bindSystemHookSwitch(R.id.row_debug_log, findViewById(R.id.switch_debug_log), AppPreferences.KEY_DEBUG_LOG);
 
         // These need an extra LSPosed scope: turning one on explains which, unless that
@@ -195,6 +193,59 @@ public class MainActivity extends AppCompatActivity {
         stylePerfButtons(buttons);
     }
 
+    // Two segments: file transfer (MTP) / charging only. The system_server hook makes the
+    // choice the default USB configuration and applies it on each connection.
+    private void buildUsbModeButtons() {
+        android.widget.LinearLayout box = findViewById(R.id.usb_mode_buttons);
+        float density = getResources().getDisplayMetrics().density;
+        int[] labels = {R.string.usb_mode_mtp, R.string.usb_mode_charge};
+        TextView[] buttons = new TextView[labels.length];
+        for (int i = 0; i < labels.length; i++) {
+            final boolean chargeOnly = i == 1;
+            TextView b = new TextView(this);
+            b.setText(labels[i]);
+            b.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14);
+            b.setTypeface(Typeface.DEFAULT_BOLD);
+            b.setGravity(android.view.Gravity.CENTER);
+            buttons[i] = b;
+            android.widget.FrameLayout cell = new android.widget.FrameLayout(this);
+            cell.addView(b, new android.widget.FrameLayout.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.Gravity.CENTER));
+            cell.setClickable(true);
+            cell.setContentDescription(getString(labels[i]));
+            cell.setOnClickListener(v -> {
+                prefs.edit().putBoolean(AppPreferences.KEY_USB_CHARGE_ONLY, chargeOnly).commit();
+                getContentResolver().notifyChange(SettingsProvider.CONTENT_URI, null);
+                styleUsbModeButtons(buttons);
+            });
+            android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(
+                    0, Math.round(44 * density), 1f);
+            if (i > 0) lp.setMarginStart(Math.round(8 * density));
+            box.addView(cell, lp);
+        }
+        styleUsbModeButtons(buttons);
+    }
+
+    // Selected: butter fill with dark ink. Other: outlined.
+    private void styleUsbModeButtons(TextView[] buttons) {
+        float density = getResources().getDisplayMetrics().density;
+        boolean chargeOnly = prefs.getBoolean(AppPreferences.KEY_USB_CHARGE_ONLY, false);
+        for (int i = 0; i < buttons.length; i++) {
+            boolean on = (i == 1) == chargeOnly;
+            buttons[i].setTextColor(getColor(on ? R.color.ft_on_butter : R.color.ft_ink));
+            android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+            bg.setCornerRadius(14 * density);
+            if (on) {
+                bg.setColor(getColor(R.color.ft_butter));
+            } else {
+                bg.setColor(getColor(R.color.ft_surface));
+                bg.setStroke(Math.max(1, Math.round(density)), getColor(R.color.ft_line));
+            }
+            ((View) buttons[i].getParent()).setBackground(bg);
+        }
+    }
+
     // Selected: filled with its color, dark ink. Others: outlined, icon and name in that color.
     private void stylePerfButtons(TextView[] buttons) {
         float density = getResources().getDisplayMetrics().density;
@@ -268,8 +319,7 @@ public class MainActivity extends AppCompatActivity {
     private void updateRebootNotice() {
         boolean needsSystemHook = forceRotationSwitch.isChecked() || powerMenuSwitch.isChecked()
                 || noTopScreenSwitch.isChecked() || topBlackoutSwitch.isChecked()
-                || volumeOverlaySwitch.isChecked() || batteryStripSwitch.isChecked()
-                || usbChargeOnlySwitch.isChecked();
+                || volumeOverlaySwitch.isChecked() || batteryStripSwitch.isChecked();
         boolean needReboot = (needsSystemHook || prefs.getBoolean(AppPreferences.KEY_FINGERPRINT_OFF, false))
                 && !AppPreferences.isSystemHookActive(this);
         // SystemUI features: same notice while the SystemUI hook hasn't reported this boot.
