@@ -83,7 +83,9 @@ final class PerfProfile {
                 + "g=/sys/class/kgsl/kgsl-3d0\n"
                 + "[ -d $g ] && pick \"$(cat $g/gpu_available_frequencies)\" " + gpuMax + " > $g/max_gpuclk\n"
                 // LG thermal mitigation: relaxed only in performance, stock (on) otherwise.
-                + "rp=$(command -v resetprop || echo setprop)\n"
+                // persist.* lives on in /data/property even after the module that set it is gone,
+                // so write the persistent copy too (-p), not only the runtime value.
+                + "if command -v resetprop >/dev/null; then rp='resetprop -p'; else rp=setprop; fi\n"
                 + "$rp " + THROTTLE_PROP + " " + (profile == PERFORMANCE ? "true" : "false") + "\n";
         try {
             java.lang.Process su = new ProcessBuilder("su").redirectErrorStream(true).start();
