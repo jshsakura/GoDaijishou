@@ -42,8 +42,10 @@
     <string name="row_reboot_desc">Needed only after enabling the module or changing its scope. Switches above apply instantly.</string>
     <string name="row_debug_log_title">Diagnostic log</string>
     <string name="row_debug_log_desc">Writes the errors the module runs into to the LSPosed log. Turn it on only while tracking down a problem. Hooks that fail to install are always logged.</string>
-    <string name="row_usb_charge_only_title">Connect USB as charging only</string>
-    <string name="row_usb_charge_only_desc">On: each USB connection comes up as charging only. Off: file transfer (MTP), as stock. You can still pick another mode by hand after connecting.</string>
+    <string name="row_usb_mode_title">USB mode</string>
+    <string name="row_usb_mode_desc">USB connects in the mode chosen here. It is also set as the default USB configuration in Developer options, so that setting no longer switches it back. You can still pick another mode by hand after connecting.</string>
+    <string name="usb_mode_mtp">File transfer</string>
+    <string name="usb_mode_charge">Charging only</string>
     <string name="notice_reboot_title">Reboot required</string>
     <string name="notice_reboot_desc">A feature you turned on is not loaded in this boot yet. In LSPosed, pick \"Select recommended\" in GoDaijishou\'s scope, then reboot.</string>
     <string name="reboot_confirm_title">Reboot now?</string>

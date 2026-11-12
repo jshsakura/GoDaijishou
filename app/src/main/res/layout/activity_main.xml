@@ -490,29 +490,45 @@
                 android:importantForAccessibility="no" />
         </LinearLayout>
 
+        <!-- USB mode: title row, then file transfer / charging only segments -->
         <LinearLayout
-            android:id="@+id/row_usb_charge_only"
-            style="@style/Ft.Row">
+            android:id="@+id/row_usb_mode"
+            style="@style/Ft.Row"
+            android:clickable="false"
+            android:focusable="false"
+            android:gravity="start"
+            android:orientation="vertical">
 
-            <ImageView
-                style="@style/Ft.RowIcon"
-                android:importantForAccessibility="no"
-                android:src="@drawable/ic_ft_usb" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-            <LinearLayout style="@style/Ft.RowText">
+                <ImageView
+                    style="@style/Ft.RowIcon"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_ft_usb" />
 
-                <TextView
-                    style="@style/Ft.RowTitle"
-                    android:text="@string/row_usb_charge_only_title" />
+                <LinearLayout style="@style/Ft.RowText">
 
-                <TextView
-                    style="@style/Ft.RowDesc"
-                    android:text="@string/row_usb_charge_only_desc" />
+                    <TextView
+                        style="@style/Ft.RowTitle"
+                        android:text="@string/row_usb_mode_title" />
+
+                    <TextView
+                        style="@style/Ft.RowDesc"
+                        android:text="@string/row_usb_mode_desc" />
+                </LinearLayout>
             </LinearLayout>
 
-            <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/switch_usb_charge_only"
-                style="@style/Ft.Switch" />
+            <!-- Built in MainActivity -->
+            <LinearLayout
+                android:id="@+id/usb_mode_buttons"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal" />
         </LinearLayout>
 
         <LinearLayout

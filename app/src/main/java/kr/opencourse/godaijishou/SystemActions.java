@@ -107,15 +107,26 @@ final class SystemActions {
         }
     }
 
-    // UsbManager.setCurrentFunctions(FUNCTION_NONE): charging only (adb stays on top when it is
-    // enabled). Applied once per connection, so file transfer picked by hand afterwards stays.
-    static void chargeOnlyUsb(Context context) {
-        if (!SystemSettings.usbChargeOnly) return;
+    // UsbManager.FUNCTION_MTP; FUNCTION_NONE (0) is charging only. adb is added on top of
+    // either when it is enabled.
+    private static final long USB_FUNCTION_MTP = 1L << 2;
+
+    /**
+     * Applies the chosen USB mode. The default for connections is what Developer options
+     * calls "Default USB configuration" (setScreenUnlockedFunctions), so writing it here keeps
+     * that option from undoing the choice. connected: also switch the live connection, once,
+     * so a mode picked by hand afterwards stays until the next plug-in.
+     */
+    static void applyUsbMode(Context context, boolean connected) {
+        if (!SystemSettings.loaded()) return;
+        long functions = SystemSettings.usbChargeOnly ? 0L : USB_FUNCTION_MTP;
         try {
             Object usb = context.getSystemService(Context.USB_SERVICE);
-            if (usb != null) XposedHelpers.callMethod(usb, "setCurrentFunctions", 0L);
-        } catch (Throwable ignored) {
-            ModuleLog.w(ignored);
+            if (usb == null) return;
+            XposedHelpers.callMethod(usb, "setScreenUnlockedFunctions", functions);
+            if (connected) XposedHelpers.callMethod(usb, "setCurrentFunctions", functions);
+        } catch (Throwable t) {
+            ModuleLog.w(t);
         }
     }
 
