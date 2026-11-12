@@ -13,7 +13,7 @@
 
     <!-- Bottom screen only mode (black top screen) -->
     <string name="main_no_top_screen_switch">상단 화면 없음</string>
-    <string name="main_no_top_screen_desc">상단 패널을 늘 끄고, 모든 창·대화상자·볼륨 바·안내 메시지를 하단 화면에 띄웁니다.</string>
+    <string name="main_no_top_screen_desc">상단 패널을 늘 끄고, 대화상자·알림·볼륨 바·안내 메시지를 하단 화면에 띄웁니다.</string>
     <string name="main_top_blackout_switch">하단 화면 전용 모드</string>
     <string name="main_top_blackout_desc">스위블이 열려 있는 동안 상단 패널 전원을 끄고, 상단에 뜨던 창은 하단 화면으로 보냅니다(시스템 프레임워크 필요).</string>
     <string name="main_volume_overlay_switch">볼륨 표시</string>

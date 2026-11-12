@@ -7,15 +7,12 @@ import de.robv.android.xposed.XposedHelpers;
 
 /**
  * While the top display is unavailable ("no top screen", or "bottom screen only" with the
- * swivel open), new activities that would open on the top display go to the second
- * screen instead:
- * USB debugging prompts, permission dialogs, settings screens, apps without a preferred
- * display, etc. Runs inside system_server.
+ * swivel open), dialog activities that would open on the top display go to the second
+ * screen instead: USB debugging prompts, permission requests and the like. Full-screen
+ * apps keep the display the system picked. Runs inside system_server.
  *
  * LaunchParamsController.calculate() is where the system picks the task display area for
- * a launch. Any result pointing at the top display is moved, even when the caller asked
- * for the top display explicitly. Only home activities stay, so the top home never
- * replaces the second screen home.
+ * a launch.
  */
 final class LaunchRedirectHook {
 
@@ -54,7 +51,7 @@ final class LaunchRedirectHook {
 
     private static void redirect(XC_MethodHook.MethodHookParam param) {
         Object activity = param.args[2];
-        if (activity != null && (boolean) XposedHelpers.callMethod(activity, "isActivityTypeHome")) return;
+        if (activity == null || !isDialog(activity)) return;
 
         Object result = param.args[7];
         Object area = XposedHelpers.getObjectField(result, "mPreferredTaskDisplayArea");
@@ -72,6 +69,17 @@ final class LaunchRedirectHook {
         Object secondArea = XposedHelpers.callMethod(second, "getDefaultTaskDisplayArea");
         if (secondArea != null) {
             XposedHelpers.setObjectField(result, "mPreferredTaskDisplayArea", secondArea);
+        }
+    }
+
+    // Floating or translucent windows (permission requests, USB debugging prompts) don't
+    // cover their parent. Full-screen apps such as the camera or RetroArch manage their own
+    // display, and moving them made LG's services and the apps themselves shut them down.
+    private static boolean isDialog(Object activity) {
+        try {
+            return !(boolean) XposedHelpers.callMethod(activity, "occludesParent");
+        } catch (Throwable noMethod) {
+            return !XposedHelpers.getBooleanField(activity, "fullscreen");
         }
     }
 }
