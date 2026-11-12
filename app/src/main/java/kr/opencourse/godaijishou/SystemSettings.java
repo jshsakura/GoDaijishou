@@ -47,6 +47,8 @@ final class SystemSettings {
     static volatile boolean batteryStrip = false;
     // Hide the status label while the second screen shows a fullscreen app.
     static volatile boolean labelHideFullscreen = false;
+    // Current performance profile (PerfProfile.*), for the panel's highlight.
+    static volatile int perfProfile = PerfProfile.NORMAL;
     // Swivel state, kept current by a display listener so hooks never query DisplayManager
     // (the rotation hooks run under the WindowManager lock).
     static volatile boolean secondScreenOn = false;
@@ -204,6 +206,13 @@ final class SystemSettings {
             volumeOverlay = volume;
             batteryStrip = strip;
             labelHideFullscreen = hideFullscreen;
+            int idx = cursor.getColumnIndex(AppPreferences.KEY_PERF_PROFILE);
+            if (idx >= 0) {
+                try {
+                    perfProfile = Integer.parseInt(cursor.getString(idx));
+                } catch (RuntimeException ignored) {
+                }
+            }
             if (changed) {
                 for (Runnable l : listeners) l.run();
             }

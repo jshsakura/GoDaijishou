@@ -4,7 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 
-/** Re-applies the saved performance profile at boot and when battery saver flips. */
+/** Applies the performance profile: on request from the notification panel, at boot, and when battery saver flips. */
 public class PerfProfileReceiver extends BroadcastReceiver {
 
     @Override
@@ -17,6 +17,8 @@ public class PerfProfileReceiver extends BroadcastReceiver {
                 if (PerfProfile.ACTION_SET.equals(intent.getAction()) && intent.hasExtra(PerfProfile.EXTRA_PROFILE)) {
                     profile = intent.getIntExtra(PerfProfile.EXTRA_PROFILE, profile);
                     prefs.edit().putInt(AppPreferences.KEY_PERF_PROFILE, profile).commit();
+                    // Lets system_server pick up the new value (panel highlight).
+                    context.getContentResolver().notifyChange(SettingsProvider.CONTENT_URI, null);
                 }
                 PerfProfile.apply(profile);
             } finally {

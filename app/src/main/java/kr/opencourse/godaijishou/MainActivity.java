@@ -125,6 +125,7 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         updateRebootNotice();
         updateLauncherRows(); // reflect apps installed/removed while we were away
+        if (perfButtons != null) stylePerfButtons(perfButtons); // may have changed in the panel
     }
 
     // --- Performance profile ---
@@ -136,19 +137,24 @@ public class MainActivity extends AppCompatActivity {
             {PerfProfile.PERFORMANCE, R.drawable.ic_ft_bolt, R.color.ft_error},
     };
 
+    private android.widget.ImageView[] perfButtons;
+
     private void buildPerfProfileButtons() {
         android.widget.LinearLayout box = findViewById(R.id.perf_profile_buttons);
         float density = getResources().getDisplayMetrics().density;
         int size = Math.round(38 * density);
         int pad = Math.round(8 * density);
         android.widget.ImageView[] buttons = new android.widget.ImageView[PERF_PROFILES.length];
+        perfButtons = buttons;
         for (int i = 0; i < PERF_PROFILES.length; i++) {
             int[] def = PERF_PROFILES[i];
             android.widget.ImageView b = new android.widget.ImageView(this);
             b.setPadding(pad, pad, pad, pad);
             buttons[i] = b;
             b.setOnClickListener(v -> {
-                prefs.edit().putInt(AppPreferences.KEY_PERF_PROFILE, def[0]).apply();
+                prefs.edit().putInt(AppPreferences.KEY_PERF_PROFILE, def[0]).commit();
+                // The notification panel (system_server) shows the same choice.
+                getContentResolver().notifyChange(SettingsProvider.CONTENT_URI, null);
                 stylePerfButtons(buttons);
                 // Root shell: off the main thread. Magisk asks once for the grant.
                 new Thread(() -> {
