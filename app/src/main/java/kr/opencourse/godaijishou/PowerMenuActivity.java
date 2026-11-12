@@ -109,15 +109,18 @@ public class PowerMenuActivity extends Activity {
                 if (child instanceof TextView) {
                     TextView label = (TextView) child;
                     ViewGroup.MarginLayoutParams llp = (ViewGroup.MarginLayoutParams) label.getLayoutParams();
-                    llp.topMargin = Math.round(tile * 0.07f);
+                    llp.topMargin = Math.round(tile * 0.08f);
                     label.setLayoutParams(llp);
                     label.setMaxWidth(tile - inset * 2);
-                    label.setTextSize(TypedValue.COMPLEX_UNIT_PX, Math.min(14 * density * getResources().getConfiguration().fontScale,
-                            tile * 0.15f));
+                    // Small, medium weight, slightly spaced: quieter than a bold caption.
+                    label.setTextSize(TypedValue.COMPLEX_UNIT_PX, Math.min(12 * density * getResources().getConfiguration().fontScale,
+                            tile * 0.125f));
+                    label.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
+                    label.setLetterSpacing(0.02f);
                     label.setEllipsize(TextUtils.TruncateAt.END);
                 } else {
                     ViewGroup.LayoutParams ilp = child.getLayoutParams();
-                    ilp.width = ilp.height = Math.round(tile * 0.3f);
+                    ilp.width = ilp.height = Math.round(tile * 0.24f);
                     child.setLayoutParams(ilp);
                 }
             }
