@@ -269,31 +269,44 @@
                 style="@style/Ft.Switch" />
         </LinearLayout>
 
+        <!-- Performance profile: title row, then eco / normal / turbo segments across the card -->
         <LinearLayout
             android:id="@+id/row_perf_profile"
-            style="@style/Ft.Row">
+            style="@style/Ft.Row"
+            android:clickable="false"
+            android:focusable="false"
+            android:gravity="start"
+            android:orientation="vertical">
 
-            <ImageView
-                style="@style/Ft.RowIcon"
-                android:importantForAccessibility="no"
-                android:src="@drawable/ic_ft_gauge" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-            <LinearLayout style="@style/Ft.RowText">
+                <ImageView
+                    style="@style/Ft.RowIcon"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_ft_gauge" />
 
-                <TextView
-                    style="@style/Ft.RowTitle"
-                    android:text="@string/main_perf_profile" />
+                <LinearLayout style="@style/Ft.RowText">
 
-                <TextView
-                    style="@style/Ft.RowDesc"
-                    android:text="@string/main_perf_profile_desc" />
+                    <TextView
+                        style="@style/Ft.RowTitle"
+                        android:text="@string/main_perf_profile" />
+
+                    <TextView
+                        style="@style/Ft.RowDesc"
+                        android:text="@string/main_perf_profile_desc" />
+                </LinearLayout>
             </LinearLayout>
 
-            <!-- Eco / normal / performance icon buttons, built in MainActivity -->
+            <!-- Built in MainActivity -->
             <LinearLayout
                 android:id="@+id/perf_profile_buttons"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
                 android:orientation="horizontal" />
         </LinearLayout>
 

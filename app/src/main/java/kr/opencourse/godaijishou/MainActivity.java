@@ -130,26 +130,29 @@ public class MainActivity extends AppCompatActivity {
 
     // --- Performance profile ---
 
-    // {profile, icon, color}: eco green leaf, normal grey gauge, performance red bolt.
+    // {profile, icon, color, label}: eco green leaf, normal grey gauge, turbo red bolt.
     private static final int[][] PERF_PROFILES = {
-            {PerfProfile.ECO, R.drawable.ic_ft_leaf, R.color.ft_good},
-            {PerfProfile.NORMAL, R.drawable.ic_ft_gauge, R.color.ft_secondary},
-            {PerfProfile.PERFORMANCE, R.drawable.ic_ft_bolt, R.color.ft_error},
+            {PerfProfile.ECO, R.drawable.ic_ft_leaf, R.color.ft_good, R.string.perf_eco},
+            {PerfProfile.NORMAL, R.drawable.ic_ft_gauge, R.color.ft_secondary, R.string.perf_normal},
+            {PerfProfile.PERFORMANCE, R.drawable.ic_ft_bolt, R.color.ft_error, R.string.perf_turbo},
     };
 
-    private android.widget.ImageView[] perfButtons;
+    private TextView[] perfButtons;
 
+    // Three equal segments across the card: icon + name.
     private void buildPerfProfileButtons() {
         android.widget.LinearLayout box = findViewById(R.id.perf_profile_buttons);
         float density = getResources().getDisplayMetrics().density;
-        int size = Math.round(38 * density);
-        int pad = Math.round(8 * density);
-        android.widget.ImageView[] buttons = new android.widget.ImageView[PERF_PROFILES.length];
+        TextView[] buttons = new TextView[PERF_PROFILES.length];
         perfButtons = buttons;
         for (int i = 0; i < PERF_PROFILES.length; i++) {
             int[] def = PERF_PROFILES[i];
-            android.widget.ImageView b = new android.widget.ImageView(this);
-            b.setPadding(pad, pad, pad, pad);
+            TextView b = new TextView(this);
+            b.setText(def[3]);
+            b.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14);
+            b.setTypeface(Typeface.DEFAULT_BOLD);
+            b.setGravity(android.view.Gravity.CENTER);
+            b.setCompoundDrawablePadding(Math.round(6 * density));
             buttons[i] = b;
             b.setOnClickListener(v -> {
                 prefs.edit().putInt(AppPreferences.KEY_PERF_PROFILE, def[0]).commit();
@@ -163,26 +166,31 @@ public class MainActivity extends AppCompatActivity {
                             R.string.main_perf_profile_no_root, android.widget.Toast.LENGTH_LONG).show());
                 }, "GoDaijishou-perf").start();
             });
-            android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(size, size);
-            if (i > 0) lp.setMarginStart(Math.round(6 * density));
+            android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(
+                    0, Math.round(44 * density), 1f);
+            if (i > 0) lp.setMarginStart(Math.round(8 * density));
             box.addView(b, lp);
         }
         stylePerfButtons(buttons);
     }
 
-    // Selected: filled with its color. Others: outlined, icon in that color.
-    private void stylePerfButtons(android.widget.ImageView[] buttons) {
+    // Selected: filled with its color, dark ink. Others: outlined, icon and name in that color.
+    private void stylePerfButtons(TextView[] buttons) {
         float density = getResources().getDisplayMetrics().density;
         int current = prefs.getInt(AppPreferences.KEY_PERF_PROFILE, PerfProfile.NORMAL);
         for (int i = 0; i < buttons.length; i++) {
             int[] def = PERF_PROFILES[i];
             boolean on = current == def[0];
             int color = getColor(def[2]);
+            int ink = on ? getColor(R.color.ft_on_butter) : color;
             android.graphics.drawable.Drawable icon = getDrawable(def[1]).mutate();
-            icon.setTint(on ? getColor(R.color.ft_on_butter) : color);
-            buttons[i].setImageDrawable(icon);
+            icon.setTint(ink);
+            int size = Math.round(18 * density);
+            icon.setBounds(0, 0, size, size);
+            buttons[i].setCompoundDrawablesRelative(icon, null, null, null);
+            buttons[i].setTextColor(on ? ink : getColor(R.color.ft_ink));
             android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-            bg.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            bg.setCornerRadius(14 * density);
             if (on) {
                 bg.setColor(color);
             } else {

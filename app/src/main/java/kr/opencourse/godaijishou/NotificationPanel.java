@@ -436,7 +436,6 @@ final class NotificationPanel {
         LinearLayout card = NotificationBanner.card(ui, SystemSettings.context(), shown.pkg, shown.title,
                 shown.text, pinned);
         card.setElevation(0);
-        if (targets.size() == 1) addActions(card, shown, density);
         if (count > 0) {
             TextView pill = countPill(count, open, density);
             pill.setOnClickListener(v -> {
@@ -448,6 +447,7 @@ final class NotificationPanel {
             pillLp.setMarginStart(Math.round(10 * density));
             card.addView(pill, pillLp);
         }
+        if (targets.size() == 1) addActions(card, shown, density);
         // Behind the card: what the current swipe direction will do.
         FrameLayout slot = new FrameLayout(ui);
         android.widget.ImageView hint = new android.widget.ImageView(ui);
@@ -490,45 +490,73 @@ final class NotificationPanel {
         return pill;
     }
 
-    // The notification's own buttons (mark read, play/pause...). Ones that need typing
-    // (reply) are left out: the panel has no keyboard.
+    // The notification's own buttons (mark read, disable, play/pause...), built into the card's
+    // bottom like the system shade: a hairline, then flat butter text buttons sharing the
+    // width, split by hairlines. Ones that need typing (reply) are left out: no keyboard here.
     private static void addActions(LinearLayout card, Entry e, float density) {
         if (e.actions == null || e.actions.length == 0) return;
         LinearLayout row = new LinearLayout(ui);
         row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        int line = ui.getColor(R.color.ft_line);
+        int hair = Math.max(1, Math.round(density));
         int shown = 0;
         for (int i = 0; i < e.actions.length && shown < MAX_ACTIONS; i++) {
             Notification.Action action = e.actions[i];
             if (action == null || action.actionIntent == null || TextUtils.isEmpty(action.title)) continue;
             if (action.getRemoteInputs() != null && action.getRemoteInputs().length > 0) continue;
-            TextView chip = new TextView(ui);
-            chip.setText(action.title);
-            chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-            chip.setTypeface(Typeface.DEFAULT_BOLD);
-            chip.setTextColor(ui.getColor(R.color.ft_ink));
-            chip.setSingleLine(true);
-            chip.setEllipsize(TextUtils.TruncateAt.END);
-            chip.setGravity(Gravity.CENTER);
-            int ph = Math.round(10 * density);
-            chip.setPadding(ph, 0, ph, 0);
-            GradientDrawable bg = new GradientDrawable();
-            bg.setCornerRadius(13 * density);
-            bg.setColor(ui.getColor(R.color.ft_surface));
-            bg.setStroke(Math.max(1, Math.round(density)), ui.getColor(R.color.ft_line));
-            chip.setBackground(bg);
+            if (shown > 0) {
+                View split = new View(ui);
+                split.setBackgroundColor(line);
+                row.addView(split, new LinearLayout.LayoutParams(hair, Math.round(18 * density)));
+            }
+            TextView button = new TextView(ui);
+            button.setText(action.title);
+            button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+            button.setTypeface(Typeface.DEFAULT_BOLD);
+            button.setTextColor(ui.getColor(R.color.ft_butter));
+            button.setSingleLine(true);
+            button.setEllipsize(TextUtils.TruncateAt.END);
+            button.setGravity(Gravity.CENTER);
+            int ph = Math.round(8 * density);
+            button.setPadding(ph, 0, ph, 0);
+            // Pressed: a soft tint over the button.
+            android.graphics.drawable.StateListDrawable press = new android.graphics.drawable.StateListDrawable();
+            GradientDrawable pressed = new GradientDrawable();
+            pressed.setCornerRadius(10 * density);
+            pressed.setColor(ui.getColor(R.color.ft_press));
+            press.addState(new int[]{android.R.attr.state_pressed}, pressed);
+            button.setBackground(press);
             int index = i;
-            chip.setOnClickListener(v -> runAction(e, index, action));
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, Math.round(28 * density), 1f);
-            if (shown > 0) lp.setMarginStart(Math.round(6 * density));
-            row.addView(chip, lp);
+            button.setOnClickListener(v -> runAction(e, index, action));
+            row.addView(button, new LinearLayout.LayoutParams(0, Math.round(38 * density), 1f));
             shown++;
         }
         if (shown == 0) return;
-        LinearLayout texts = (LinearLayout) card.getChildAt(1);
-        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        rowLp.topMargin = Math.round(8 * density);
-        texts.addView(row, rowLp);
+
+        // Card becomes: [icon | texts | pill] / hairline / [buttons].
+        LinearLayout content = new LinearLayout(ui);
+        content.setOrientation(LinearLayout.HORIZONTAL);
+        content.setGravity(Gravity.CENTER_VERTICAL);
+        while (card.getChildCount() > 0) {
+            View child = card.getChildAt(0);
+            ViewGroup.LayoutParams lp = child.getLayoutParams();
+            card.removeViewAt(0);
+            content.addView(child, lp);
+        }
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(card.getPaddingLeft(), card.getPaddingTop(), card.getPaddingRight(),
+                Math.round(4 * density));
+        card.addView(content, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        View divider = new View(ui);
+        divider.setBackgroundColor(line);
+        LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, hair);
+        dividerLp.topMargin = Math.round(12 * density);
+        dividerLp.bottomMargin = Math.round(4 * density);
+        card.addView(divider, dividerLp);
+        card.addView(row, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
     }
 
     // Fires the button like the shade does; screens it opens go to the second screen.
