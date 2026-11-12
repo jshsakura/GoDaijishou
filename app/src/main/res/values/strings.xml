@@ -19,8 +19,8 @@
     <string name="main_volume_overlay_switch">Volume overlay</string>
     <string name="main_battery_strip_switch">Status label</string>
     <string name="main_battery_strip_desc">A small translucent tab at the top right of the bottom screen shows Wi-Fi, mobile data, the notification count and battery %. Covers nothing, takes no input.</string>
-    <string name="main_label_hide_fullscreen_switch">Hide label in fullscreen</string>
-    <string name="main_label_hide_fullscreen_desc">Hides the status label while the bottom screen app is fullscreen (Daijishou, games and other apps that hide status info). It comes back with regular apps.</string>
+    <string name="main_label_hide_fullscreen_switch">Hide the status bar in fullscreen apps</string>
+    <string name="main_label_hide_fullscreen_desc">Fullscreen apps such as Daijishou and games hide the status label at the top.</string>
     <string name="main_volume_overlay_desc">A slim vertical volume bar on the right edge of the screen in use, drawn by the system (no extra permission). Never takes input.</string>
 
     <!-- Rotation forcing (formerly GoRotation90) -->

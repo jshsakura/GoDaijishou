@@ -19,8 +19,8 @@
     <string name="main_volume_overlay_switch">볼륨 표시</string>
     <string name="main_battery_strip_switch">상태 라벨</string>
     <string name="main_battery_strip_desc">하단 화면 오른쪽 위에 작은 반투명 라벨로 와이파이, LTE, 알림 개수, 배터리 %를 보여줍니다. 아무것도 가리지 않고 입력도 받지 않습니다.</string>
-    <string name="main_label_hide_fullscreen_switch">전체화면에서 라벨 숨기기</string>
-    <string name="main_label_hide_fullscreen_desc">하단 화면 앱이 전체화면일 때(다이지쇼, 게임 등 상태 표시를 숨기는 앱) 상태 라벨을 감춥니다. 일반 앱으로 돌아오면 다시 나타납니다.</string>
+    <string name="main_label_hide_fullscreen_switch">전체화면 앱은 알림바 숨김</string>
+    <string name="main_label_hide_fullscreen_desc">다이지쇼·게임처럼 전체화면인 앱에서는 위쪽 알림바(상태 라벨)를 숨깁니다.</string>
     <string name="main_volume_overlay_desc">지금 쓰는 화면 오른쪽 가장자리에 얇은 세로 볼륨 바를 시스템이 직접 그립니다(추가 권한 없음). 입력을 가로채지 않습니다.</string>
 
     <!-- Rotation forcing (formerly GoRotation90) -->

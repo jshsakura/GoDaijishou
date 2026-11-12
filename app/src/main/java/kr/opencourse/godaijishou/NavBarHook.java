@@ -54,6 +54,7 @@ final class NavBarHook {
     // --- SystemUI ---
 
     static void installSystemUi(ClassLoader cl) {
+        installFrameSwap();
         Class<?> handle = XposedHelpers.findClass(HANDLE, cl);
         XposedBridge.hookAllConstructors(handle, new XC_MethodHook() {
             @Override
@@ -71,6 +72,21 @@ final class NavBarHook {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
                 View v = (View) param.thisObject;
+                // LG centers the pill mFullgestureNavHeight/2 above the bottom. With the shorter
+                // bar (keyboard strip option) that is above the window: the pill vanished.
+                // Center it in the bar it actually has.
+                try {
+                    Object full = XposedHelpers.getAdditionalInstanceField(v, "gdj_full");
+                    int now = XposedHelpers.getIntField(v, "mFullgestureNavHeight");
+                    if (!(full instanceof Integer) || (now != (Integer) full && now != v.getHeight())) {
+                        full = now;
+                        XposedHelpers.setAdditionalInstanceField(v, "gdj_full", now);
+                    }
+                    int stock = (Integer) full;
+                    boolean shortBar = imeStripOff() && v.getHeight() > 0 && v.getHeight() < stock;
+                    XposedHelpers.setIntField(v, "mFullgestureNavHeight", shortBar ? v.getHeight() : stock);
+                } catch (Throwable ignored) {
+                }
                 boolean slim = slimPill(v.getContext());
                 for (String f : SIZE_FIELDS) {
                     try {
@@ -144,6 +160,29 @@ final class NavBarHook {
         XposedBridge.hookAllMethods(impl, "installNavigationBarFrameIfNecessary", hideFrame);
         XposedBridge.hookAllMethods(impl, "onViewInitialized", hideFrame);
         XposedBridge.hookAllMethods(impl, "onWindowShown", hideFrame);
+    }
+
+    // SystemUI: the bar's frame (what the keyboard sits on) = the gesture bar's own height.
+    private static void installFrameSwap() {
+        Resources sys = Resources.getSystem();
+        final int frame = sys.getIdentifier("navigation_bar_frame_height", "dimen", "android");
+        final int frameLand = sys.getIdentifier("navigation_bar_frame_height_landscape", "dimen", "android");
+        final int bar = sys.getIdentifier("navigation_bar_height", "dimen", "android");
+        if (frame == 0 || bar == 0) return;
+        XC_MethodHook swap = new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) {
+                int id = (Integer) param.args[0];
+                if (id != frame && (frameLand == 0 || id != frameLand)) return;
+                if (imeStripOff()) param.args[0] = bar;
+            }
+        };
+        for (String name : new String[]{"getDimensionPixelSize", "getDimensionPixelOffset", "getDimension"}) {
+            try {
+                XposedHelpers.findAndHookMethod(Resources.class, name, int.class, swap);
+            } catch (Throwable ignored) {
+            }
+        }
     }
 
     // --- Settings ---
