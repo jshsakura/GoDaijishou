@@ -251,7 +251,7 @@
             <ImageView
                 style="@style/Ft.RowIcon"
                 android:importantForAccessibility="no"
-                android:src="@drawable/ic_ft_screen_bottom" />
+                android:src="@drawable/ic_ft_fullscreen" />
 
             <LinearLayout style="@style/Ft.RowText">
 
@@ -342,7 +342,7 @@
             <ImageView
                 style="@style/Ft.RowIcon"
                 android:importantForAccessibility="no"
-                android:src="@drawable/ic_ft_gauge" />
+                android:src="@drawable/ic_ft_gesture_bar" />
 
             <LinearLayout style="@style/Ft.RowText">
 
@@ -367,7 +367,7 @@
             <ImageView
                 style="@style/Ft.RowIcon"
                 android:importantForAccessibility="no"
-                android:src="@drawable/ic_ft_gauge" />
+                android:src="@drawable/ic_ft_keyboard" />
 
             <LinearLayout style="@style/Ft.RowText">
 
@@ -392,7 +392,7 @@
             <ImageView
                 style="@style/Ft.RowIcon"
                 android:importantForAccessibility="no"
-                android:src="@drawable/ic_ft_power" />
+                android:src="@drawable/ic_ft_fingerprint" />
 
             <LinearLayout style="@style/Ft.RowText">
 
@@ -522,7 +522,7 @@
             <ImageView
                 style="@style/Ft.RowIcon"
                 android:importantForAccessibility="no"
-                android:src="@drawable/ic_ft_power" />
+                android:src="@drawable/ic_ft_restart" />
 
             <LinearLayout style="@style/Ft.RowText">
 
