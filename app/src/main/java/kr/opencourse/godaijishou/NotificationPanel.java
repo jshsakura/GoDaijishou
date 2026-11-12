@@ -575,14 +575,13 @@ final class NotificationPanel {
         return pill;
     }
 
-    // The notification's own buttons (mark read, disable, play/pause...), built into the card's
-    // bottom like the system shade: a hairline, then flat butter text buttons sharing the
-    // width, split by hairlines. Ones that need typing (reply) are left out: no keyboard here.
+    // The notification's own buttons (mark read, disable, play/pause...): one full-width bar
+    // across the card's bottom, edge to edge, split by full-height hairlines, quiet ink.
+    // Ones that need typing (reply) are left out: there is no keyboard here.
     private static void addActions(LinearLayout card, Entry e, float density) {
         if (e.actions == null || e.actions.length == 0) return;
         LinearLayout row = new LinearLayout(ui);
         row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER_VERTICAL);
         int line = ui.getColor(R.color.ft_line);
         int hair = Math.max(1, Math.round(density));
         int shown = 0;
@@ -590,6 +589,11 @@ final class NotificationPanel {
             Notification.Action action = e.actions[i];
             if (action == null || action.actionIntent == null || TextUtils.isEmpty(action.title)) continue;
             if (action.getRemoteInputs() != null && action.getRemoteInputs().length > 0) continue;
+            if (shown > 0) {
+                View split = new View(ui);
+                split.setBackgroundColor(line);
+                row.addView(split, new LinearLayout.LayoutParams(hair, ViewGroup.LayoutParams.MATCH_PARENT));
+            }
             TextView button = new TextView(ui);
             android.graphics.drawable.Drawable actionIcon = actionIcon(action, density);
             if (actionIcon != null) {
@@ -607,29 +611,18 @@ final class NotificationPanel {
             button.setGravity(Gravity.CENTER);
             int ph = Math.round(8 * density);
             button.setPadding(ph, 0, ph, 0);
-            // Each button its own outlined box on the ground color; brighter while pressed.
             android.graphics.drawable.StateListDrawable press = new android.graphics.drawable.StateListDrawable();
-            GradientDrawable pressed = new GradientDrawable();
-            pressed.setCornerRadius(10 * density);
-            pressed.setColor(ui.getColor(R.color.ft_line));
-            pressed.setStroke(hair, ui.getColor(R.color.ft_secondary));
-            GradientDrawable normal = new GradientDrawable();
-            normal.setCornerRadius(10 * density);
-            normal.setColor(ui.getColor(R.color.ft_ground));
-            normal.setStroke(hair, line);
-            press.addState(new int[]{android.R.attr.state_pressed}, pressed);
-            press.addState(new int[]{}, normal);
+            press.addState(new int[]{android.R.attr.state_pressed},
+                    new android.graphics.drawable.ColorDrawable(ui.getColor(R.color.ft_press)));
             button.setBackground(press);
             int index = i;
             button.setOnClickListener(v -> runAction(e, index, action));
-            LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(0, Math.round(34 * density), 1f);
-            if (shown > 0) blp.setMarginStart(Math.round(6 * density));
-            row.addView(button, blp);
+            row.addView(button, new LinearLayout.LayoutParams(0, Math.round(42 * density), 1f));
             shown++;
         }
         if (shown == 0) return;
 
-        // Card becomes: [icon | texts | pill | chevron] / (hairline + buttons, pulled open).
+        // Card becomes: [icon | texts | pill | chevron] / (full-width bar, pulled open).
         android.widget.ImageView chevron = new android.widget.ImageView(ui);
         android.graphics.drawable.Drawable chev = ui.getDrawable(R.drawable.ic_ft_chevron);
         if (chev != null) {
@@ -646,26 +639,31 @@ final class NotificationPanel {
             card.removeViewAt(0);
             content.addView(child, lp);
         }
-        card.setOrientation(LinearLayout.VERTICAL);
         int chevSize = Math.round(18 * density);
         LinearLayout.LayoutParams chevLp = new LinearLayout.LayoutParams(chevSize, chevSize);
         chevLp.setMarginStart(Math.round(6 * density));
         content.addView(chevron, chevLp);
+        card.setOrientation(LinearLayout.VERTICAL);
         card.addView(content, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        // The bar ignores the card's side and bottom padding: it runs to the card's edges and
+        // the card's rounded outline clips its bottom corners.
         LinearLayout box = new LinearLayout(ui);
         box.setOrientation(LinearLayout.VERTICAL);
         View divider = new View(ui);
         divider.setBackgroundColor(line);
-        LinearLayout.LayoutParams dividerLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, hair);
-        dividerLp.topMargin = Math.round(10 * density);
-        dividerLp.bottomMargin = Math.round(8 * density);
-        box.addView(divider, dividerLp);
+        box.addView(divider, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, hair));
         box.addView(row, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        card.addView(box, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        card.setTag(new Object[]{e.key, box, chevron});
+        LinearLayout.LayoutParams boxLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        boxLp.setMarginStart(-card.getPaddingStart());
+        boxLp.setMarginEnd(-card.getPaddingEnd());
+        boxLp.topMargin = card.getPaddingTop();
+        card.addView(box, boxLp);
+        card.setClipToOutline(true);
+        card.setTag(new Object[]{e.key, box, chevron, card.getPaddingBottom()});
         showActions(card, actionsOpen.contains(e.key), false);
         chevron.setOnClickListener(v -> toggleActions(card));
     }
@@ -678,8 +676,9 @@ final class NotificationPanel {
         if (animate && list != null) android.transition.TransitionManager.beginDelayedTransition(list);
         box.setVisibility(open ? View.VISIBLE : View.GONE);
         chevron.setRotation(open ? -90f : 90f);
+        int basePad = (int) tag[3];
         ((LinearLayout) card).setPadding(card.getPaddingLeft(), card.getPaddingTop(), card.getPaddingRight(),
-                card.getPaddingTop());
+                open ? 0 : basePad);
     }
 
     private static void toggleActions(View card) {
