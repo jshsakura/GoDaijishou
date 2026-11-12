@@ -160,6 +160,10 @@ final class NotificationPanel {
             list = new LinearLayout(ui);
             list.setOrientation(LinearLayout.VERTICAL);
             scroll.addView(list);
+            // The list fills the screen: a tap on the empty space under the cards closes
+            // (the ScrollView used to swallow it).
+            scroll.setFillViewport(true);
+            list.setOnClickListener(v -> close());
             // Wraps its cards, capped by the screen height (then it scrolls); the header sits
             // on top of it and the list starts below the header.
             FrameLayout stack = new FrameLayout(ui);
@@ -244,6 +248,21 @@ final class NotificationPanel {
         title.setPadding(tp, 0, tp, 0);
         title.setBackground(pill(density, false));
         row.addView(title, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, pillHeight));
+
+        // Clock beside the title: big, tabular digits, follows the 12/24h setting.
+        android.widget.TextClock clock = new android.widget.TextClock(ui);
+        clock.setFormat24Hour("H:mm");
+        clock.setFormat12Hour("h:mm");
+        clock.setTextColor(ui.getColor(R.color.ft_ink));
+        clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+        clock.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+        clock.setFontFeatureSettings("tnum");
+        clock.setLetterSpacing(0.02f);
+        clock.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams clockLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, pillHeight);
+        clockLp.setMarginStart(Math.round(10 * density));
+        row.addView(clock, clockLp);
 
         row.addView(new View(ui), new LinearLayout.LayoutParams(0, 1, 1f));
 
