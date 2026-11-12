@@ -35,7 +35,7 @@ public class SettingsProvider extends ContentProvider {
         if (Binder.getCallingUid() == Process.SYSTEM_UID) {
             AppPreferences.markSystemHookSeen(context);
         }
-        SharedPreferences prefs = context.getSharedPreferences(AppPreferences.PREF_FILE_NAME, Context.MODE_PRIVATE);
+        SharedPreferences prefs = AppPreferences.settings(context);
 
         String targetPackage = prefs.getString(AppPreferences.KEY_LAUNCHER_PACKAGE, null);
         String targetActivity = prefs.getString(AppPreferences.KEY_LAUNCHER_ACTIVITY, null);

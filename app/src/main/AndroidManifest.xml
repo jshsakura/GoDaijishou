@@ -53,6 +53,7 @@
         <provider
             android:name=".SettingsProvider"
             android:authorities="kr.opencourse.godaijishou.provider"
+            android:directBootAware="true"
             android:exported="true" />
 
         <!-- Second screen power menu, launched by the system_server hook (system uid may start it) -->

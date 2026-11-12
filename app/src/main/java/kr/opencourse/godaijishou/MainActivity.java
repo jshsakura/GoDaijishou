@@ -70,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        prefs = getSharedPreferences(AppPreferences.PREF_FILE_NAME, Context.MODE_PRIVATE);
+        prefs = AppPreferences.settings(this);
 
         buildLauncherRows();
         topBlackoutSwitch = findViewById(R.id.switch_top_blackout);
