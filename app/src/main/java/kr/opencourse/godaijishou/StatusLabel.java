@@ -363,6 +363,11 @@ final class StatusLabel {
                         if (!fired[0] && dy > pull && dy > dx * 1.5f) {
                             fired[0] = true;
                             if (!NotificationPanel.isOpen()) NotificationPanel.toggle();
+                            // The same pull is a swipe from the top edge for the system too,
+                            // which drops the stock shade: put it back up, now and once more
+                            // when its own animation has started.
+                            collapseStockShade(g.getContext());
+                            g.postDelayed(() -> collapseStockShade(g.getContext()), 250);
                         }
                         return true;
                     }
@@ -377,6 +382,14 @@ final class StatusLabel {
             grip = g;
         } catch (Throwable ignored) {
             grip = null;
+        }
+    }
+
+    private static void collapseStockShade(Context context) {
+        try {
+            Object sbm = context.getSystemService("statusbar");
+            if (sbm != null) XposedHelpers.callMethod(sbm, "collapsePanels");
+        } catch (Throwable ignored) {
         }
     }
 
