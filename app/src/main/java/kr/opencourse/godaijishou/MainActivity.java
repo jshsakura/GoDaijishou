@@ -199,6 +199,7 @@ public class MainActivity extends AppCompatActivity {
         android.widget.LinearLayout box = findViewById(R.id.usb_mode_buttons);
         float density = getResources().getDisplayMetrics().density;
         int[] labels = {R.string.usb_mode_mtp, R.string.usb_mode_charge};
+        int[] icons = {R.drawable.ic_ft_folder, R.drawable.ic_ft_plug};
         TextView[] buttons = new TextView[labels.length];
         for (int i = 0; i < labels.length; i++) {
             final boolean chargeOnly = i == 1;
@@ -207,6 +208,8 @@ public class MainActivity extends AppCompatActivity {
             b.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14);
             b.setTypeface(Typeface.DEFAULT_BOLD);
             b.setGravity(android.view.Gravity.CENTER);
+            b.setCompoundDrawablePadding(Math.round(6 * density));
+            b.setTag(icons[i]);
             buttons[i] = b;
             android.widget.FrameLayout cell = new android.widget.FrameLayout(this);
             cell.addView(b, new android.widget.FrameLayout.LayoutParams(
@@ -233,7 +236,13 @@ public class MainActivity extends AppCompatActivity {
         boolean chargeOnly = prefs.getBoolean(AppPreferences.KEY_USB_CHARGE_ONLY, false);
         for (int i = 0; i < buttons.length; i++) {
             boolean on = (i == 1) == chargeOnly;
-            buttons[i].setTextColor(getColor(on ? R.color.ft_on_butter : R.color.ft_ink));
+            int ink = getColor(on ? R.color.ft_on_butter : R.color.ft_ink);
+            android.graphics.drawable.Drawable icon = getDrawable((Integer) buttons[i].getTag()).mutate();
+            icon.setTint(ink);
+            int size = Math.round(18 * density);
+            icon.setBounds(0, 0, size, size);
+            buttons[i].setCompoundDrawablesRelative(icon, null, null, null);
+            buttons[i].setTextColor(ink);
             android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
             bg.setCornerRadius(14 * density);
             if (on) {
