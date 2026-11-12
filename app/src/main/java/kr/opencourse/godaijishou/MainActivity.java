@@ -330,6 +330,20 @@ public class MainActivity extends AppCompatActivity {
                 desc.setText(R.string.launcher_not_installed);
                 desc.setTextColor(getColor(R.color.ft_secondary));
             }
+            // Target package under the status, small and quiet (stock: LG's second home).
+            String target = pkg != null ? pkg : LauncherHook.TARGET_PACKAGE;
+            android.text.SpannableStringBuilder text = new android.text.SpannableStringBuilder(desc.getText());
+            text.append('\n');
+            int start = text.length();
+            text.append(target);
+            int end = text.length();
+            text.setSpan(new ForegroundColorSpan(getColor(R.color.ft_secondary)), start, end,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            text.setSpan(new android.text.style.RelativeSizeSpan(0.9f), start, end,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            text.setSpan(new android.text.style.TypefaceSpan("monospace"), start, end,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            desc.setText(text);
             // Dim launchers that are not installed so the usable ones stand out.
             row.setAlpha(installed ? 1f : 0.45f);
         }
