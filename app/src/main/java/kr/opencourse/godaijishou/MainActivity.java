@@ -114,6 +114,8 @@ public class MainActivity extends AppCompatActivity {
         usbDebugSwitch = findViewById(R.id.switch_usb_debug);
         bindSystemHookSwitch(R.id.row_usb_debug, usbDebugSwitch, AppPreferences.KEY_USB_DEBUG_PIN);
 
+        buildPerfProfileButtons();
+
         findViewById(R.id.row_reboot).setOnClickListener(v -> confirmReboot());
         findViewById(R.id.btn_notice_reboot).setOnClickListener(v -> confirmReboot());
     }
@@ -123,6 +125,66 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         updateRebootNotice();
         updateLauncherRows(); // reflect apps installed/removed while we were away
+    }
+
+    // --- Performance profile ---
+
+    // {profile, icon, color}: eco green leaf, normal grey gauge, performance red bolt.
+    private static final int[][] PERF_PROFILES = {
+            {PerfProfile.ECO, R.drawable.ic_ft_leaf, R.color.ft_good},
+            {PerfProfile.NORMAL, R.drawable.ic_ft_gauge, R.color.ft_secondary},
+            {PerfProfile.PERFORMANCE, R.drawable.ic_ft_bolt, R.color.ft_error},
+    };
+
+    private void buildPerfProfileButtons() {
+        android.widget.LinearLayout box = findViewById(R.id.perf_profile_buttons);
+        float density = getResources().getDisplayMetrics().density;
+        int size = Math.round(38 * density);
+        int pad = Math.round(8 * density);
+        android.widget.ImageView[] buttons = new android.widget.ImageView[PERF_PROFILES.length];
+        for (int i = 0; i < PERF_PROFILES.length; i++) {
+            int[] def = PERF_PROFILES[i];
+            android.widget.ImageView b = new android.widget.ImageView(this);
+            b.setPadding(pad, pad, pad, pad);
+            buttons[i] = b;
+            b.setOnClickListener(v -> {
+                prefs.edit().putInt(AppPreferences.KEY_PERF_PROFILE, def[0]).apply();
+                stylePerfButtons(buttons);
+                // Root shell: off the main thread. Magisk asks once for the grant.
+                new Thread(() -> {
+                    boolean ok = PerfProfile.apply(def[0]);
+                    if (!ok) runOnUiThread(() -> android.widget.Toast.makeText(this,
+                            R.string.main_perf_profile_no_root, android.widget.Toast.LENGTH_LONG).show());
+                }, "GoDaijishou-perf").start();
+            });
+            android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(size, size);
+            if (i > 0) lp.setMarginStart(Math.round(6 * density));
+            box.addView(b, lp);
+        }
+        stylePerfButtons(buttons);
+    }
+
+    // Selected: filled with its color. Others: outlined, icon in that color.
+    private void stylePerfButtons(android.widget.ImageView[] buttons) {
+        float density = getResources().getDisplayMetrics().density;
+        int current = prefs.getInt(AppPreferences.KEY_PERF_PROFILE, PerfProfile.NORMAL);
+        for (int i = 0; i < buttons.length; i++) {
+            int[] def = PERF_PROFILES[i];
+            boolean on = current == def[0];
+            int color = getColor(def[2]);
+            android.graphics.drawable.Drawable icon = getDrawable(def[1]).mutate();
+            icon.setTint(on ? getColor(R.color.ft_on_butter) : color);
+            buttons[i].setImageDrawable(icon);
+            android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+            bg.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            if (on) {
+                bg.setColor(color);
+            } else {
+                bg.setColor(getColor(R.color.ft_surface));
+                bg.setStroke(Math.max(1, Math.round(density)), getColor(R.color.ft_line));
+            }
+            buttons[i].setBackground(bg);
+        }
     }
 
     // --- Reboot notice ---

@@ -66,4 +66,7 @@
     <string name="notifications_block">Never show</string>
     <string name="notifications_clear_all">Clear all</string>
     <string name="notifications_empty">No notifications</string>
+    <string name="main_perf_profile">Performance profile</string>
+    <string name="main_perf_profile_desc">Eco: lowest clocks, least heat. Normal: a bit under stock. Performance: full clocks, less throttling. Needs root (Magisk).</string>
+    <string name="main_perf_profile_no_root">No root: allow GoDaijishou in Magisk</string>
 </resources>

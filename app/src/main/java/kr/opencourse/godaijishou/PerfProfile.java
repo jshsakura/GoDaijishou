@@ -8,9 +8,9 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Performance profiles: CPU/GPU clock caps against heat. Clock files are root-only (even
- * system_server can't write them), so the panel in system_server only sends a broadcast and
- * the app applies the profile through Magisk's su. Re-applied at boot and whenever battery
+ * Performance profiles: CPU/GPU clock caps against heat, chosen in the app. Clock files are
+ * root-only (even system_server can't write them), so the app applies them through Magisk's
+ * su; system_server only asks for a re-apply. Re-applied at boot and whenever battery
  * saver flips (LG's saver rewrites clocks on its own).
  *
  * ECO: every core and the GPU capped hard, for the least battery and heat; normal throttling.

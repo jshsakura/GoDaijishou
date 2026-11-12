@@ -229,36 +229,23 @@ final class NotificationPanel {
         withIcon(title, R.drawable.ic_ft_bell, ui.getColor(R.color.ft_butter), 18, density);
         row.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        // Performance profiles: eco (green leaf), normal (gauge), performance (red bolt).
-        LinearLayout profiles = new LinearLayout(ui);
-        profiles.setOrientation(LinearLayout.HORIZONTAL);
-        int[][] defs = {
-                {PerfProfile.ECO, R.drawable.ic_ft_leaf, R.color.ft_good},
-                {PerfProfile.NORMAL, R.drawable.ic_ft_gauge, R.color.ft_secondary},
-                {PerfProfile.PERFORMANCE, R.drawable.ic_ft_bolt, R.color.ft_error},
-        };
-        int profileSize = Math.round(30 * density);
-        android.widget.ImageView[] buttons = new android.widget.ImageView[defs.length];
-        for (int i = 0; i < defs.length; i++) {
-            int[] d = defs[i];
-            android.widget.ImageView b = new android.widget.ImageView(ui);
-            int pp = Math.round(6 * density);
-            b.setPadding(pp, pp, pp, pp);
-            buttons[i] = b;
-            b.setOnClickListener(v -> {
-                SystemSettings.perfProfile = d[0];
-                for (int j = 0; j < defs.length; j++) styleProfile(buttons[j], defs[j], density);
-                PerfProfile.request(SystemSettings.context(), d[0]);
-            });
-            styleProfile(b, d, density);
-            LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(profileSize, profileSize);
-            if (i > 0) blp.setMarginStart(Math.round(4 * density));
-            profiles.addView(b, blp);
-        }
-        LinearLayout.LayoutParams profilesLp = new LinearLayout.LayoutParams(
+        // Battery saver toggle: the quick settings live on the top display, which may be off.
+        TextView saver = chip(density);
+        saver.setText(R.string.notifications_battery_saver);
+        styleSaver(saver, density); // also sets its icon in the matching color
+        saver.setOnClickListener(x -> {
+            try {
+                PowerManager pm = SystemSettings.context().getSystemService(PowerManager.class);
+                // System API (hidden from the SDK); system_server holds DEVICE_POWER.
+                XposedHelpers.callMethod(pm, "setPowerSaveModeEnabled", !pm.isPowerSaveMode());
+            } catch (Throwable ignored) {
+            }
+            styleSaver(saver, density);
+        });
+        LinearLayout.LayoutParams saverLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        profilesLp.setMarginEnd(Math.round(8 * density));
-        row.addView(profiles, profilesLp);
+        saverLp.setMarginEnd(Math.round(8 * density));
+        row.addView(saver, saverLp);
 
         TextView clear = chip(density);
         clear.setText(R.string.notifications_clear_all);
@@ -319,25 +306,27 @@ final class NotificationPanel {
         return chip;
     }
 
-    // Selected profile: filled with its color. Others: outlined, icon in that color.
-    private static void styleProfile(android.widget.ImageView button, int[] def, float density) {
-        boolean on = SystemSettings.perfProfile == def[0];
-        int color = ui.getColor(def[2]);
-        android.graphics.drawable.Drawable icon = ui.getDrawable(def[1]);
-        if (icon != null) {
-            icon = icon.mutate();
-            icon.setTint(on ? ui.getColor(R.color.ft_on_butter) : color);
-            button.setImageDrawable(icon);
+    // On: filled butter like an active toggle. Off: outlined.
+    private static void styleSaver(TextView chip, float density) {
+        boolean on = false;
+        try {
+            on = SystemSettings.context().getSystemService(PowerManager.class).isPowerSaveMode();
+        } catch (Throwable ignored) {
         }
         GradientDrawable bg = new GradientDrawable();
-        bg.setShape(GradientDrawable.OVAL);
+        bg.setCornerRadius(100 * density);
+        int ink;
         if (on) {
-            bg.setColor(color);
+            bg.setColor(ui.getColor(R.color.ft_butter));
+            ink = ui.getColor(R.color.ft_on_butter);
         } else {
             bg.setColor(ui.getColor(R.color.ft_surface));
             bg.setStroke(Math.max(1, Math.round(density)), ui.getColor(R.color.ft_line));
+            ink = ui.getColor(R.color.ft_ink);
         }
-        button.setBackground(bg);
+        chip.setTextColor(ink);
+        withIcon(chip, R.drawable.ic_ft_battery_saver, ink, 15, density);
+        chip.setBackground(bg);
     }
 
     // Leading icon in the text's color.

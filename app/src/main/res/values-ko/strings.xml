@@ -66,4 +66,7 @@
     <string name="notifications_block">다시 보지 않기</string>
     <string name="notifications_clear_all">모두 지우기</string>
     <string name="notifications_empty">알림이 없습니다</string>
+    <string name="main_perf_profile">성능 프로필</string>
+    <string name="main_perf_profile_desc">에코: 클럭 최저, 발열 최소. 보통: 순정보다 살짝 낮게. 성능: 최대 클럭, 쓰로틀 완화. 루트(Magisk) 필요.</string>
+    <string name="main_perf_profile_no_root">루트 권한 없음: Magisk에서 GoDaijishou를 허용해 주세요</string>
 </resources>
