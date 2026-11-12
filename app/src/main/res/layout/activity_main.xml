@@ -538,7 +538,7 @@
             <ImageView
                 style="@style/Ft.RowIcon"
                 android:importantForAccessibility="no"
-                android:src="@drawable/ic_ft_wrench" />
+                android:src="@drawable/ic_ft_log" />
 
             <LinearLayout style="@style/Ft.RowText">
 
