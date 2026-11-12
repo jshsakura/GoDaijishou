@@ -13,6 +13,8 @@
         <package android:name="com.magneticchen.daijishou" />
         <package android:name="org.es_de.frontend" />
         <package android:name="org.pegasus_frontend.android" />
+        <!-- LG second home: visible so the app can bring it up when chosen -->
+        <package android:name="com.lge.secondlauncher" />
         <!-- For the Open LSPosed button -->
         <package android:name="org.lsposed.manager" />
         <!-- Host of the parasitic LSPosed manager -->

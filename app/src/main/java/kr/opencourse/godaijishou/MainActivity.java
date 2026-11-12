@@ -383,9 +383,8 @@ public class MainActivity extends AppCompatActivity {
             home = getPackageManager().getLaunchIntentForPackage(pkg);
             if (home == null) return;
         } else {
-            home = new Intent(Intent.ACTION_MAIN)
-                    .addCategory(Intent.CATEGORY_SECONDARY_HOME)
-                    .setPackage(LauncherHook.TARGET_PACKAGE);
+            home = stockSecondHome();
+            if (home == null) return;
         }
         home.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
         home.putExtra(LauncherHook.EXTRA_REFRESH, true);
@@ -395,6 +394,23 @@ public class MainActivity extends AppCompatActivity {
         } catch (RuntimeException ignored) {
             // The setting is saved either way; it applies on the next home press.
         }
+    }
+
+    // LG's second home as an explicit component, so it starts at once like the others
+    // (an implicit SECONDARY_HOME intent may not resolve for an ordinary app).
+    private Intent stockSecondHome() {
+        Intent probe = new Intent(Intent.ACTION_MAIN)
+                .addCategory(Intent.CATEGORY_SECONDARY_HOME)
+                .setPackage(LauncherHook.TARGET_PACKAGE);
+        java.util.List<android.content.pm.ResolveInfo> found =
+                getPackageManager().queryIntentActivities(probe, 0);
+        if (found != null && !found.isEmpty()) {
+            android.content.pm.ActivityInfo a = found.get(0).activityInfo;
+            return new Intent(Intent.ACTION_MAIN)
+                    .addCategory(Intent.CATEGORY_SECONDARY_HOME)
+                    .setClassName(a.packageName, a.name);
+        }
+        return getPackageManager().getLaunchIntentForPackage(LauncherHook.TARGET_PACKAGE);
     }
 
     private boolean isInstalled(String pkg) {
