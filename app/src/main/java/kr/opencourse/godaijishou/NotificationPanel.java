@@ -691,15 +691,22 @@ final class NotificationPanel {
                     float dy = ev.getRawY() - downY[0];
                     // Pull down opens the card's buttons, pull up closes them; only while the
                     // list can't scroll that way, so normal scrolling keeps working.
-                    if (!dragging[0] && !pulled[0] && v.getTag() instanceof Object[]
+                    if (!dragging[0] && !pulled[0]
                             && Math.abs(dy) > slop * 1.5f && Math.abs(dy) > Math.abs(ev.getRawX() - downX[0])) {
-                        boolean open = actionsOpen.contains((String) ((Object[]) v.getTag())[0]);
+                        boolean hasActions = v.getTag() instanceof Object[];
+                        boolean open = hasActions && actionsOpen.contains((String) ((Object[]) v.getTag())[0]);
                         boolean down = dy > 0;
                         ScrollView sv = scrollView;
-                        if (sv != null && down != open && !sv.canScrollVertically(down ? -1 : 1)) {
-                            pulled[0] = true;
-                            v.getParent().requestDisallowInterceptTouchEvent(true);
-                            toggleActions(v);
+                        if (sv != null && !sv.canScrollVertically(down ? -1 : 1)) {
+                            if (hasActions && down != open) {
+                                pulled[0] = true;
+                                v.getParent().requestDisallowInterceptTouchEvent(true);
+                                toggleActions(v);
+                            } else if (!down) {
+                                // Pushing up with nothing left to scroll: push the panel away.
+                                pulled[0] = true;
+                                close();
+                            }
                         }
                     }
                     if (pulled[0]) return true;
