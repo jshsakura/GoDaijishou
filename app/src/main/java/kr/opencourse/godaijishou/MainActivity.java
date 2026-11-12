@@ -269,7 +269,13 @@ public class MainActivity extends AppCompatActivity {
                 || noTopScreenSwitch.isChecked() || topBlackoutSwitch.isChecked()
                 || volumeOverlaySwitch.isChecked() || batteryStripSwitch.isChecked()
                 || usbDebugSwitch.isChecked();
-        boolean needReboot = needsSystemHook && !AppPreferences.isSystemHookActive(this);
+        boolean needReboot = (needsSystemHook || prefs.getBoolean(AppPreferences.KEY_FINGERPRINT_OFF, false))
+                && !AppPreferences.isSystemHookActive(this);
+        // SystemUI features: same notice while the SystemUI hook hasn't reported this boot.
+        if (prefs.getBoolean(AppPreferences.KEY_SLIM_NAV_PILL, false)
+                && !AppPreferences.isHookActive(this, "systemui")) {
+            needReboot = true;
+        }
         rebootNotice.setVisibility(needReboot ? View.VISIBLE : View.GONE);
     }
 

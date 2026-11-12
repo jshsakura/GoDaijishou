@@ -37,13 +37,13 @@
     <string name="launcher_installed">Installed</string>
     <string name="launcher_not_installed">Not installed</string>
     <string name="row_lsposed_title">Open LSPosed</string>
-    <string name="row_lsposed_desc">Enable the module and choose its scope</string>
+    <string name="row_lsposed_desc">Enable the module, pick \"Select recommended\" from the ⋮ menu of its scope, then reboot: every feature applies.</string>
     <string name="row_reboot_title">Reboot</string>
     <string name="row_reboot_desc">Needed only after enabling the module or changing its scope. Switches above apply instantly.</string>
     <string name="row_usb_debug_title">Keep USB debugging connected</string>
     <string name="row_usb_debug_desc">After a reboot the Wing drops adb and leaves USB as file transfer only. This keeps USB debugging on; file transfer keeps working.</string>
     <string name="notice_reboot_title">Reboot required</string>
-    <string name="notice_reboot_desc">A System Framework feature (rotation forcing / power menu) is on, but its hook is not loaded in this boot. Check \"System Framework\" in LSPosed, then reboot.</string>
+    <string name="notice_reboot_desc">A feature you turned on is not loaded in this boot yet. In LSPosed, pick \"Select recommended\" in GoDaijishou\'s scope, then reboot.</string>
     <string name="reboot_confirm_title">Reboot now?</string>
     <string name="reboot_confirm_msg">The device will restart now.</string>
     <string name="cancel">Cancel</string>
