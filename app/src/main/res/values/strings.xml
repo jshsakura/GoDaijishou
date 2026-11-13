@@ -12,10 +12,8 @@
     <string name="main_reboot_permission_denied">Reboot permission denied</string>
 
     <!-- Bottom screen only mode (black top screen) -->
-    <string name="main_no_top_screen_switch">Top screen off</string>
-    <string name="main_no_top_screen_desc">Windows and notifications all on the bottom.</string>
     <string name="main_top_blackout_switch">Bottom screen only</string>
-    <string name="main_top_blackout_desc">Only with the swivel open: the top panel turns off and windows move down.</string>
+    <string name="main_top_blackout_desc">With the swivel open, the top panel turns off and windows and notifications come down. The panel\'s screen button shows the top screen.</string>
     <string name="main_volume_overlay_switch">Volume overlay</string>
     <string name="main_battery_strip_switch">Battery bar</string>
     <string name="main_battery_strip_desc">Pull it down for notifications.</string>

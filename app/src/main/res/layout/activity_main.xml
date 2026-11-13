@@ -162,30 +162,6 @@
             android:drawableStart="@drawable/ic_ft_display"
             android:text="@string/group_screen" />
 
-        <LinearLayout
-            android:id="@+id/row_no_top_screen"
-            style="@style/Ft.Row">
-
-            <ImageView
-                style="@style/Ft.RowIcon"
-                android:importantForAccessibility="no"
-                android:src="@drawable/ic_ft_screen_bottom" />
-
-            <LinearLayout style="@style/Ft.RowText">
-
-                <TextView
-                    style="@style/Ft.RowTitle"
-                    android:text="@string/main_no_top_screen_switch" />
-
-                <TextView
-                    style="@style/Ft.RowDesc"
-                    android:text="@string/main_no_top_screen_desc" />
-            </LinearLayout>
-
-            <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/switch_no_top_screen"
-                style="@style/Ft.Switch" />
-        </LinearLayout>
 
         <LinearLayout
             android:id="@+id/row_top_blackout"

@@ -1,6 +1,7 @@
 package kr.opencourse.godaijishou;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.SystemClock;
 
 /**
@@ -21,7 +22,8 @@ public class AppPreferences {
     // "Bottom screen only": power the top panel off while the swivel is open (system_server hook).
     public static final String KEY_TOP_SCREEN_OFF = "top_screen_off";
     // "No top screen": top panel always off, everything goes to the second screen (system_server hook).
-    public static final String KEY_NO_TOP_SCREEN = "no_top_screen";
+    // Retired: folded into KEY_TOP_SCREEN_OFF (see migrateNoTopScreen).
+    private static final String KEY_NO_TOP_SCREEN = "no_top_screen";
     // Volume overlay drawn by the system_server hook.
     public static final String KEY_VOLUME_OVERLAY = "volume_overlay";
     // Status label on the second screen (system_server hook). Key kept from the battery strip.
@@ -120,8 +122,15 @@ public class AppPreferences {
         return Math.abs(seen - currentBootTime()) < BOOT_MATCH_TOLERANCE_MS;
     }
 
-    public static boolean isNoTopScreen(Context context) {
-        return prefs(context, PREF_FILE_NAME)
-                .getBoolean(KEY_NO_TOP_SCREEN, false);
+    /**
+     * "No top screen" was folded into "bottom screen only" (the top screen is shown on demand
+     * by mirroring now): an old "no top screen" choice carries over as "bottom screen only".
+     */
+    public static void migrateNoTopScreen(Context context) {
+        SharedPreferences p = settings(context);
+        if (!p.contains(KEY_NO_TOP_SCREEN)) return;
+        SharedPreferences.Editor e = p.edit();
+        if (p.getBoolean(KEY_NO_TOP_SCREEN, false)) e.putBoolean(KEY_TOP_SCREEN_OFF, true);
+        e.remove(KEY_NO_TOP_SCREEN).apply();
     }
 }

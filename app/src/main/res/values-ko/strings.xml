@@ -12,10 +12,8 @@
     <string name="main_reboot_permission_denied">재부팅 권한이 거부되었습니다</string>
 
     <!-- Bottom screen only mode (black top screen) -->
-    <string name="main_no_top_screen_switch">상단 화면 끄기</string>
-    <string name="main_no_top_screen_desc">창과 알림을 모두 하단에서 받습니다.</string>
     <string name="main_top_blackout_switch">하단 화면 전용 모드</string>
-    <string name="main_top_blackout_desc">스위블을 열 때만 상단을 끄고 창을 하단에 띄웁니다.</string>
+    <string name="main_top_blackout_desc">스위블을 열면 상단을 끄고 창과 알림을 하단에 띄웁니다. 상단은 알림창의 화면 버튼으로 볼 수 있습니다.</string>
     <string name="main_volume_overlay_switch">볼륨 표시</string>
     <string name="main_battery_strip_switch">배터리 바</string>
     <string name="main_battery_strip_desc">당기면 알림창이 열립니다.</string>

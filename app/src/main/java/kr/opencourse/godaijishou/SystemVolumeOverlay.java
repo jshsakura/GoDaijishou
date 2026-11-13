@@ -86,7 +86,7 @@ final class SystemVolumeOverlay {
     }
 
     private static int targetDisplayId() {
-        return SystemSettings.noTopScreen || SystemSettings.secondScreenOn
+        return SystemSettings.secondScreenOn
                 ? MainModule.SECOND_SCREEN_DISPLAY_ID : Display.DEFAULT_DISPLAY;
     }
 

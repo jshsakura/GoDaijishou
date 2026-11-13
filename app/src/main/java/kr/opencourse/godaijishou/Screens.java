@@ -15,9 +15,9 @@ final class Screens {
         return second != null && second.getState() == Display.STATE_ON;
     }
 
-    /** The second screen when it is on or there is no top screen, otherwise the main one. */
+    /** The second screen when it is on, otherwise the main one. */
     static int targetDisplayId(Context context, DisplayManager dm) {
-        return AppPreferences.isNoTopScreen(context) || isSecondScreenOn(dm)
+        return isSecondScreenOn(dm)
                 ? MainModule.SECOND_SCREEN_DISPLAY_ID : Display.DEFAULT_DISPLAY;
     }
 }

@@ -30,7 +30,7 @@ final class SystemSettings {
 
     /** Whether the top display should be treated as unusable right now. */
     static boolean topUnavailable() {
-        return noTopScreen || (topScreenOff && secondScreenOn);
+        return topScreenOff && secondScreenOn;
     }
 
     /**
@@ -46,8 +46,6 @@ final class SystemSettings {
     static volatile boolean powerMenuOnSecondScreen = false;
     // "Bottom screen only": power the top panel off while the swivel is open.
     static volatile boolean topScreenOff = false;
-    // "No top screen": top panel always off, every launch goes to the second screen.
-    static volatile boolean noTopScreen = false;
     // USB mode: charging only (true) or file transfer (false).
     static volatile boolean usbChargeOnly = false;
     // Volume overlay drawn by system_server.
@@ -251,7 +249,6 @@ final class SystemSettings {
             boolean rotation = readFlag(cursor, AppPreferences.KEY_FORCE_ROTATION);
             boolean powerMenu = readFlag(cursor, AppPreferences.KEY_POWER_MENU_SECOND_SCREEN);
             boolean topOff = readFlag(cursor, AppPreferences.KEY_TOP_SCREEN_OFF);
-            boolean noTop = readFlag(cursor, AppPreferences.KEY_NO_TOP_SCREEN);
             boolean chargeOnly = readFlag(cursor, AppPreferences.KEY_USB_CHARGE_ONLY);
             boolean volume = readFlag(cursor, AppPreferences.KEY_VOLUME_OVERLAY);
             boolean strip = readFlag(cursor, AppPreferences.KEY_BATTERY_STRIP);
@@ -261,13 +258,12 @@ final class SystemSettings {
             int pos = readInt(cursor, AppPreferences.KEY_BATTERY_STRIP_POS, stripPos);
             boolean changed = style != stripStyle || pos != stripPos
                     || rotation != forceRotation || powerMenu != powerMenuOnSecondScreen
-                    || topOff != topScreenOff || noTop != noTopScreen
+                    || topOff != topScreenOff
                     || chargeOnly != usbChargeOnly || volume != volumeOverlay
                     || strip != batteryStrip || hideFullscreen != labelHideFullscreen;
             forceRotation = rotation;
             powerMenuOnSecondScreen = powerMenu;
             topScreenOff = topOff;
-            noTopScreen = noTop;
             usbChargeOnly = chargeOnly;
             volumeOverlay = volume;
             batteryStrip = strip;
@@ -300,12 +296,12 @@ final class SystemSettings {
     // starts with them before the app's provider can run: the second screen comes up with the
     // right rotation from the first frame, not only from LOCKED_BOOT_COMPLETED on.
     private static final String CACHE_KEY = "godaijishou_flags";
-    private static final String[] CACHE_ORDER = {"rotation", "powerMenu", "topOff", "noTop", "chargeOnly",
+    private static final String[] CACHE_ORDER = {"rotation", "powerMenu", "topOff", "retired", "chargeOnly",
             "volume", "strip", "hideFullscreen", "fingerprintOff"};
 
     private static void saveCache() {
         try {
-            boolean[] f = {forceRotation, powerMenuOnSecondScreen, topScreenOff, noTopScreen,
+            boolean[] f = {forceRotation, powerMenuOnSecondScreen, topScreenOff, false,
                     usbChargeOnly, volumeOverlay, batteryStrip, labelHideFullscreen, fingerprintOff};
             StringBuilder b = new StringBuilder();
             for (boolean v : f) b.append(v ? '1' : '0');
@@ -353,7 +349,7 @@ final class SystemSettings {
             forceRotation = value.charAt(0) == '1';
             powerMenuOnSecondScreen = value.charAt(1) == '1';
             topScreenOff = value.charAt(2) == '1';
-            noTopScreen = value.charAt(3) == '1';
+            // [3]: retired "no top screen" flag
             usbChargeOnly = value.charAt(4) == '1';
             volumeOverlay = value.charAt(5) == '1';
             batteryStrip = value.charAt(6) == '1';

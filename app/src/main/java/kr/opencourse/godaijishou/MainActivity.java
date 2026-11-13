@@ -46,7 +46,6 @@ public class MainActivity extends AppCompatActivity {
     private SwitchMaterial volumeOverlaySwitch;
     private SwitchMaterial batteryStripSwitch;
     private SwitchMaterial labelHideFullscreenSwitch;
-    private SwitchMaterial noTopScreenSwitch;
     private View rebootNotice;
 
     // Prevents the listener from firing when setChecked() only syncs the UI.
@@ -70,6 +69,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         drawBehindBars();
 
+        AppPreferences.migrateNoTopScreen(this);
         prefs = AppPreferences.settings(this);
 
         buildLauncherRows();
@@ -105,8 +105,6 @@ public class MainActivity extends AppCompatActivity {
         labelHideFullscreenSwitch = findViewById(R.id.switch_label_hide_fullscreen);
         bindSystemHookSwitch(R.id.row_label_hide_fullscreen, labelHideFullscreenSwitch,
                 AppPreferences.KEY_LABEL_HIDE_FULLSCREEN);
-        noTopScreenSwitch = findViewById(R.id.switch_no_top_screen);
-        bindSystemHookSwitch(R.id.row_no_top_screen, noTopScreenSwitch, AppPreferences.KEY_NO_TOP_SCREEN);
         bindSystemHookSwitch(R.id.row_force_rotation, forceRotationSwitch, AppPreferences.KEY_FORCE_ROTATION);
         powerMenuSwitch = findViewById(R.id.switch_power_menu);
         bindSystemHookSwitch(R.id.row_power_menu, powerMenuSwitch, AppPreferences.KEY_POWER_MENU_SECOND_SCREEN);
@@ -487,7 +485,7 @@ public class MainActivity extends AppCompatActivity {
     // in this boot (scope not checked, or checked but not rebooted yet).
     private void updateRebootNotice() {
         boolean needsSystemHook = forceRotationSwitch.isChecked() || powerMenuSwitch.isChecked()
-                || noTopScreenSwitch.isChecked() || topBlackoutSwitch.isChecked()
+                || topBlackoutSwitch.isChecked()
                 || volumeOverlaySwitch.isChecked() || batteryStripSwitch.isChecked();
         boolean needReboot = (needsSystemHook || prefs.getBoolean(AppPreferences.KEY_FINGERPRINT_OFF, false))
                 && !AppPreferences.isSystemHookActive(this);

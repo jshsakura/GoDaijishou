@@ -95,12 +95,21 @@ final class TopMirror {
             showing = true;
             addControls(ui); // after the mirror window, so above it and its mirrored windows
 
-            // The top screen rotating or changing size: fit again.
+            // The top screen rotating or changing size: fit again. The swivel closing (second
+            // screen off or gone): nothing to show it on, close.
             topListener = new DisplayManager.DisplayListener() {
                 @Override public void onDisplayAdded(int id) { }
-                @Override public void onDisplayRemoved(int id) { }
+                @Override public void onDisplayRemoved(int id) {
+                    if (id == MainModule.SECOND_SCREEN_DISPLAY_ID) hide();
+                }
                 @Override public void onDisplayChanged(int id) {
-                    if (id == TOP && view != null) view.requestLayout();
+                    if (view == null) return;
+                    if (id == TOP) {
+                        view.requestLayout();
+                    } else if (id == MainModule.SECOND_SCREEN_DISPLAY_ID) {
+                        Display d = dm.getDisplay(id);
+                        if (d == null || d.getState() == Display.STATE_OFF) hide();
+                    }
                 }
             };
             dm.registerDisplayListener(topListener, handler);

@@ -41,6 +41,7 @@ public class SettingsProvider extends ContentProvider {
         } else if (Binder.getCallingUid() == Process.SYSTEM_UID) {
             AppPreferences.markSystemHookSeen(context, uri.getQueryParameter(PARAM_REV));
         }
+        AppPreferences.migrateNoTopScreen(context);
         SharedPreferences prefs = AppPreferences.settings(context);
 
         String targetPackage = prefs.getString(AppPreferences.KEY_LAUNCHER_PACKAGE, null);
@@ -49,7 +50,6 @@ public class SettingsProvider extends ContentProvider {
         String powerMenu = prefs.getBoolean(AppPreferences.KEY_POWER_MENU_SECOND_SCREEN, false) ? "1" : "0";
         String topOff = prefs.getBoolean(AppPreferences.KEY_TOP_SCREEN_OFF, false) ? "1" : "0";
         String volume = prefs.getBoolean(AppPreferences.KEY_VOLUME_OVERLAY, false) ? "1" : "0";
-        String noTop = prefs.getBoolean(AppPreferences.KEY_NO_TOP_SCREEN, false) ? "1" : "0";
         String chargeOnly = prefs.getBoolean(AppPreferences.KEY_USB_CHARGE_ONLY, false) ? "1" : "0";
         String batteryStrip = prefs.getBoolean(AppPreferences.KEY_BATTERY_STRIP, false) ? "1" : "0";
         String labelHideFullscreen = prefs.getBoolean(AppPreferences.KEY_LABEL_HIDE_FULLSCREEN, false) ? "1" : "0";
@@ -70,7 +70,6 @@ public class SettingsProvider extends ContentProvider {
                 AppPreferences.KEY_FORCE_ROTATION,
                 AppPreferences.KEY_POWER_MENU_SECOND_SCREEN,
                 AppPreferences.KEY_TOP_SCREEN_OFF,
-                AppPreferences.KEY_NO_TOP_SCREEN,
                 AppPreferences.KEY_USB_CHARGE_ONLY,
                 AppPreferences.KEY_VOLUME_OVERLAY,
                 AppPreferences.KEY_BATTERY_STRIP,
@@ -84,7 +83,7 @@ public class SettingsProvider extends ContentProvider {
                 AppPreferences.KEY_BATTERY_STRIP_STYLE,
                 AppPreferences.KEY_BATTERY_STRIP_POS
         });
-        cursor.addRow(new Object[]{targetPackage, targetActivity, forceRotation, powerMenu, topOff, noTop, chargeOnly, volume,
+        cursor.addRow(new Object[]{targetPackage, targetActivity, forceRotation, powerMenu, topOff, chargeOnly, volume,
                 batteryStrip, labelHideFullscreen, perfProfile, hideSwivel, slimPill, imeStrip, fingerprintOff, debugLog,
                 stripStyle, stripPos});
         return cursor;
