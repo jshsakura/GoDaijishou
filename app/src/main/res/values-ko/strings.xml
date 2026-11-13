@@ -37,6 +37,11 @@
     <string name="status_active">모듈 작동 중</string>
     <string name="status_inactive">LSPosed에서 켜고 재부팅</string>
     <string name="group_screen">화면</string>
+    <string name="mode_second">하단 화면</string>
+    <string name="mode_original">순정 화면</string>
+    <string name="mode_original_title">순정 화면</string>
+    <string name="mode_original_desc">스위블을 열면 상단을 끄고 하단에 상단 화면이 그대로 나옵니다. 앱·알림·상태바·제스처 모두 접었을 때 폰 그대로입니다. LSPosed 범위에 LG 홈과 시스템 UI가 필요합니다.</string>
+    <string name="group_common">공통</string>
     <string name="group_module">모듈</string>
     <string name="row_launcher_title">세컨드 스크린 홈</string>
     <string name="launcher_stock_desc">LG 세컨드 런처를 그대로 사용</string>
@@ -99,5 +104,4 @@
     <string name="scope_systemui_keyboard">• 시스템 UI (com.android.systemui)\n• LG 키보드 (com.lge.ime)</string>
     <string name="scope_popupcamera">• LG 팝업 카메라 (com.lge.popupcamera)</string>
     <string name="update_available">업데이트 v%1$s</string>
-    <string name="panel_top_mirror">상단 화면 보기</string>
 </resources>

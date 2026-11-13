@@ -258,7 +258,7 @@ final class StatusLabel {
 
     private static void apply() {
         boolean want = SystemSettings.batteryStrip
-                && SystemSettings.secondScreenOn;
+                && SystemSettings.secondScreenOn && SystemSettings.secondScreenMode();
         if (want) {
             registerNetwork();
             registerThermal();

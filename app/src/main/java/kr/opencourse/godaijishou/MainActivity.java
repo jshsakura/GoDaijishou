@@ -119,6 +119,7 @@ public class MainActivity extends AppCompatActivity {
                 AppPreferences.STRIP_POS_RIGHT,
                 new int[]{R.string.strip_pos_left, R.string.strip_pos_center, R.string.strip_pos_right});
         bindSystemHookSwitch(R.id.row_debug_log, findViewById(R.id.switch_debug_log), AppPreferences.KEY_DEBUG_LOG);
+        buildModeTabs();
 
         // These need an extra LSPosed scope: turning one on explains which, unless that
         // hook is already known to be loaded this boot.
@@ -369,6 +370,68 @@ public class MainActivity extends AppCompatActivity {
             box.addView(cell, lp);
         }
         styleChoice(buttons, prefs.getInt(key, def));
+    }
+
+    // Stock screen or bottom screen: the tab picked is the mode. Each shows only its own
+    // settings; the ones for both (performance, gesture bar, fingerprint, rotation) and the
+    // module rows stay under either.
+    private static final int[] BOTTOM_SCREEN_ONLY = {
+            R.id.group_launcher, R.id.launcher_list, R.id.group_screen, R.id.row_top_blackout,
+            R.id.row_volume_overlay, R.id.card_battery_strip, R.id.row_hide_swivel_warnings,
+            R.id.row_power_menu};
+    // Tab order: stock first.
+    private static final int[] TAB_MODES = {AppPreferences.SCREEN_MODE_ORIGINAL, AppPreferences.SCREEN_MODE_SECOND};
+    private static final int[] TAB_LABELS = {R.string.mode_original, R.string.mode_second};
+
+    private void buildModeTabs() {
+        android.widget.LinearLayout box = findViewById(R.id.mode_tabs);
+        TextView[] tabs = new TextView[TAB_MODES.length];
+        for (int i = 0; i < TAB_MODES.length; i++) {
+            final int mode = TAB_MODES[i];
+            TextView t = new TextView(this);
+            t.setText(TAB_LABELS[i]);
+            t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 15);
+            t.setTypeface(Typeface.DEFAULT_BOLD);
+            t.setGravity(android.view.Gravity.CENTER);
+            t.setOnClickListener(v -> {
+                if (screenMode() == mode) return;
+                prefs.edit().putInt(AppPreferences.KEY_SCREEN_MODE, mode).commit();
+                getContentResolver().notifyChange(SettingsProvider.CONTENT_URI, null);
+                showMode(tabs);
+            });
+            tabs[i] = t;
+            box.addView(t, new android.widget.LinearLayout.LayoutParams(0,
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT, 1f));
+        }
+        showMode(tabs);
+    }
+
+    private int screenMode() {
+        return prefs.getInt(AppPreferences.KEY_SCREEN_MODE, AppPreferences.SCREEN_MODE_SECOND);
+    }
+
+    private void showMode(TextView[] tabs) {
+        int mode = screenMode();
+        float density = getResources().getDisplayMetrics().density;
+        for (int i = 0; i < tabs.length; i++) {
+            boolean on = TAB_MODES[i] == mode;
+            tabs[i].setTextColor(getColor(on ? R.color.ft_on_butter : R.color.ft_ink));
+            tabs[i].setSelected(on);
+            if (on) {
+                android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+                bg.setCornerRadius(12 * density);
+                bg.setColor(getColor(R.color.ft_butter));
+                tabs[i].setBackground(bg);
+            } else {
+                tabs[i].setBackground(null);
+            }
+        }
+        boolean bottom = mode == AppPreferences.SCREEN_MODE_SECOND;
+        for (int id : BOTTOM_SCREEN_ONLY) {
+            View v = findViewById(id);
+            if (v != null) v.setVisibility(bottom ? View.VISIBLE : View.GONE);
+        }
+        findViewById(R.id.card_original).setVisibility(bottom ? View.GONE : View.VISIBLE);
     }
 
     private void styleChoice(TextView[] buttons, int selected) {

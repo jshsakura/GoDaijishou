@@ -39,9 +39,11 @@ final class LaunchRedirectHook {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) {
                         // Cheapest checks first: feature off or swivel closed -> untouched.
-                        if (!SystemSettings.sendToBottom()) return;
+                        boolean toTop = TopMirror.isShowing();
+                        if (!toTop && !SystemSettings.sendToBottom()) return;
                         try {
-                            redirect(param);
+                            if (toTop) redirectToTop(param);
+                            else redirect(param);
                         } catch (Throwable ignored) {
                             ModuleLog.w(ignored);
                             // Leave the system's choice as is.
@@ -71,6 +73,31 @@ final class LaunchRedirectHook {
         if (secondArea != null) {
             XposedHelpers.setObjectField(result, "mPreferredTaskDisplayArea", secondArea);
         }
+    }
+
+    /**
+     * Original mode: the second screen shows the top screen, so anything opening on the
+     * second screen (an app's own choice, LG's swivel apps) would be hidden under it. Every
+     * launch bound there goes to the top screen instead; homes stay where they are.
+     */
+    private static void redirectToTop(XC_MethodHook.MethodHookParam param) {
+        Object activity = param.args[2];
+        if (activity != null) {
+            try {
+                if ((boolean) XposedHelpers.callMethod(activity, "isActivityTypeHomeOrRecents")) return;
+            } catch (Throwable ignored) {
+            }
+        }
+        Object result = param.args[7];
+        Object area = XposedHelpers.getObjectField(result, "mPreferredTaskDisplayArea");
+        if (area == null) return; // the default display already
+        if ((int) XposedHelpers.callMethod(area, "getDisplayId") != MainModule.SECOND_SCREEN_DISPLAY_ID) return;
+        Object atms = XposedHelpers.getObjectField(param.thisObject, "mService");
+        Object root = XposedHelpers.getObjectField(atms, "mRootWindowContainer");
+        Object top = XposedHelpers.callMethod(root, "getDisplayContent", TOP_DISPLAY_ID);
+        if (top == null) return;
+        Object topArea = XposedHelpers.callMethod(top, "getDefaultTaskDisplayArea");
+        if (topArea != null) XposedHelpers.setObjectField(result, "mPreferredTaskDisplayArea", topArea);
     }
 
     // Floating or translucent windows (permission requests, USB debugging prompts) don't

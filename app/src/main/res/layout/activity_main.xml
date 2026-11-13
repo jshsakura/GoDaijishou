@@ -143,8 +143,44 @@
             </LinearLayout>
         </LinearLayout>
 
+        <!-- Mode tabs: the tab picked is the mode (segments built in MainActivity) -->
+        <LinearLayout
+            android:id="@+id/mode_tabs"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/bg_ft_table"
+            android:orientation="horizontal"
+            android:padding="4dp" />
+
+        <!-- Original mode: what it does (shown on its tab) -->
+        <LinearLayout
+            android:id="@+id/card_original"
+            style="@style/Ft.Row"
+            android:clickable="false"
+            android:focusable="false"
+            android:visibility="gone">
+
+            <ImageView
+                style="@style/Ft.RowIcon"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_ft_display" />
+
+            <LinearLayout style="@style/Ft.RowText">
+
+                <TextView
+                    style="@style/Ft.RowTitle"
+                    android:text="@string/mode_original_title" />
+
+                <TextView
+                    style="@style/Ft.RowDesc"
+                    android:text="@string/mode_original_desc" />
+            </LinearLayout>
+        </LinearLayout>
+
         <!-- Launcher -->
         <TextView
+            android:id="@+id/group_launcher"
             style="@style/Ft.Group"
             android:drawableStart="@drawable/ic_ft_apps"
             android:text="@string/row_launcher_title" />
@@ -158,6 +194,7 @@
 
         <!-- Screen -->
         <TextView
+            android:id="@+id/group_screen"
             style="@style/Ft.Group"
             android:drawableStart="@drawable/ic_ft_display"
             android:text="@string/group_screen" />
@@ -216,6 +253,7 @@
         <!-- Battery bar: one card. Header toggles it; under it the look, the position and
              the fullscreen rule (segments built in MainActivity). -->
         <LinearLayout
+            android:id="@+id/card_battery_strip"
             style="@style/Ft.Row"
             android:clickable="false"
             android:focusable="false"
@@ -347,6 +385,63 @@
             </LinearLayout>
         </LinearLayout>
 
+        <LinearLayout
+            android:id="@+id/row_hide_swivel_warnings"
+            style="@style/Ft.Row">
+
+            <ImageView
+                style="@style/Ft.RowIcon"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_ft_camera" />
+
+            <LinearLayout style="@style/Ft.RowText">
+
+                <TextView
+                    style="@style/Ft.RowTitle"
+                    android:text="@string/main_hide_swivel_warnings_switch" />
+
+                <TextView
+                    style="@style/Ft.RowDesc"
+                    android:text="@string/main_hide_swivel_warnings_desc" />
+            </LinearLayout>
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_hide_swivel_warnings"
+                style="@style/Ft.Switch" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/row_power_menu"
+            style="@style/Ft.Row">
+
+            <ImageView
+                style="@style/Ft.RowIcon"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_ft_power" />
+
+            <LinearLayout style="@style/Ft.RowText">
+
+                <TextView
+                    style="@style/Ft.RowTitle"
+                    android:text="@string/main_power_menu_switch" />
+
+                <TextView
+                    style="@style/Ft.RowDesc"
+                    android:text="@string/main_power_menu_desc" />
+            </LinearLayout>
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_power_menu"
+                style="@style/Ft.Switch" />
+        </LinearLayout>
+
+        <!-- Both modes -->
+        <TextView
+            android:id="@+id/group_common"
+            style="@style/Ft.Group"
+            android:drawableStart="@drawable/ic_ft_settings"
+            android:text="@string/group_common" />
+
         <!-- Performance profile: title row, then eco / normal / turbo segments across the card -->
         <LinearLayout
             android:id="@+id/row_perf_profile"
@@ -386,31 +481,6 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:orientation="horizontal" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/row_hide_swivel_warnings"
-            style="@style/Ft.Row">
-
-            <ImageView
-                style="@style/Ft.RowIcon"
-                android:importantForAccessibility="no"
-                android:src="@drawable/ic_ft_camera" />
-
-            <LinearLayout style="@style/Ft.RowText">
-
-                <TextView
-                    style="@style/Ft.RowTitle"
-                    android:text="@string/main_hide_swivel_warnings_switch" />
-
-                <TextView
-                    style="@style/Ft.RowDesc"
-                    android:text="@string/main_hide_swivel_warnings_desc" />
-            </LinearLayout>
-
-            <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/switch_hide_swivel_warnings"
-                style="@style/Ft.Switch" />
         </LinearLayout>
 
         <LinearLayout
@@ -510,31 +580,6 @@
 
             <com.google.android.material.switchmaterial.SwitchMaterial
                 android:id="@+id/switch_force_rotation"
-                style="@style/Ft.Switch" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/row_power_menu"
-            style="@style/Ft.Row">
-
-            <ImageView
-                style="@style/Ft.RowIcon"
-                android:importantForAccessibility="no"
-                android:src="@drawable/ic_ft_power" />
-
-            <LinearLayout style="@style/Ft.RowText">
-
-                <TextView
-                    style="@style/Ft.RowTitle"
-                    android:text="@string/main_power_menu_switch" />
-
-                <TextView
-                    style="@style/Ft.RowDesc"
-                    android:text="@string/main_power_menu_desc" />
-            </LinearLayout>
-
-            <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/switch_power_menu"
                 style="@style/Ft.Switch" />
         </LinearLayout>
 

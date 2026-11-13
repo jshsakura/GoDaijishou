@@ -36,6 +36,10 @@ public class AppPreferences {
     // Where its content (and the pull-down spot) sits: STRIP_POS_LEFT / CENTER / RIGHT.
     public static final String KEY_BATTERY_STRIP_POS = "battery_strip_pos";
     public static final int STRIP_POS_LEFT = 0, STRIP_POS_CENTER = 1, STRIP_POS_RIGHT = 2;
+    // With the swivel open: the second screen as its own screen (SCREEN_MODE_SECOND), or as
+    // the top screen itself, the phone as when folded (SCREEN_MODE_ORIGINAL, TopMirror).
+    public static final String KEY_SCREEN_MODE = "screen_mode";
+    public static final int SCREEN_MODE_SECOND = 0, SCREEN_MODE_ORIGINAL = 1;
     // Skip LG's swivel-mode camera notices (scope com.lge.popupcamera).
     public static final String KEY_HIDE_SWIVEL_WARNINGS = "hide_swivel_warnings";
     // Thinner, narrower gesture pill that hides until the bottom edge is touched (scope SystemUI).

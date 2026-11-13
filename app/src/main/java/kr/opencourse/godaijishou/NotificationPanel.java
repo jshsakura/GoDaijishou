@@ -340,16 +340,6 @@ final class NotificationPanel {
         });
         tools.addView(blockedToggle, new LinearLayout.LayoutParams(buttonSize, buttonSize));
 
-        // Top screen on this one (live mirror); lit while it shows.
-        android.widget.ImageView mirrorToggle = toolButton(density);
-        styleTool(mirrorToggle, R.drawable.ic_ft_display, TopMirror.isShowing(), density);
-        mirrorToggle.setContentDescription(ui.getString(R.string.panel_top_mirror));
-        mirrorToggle.setOnClickListener(v -> {
-            close();
-            TopMirror.toggle();
-        });
-        tools.addView(mirrorToggle, new LinearLayout.LayoutParams(buttonSize, buttonSize));
-
         // Settings: back to the GoDaijishou app on this screen.
         android.widget.ImageView settings = toolButton(density);
         styleTool(settings, R.drawable.ic_ft_settings, false, density);

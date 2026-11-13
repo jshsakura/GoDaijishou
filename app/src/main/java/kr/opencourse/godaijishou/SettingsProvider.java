@@ -63,6 +63,8 @@ public class SettingsProvider extends ContentProvider {
                 AppPreferences.STRIP_STYLE_PILL));
         String stripPos = String.valueOf(prefs.getInt(AppPreferences.KEY_BATTERY_STRIP_POS,
                 AppPreferences.STRIP_POS_RIGHT));
+        String screenMode = String.valueOf(prefs.getInt(AppPreferences.KEY_SCREEN_MODE,
+                AppPreferences.SCREEN_MODE_SECOND));
 
         MatrixCursor cursor = new MatrixCursor(new String[]{
                 AppPreferences.KEY_LAUNCHER_PACKAGE,
@@ -81,11 +83,12 @@ public class SettingsProvider extends ContentProvider {
                 AppPreferences.KEY_FINGERPRINT_OFF,
                 AppPreferences.KEY_DEBUG_LOG,
                 AppPreferences.KEY_BATTERY_STRIP_STYLE,
-                AppPreferences.KEY_BATTERY_STRIP_POS
+                AppPreferences.KEY_BATTERY_STRIP_POS,
+                AppPreferences.KEY_SCREEN_MODE
         });
         cursor.addRow(new Object[]{targetPackage, targetActivity, forceRotation, powerMenu, topOff, chargeOnly, volume,
                 batteryStrip, labelHideFullscreen, perfProfile, hideSwivel, slimPill, imeStrip, fingerprintOff, debugLog,
-                stripStyle, stripPos});
+                stripStyle, stripPos, screenMode});
         return cursor;
     }
 

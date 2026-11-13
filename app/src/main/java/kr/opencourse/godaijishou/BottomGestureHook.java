@@ -25,7 +25,7 @@ import de.robv.android.xposed.XposedHelpers;
  *
  * The second screen's pill (LG's NavigationHandle watches swipes itself) sees every touch on
  * that screen first, the mirror on top of it included. While the top view flag is set, a
- * touch that starts at an edge (left, right, bottom) is taken from the second screen
+ * touch that starts at an edge (left, right, bottom, top) is taken from the second screen
  * (pilfered: the mirrored apps get a cancel) and played, whole, into the top screen, mapped
  * to its coordinates. The top screen's own gesture handlers get it as a finger there: back
  * with its arrow, home, recents, all theirs. Other touches go through the mirror untouched.
@@ -40,7 +40,12 @@ final class BottomGestureHook {
     // Where the top screen sits on the second one: scale, left, top (TopMirror publishes it).
     private static volatile float mapScale = 1f, mapLeft, mapTop;
     private static volatile int topW, topH;
-    // The gesture being played into the top screen (input thread of the pill only).
+    // The gesture being played into the top screen. LG keeps several pill watchers on the
+    // second screen, each seeing every touch (on their own threads): the first to see a
+    // gesture's down plays it, the others only let it go by.
+    private static final Object lock = new Object();
+    private static Object owner;
+    private static long ownerDownTime = -1;
     private static boolean forwarding;
     private static final float SIDE_DP = 20f, BOTTOM_DP = 24f;
     private static boolean observing;
@@ -75,11 +80,17 @@ final class BottomGestureHook {
                     View h = (View) XposedHelpers.getObjectField(param.thisObject, "this$0");
                     if (!onSecondScreen(h.getContext())) return;
                     InputEvent event = (InputEvent) param.args[0];
-                    if (event instanceof MotionEvent) forward(h, (MotionEvent) event);
+                    if (event instanceof MotionEvent) {
+                        synchronized (lock) {
+                            forward(param.thisObject, h, (MotionEvent) event);
+                        }
+                    }
                     XposedHelpers.callMethod(param.thisObject, "finishInputEvent", event, false);
                     param.setResult(null);
                 } catch (Throwable t) {
-                    forwarding = false;
+                    synchronized (lock) {
+                        if (owner == param.thisObject) forwarding = false;
+                    }
                     ModuleLog.w(t); // let the system handle it as usual
                 }
             }
@@ -101,16 +112,19 @@ final class BottomGestureHook {
         });
     }
 
-    private static void forward(View handle, MotionEvent ev) {
+    private static void forward(Object receiver, View handle, MotionEvent ev) {
         int action = ev.getActionMasked();
         if (action == MotionEvent.ACTION_DOWN) {
+            if (ev.getDownTime() == ownerDownTime) return; // another watcher has this one
+            ownerDownTime = ev.getDownTime();
+            owner = receiver;
             forwarding = topView && atEdge(handle, ev.getX(), ev.getY());
             if (forwarding) {
                 Object monitor = XposedHelpers.getObjectField(handle, "mInputMonitor");
                 if (monitor != null) XposedHelpers.callMethod(monitor, "pilferPointers");
             }
         }
-        if (!forwarding) return;
+        if (!forwarding || receiver != owner) return;
         MotionEvent copy = MotionEvent.obtain(ev);
         try {
             android.graphics.Matrix m = new android.graphics.Matrix();
@@ -141,7 +155,9 @@ final class BottomGestureHook {
         android.graphics.Point size = new android.graphics.Point();
         handle.getDisplay().getRealSize(size);
         float side = SIDE_DP * dm.density, bottom = BOTTOM_DP * dm.density;
-        return x < side || x > size.x - side || y > size.y - bottom;
+        // Top too: pulling down there is the top screen's status bar (not LG's second-screen
+        // control panel).
+        return x < side || x > size.x - side || y > size.y - bottom || y < bottom;
     }
 
     private static boolean onSecondScreen(Context context) {

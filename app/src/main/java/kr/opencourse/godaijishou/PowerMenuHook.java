@@ -48,7 +48,8 @@ final class PowerMenuHook {
                 new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
-                        if (!SystemSettings.powerMenuOnSecondScreen) return;
+                        // Original mode: the top screen's own menu (it shows below anyway).
+                        if (!SystemSettings.powerMenuOnSecondScreen || SystemSettings.original()) return;
                         try {
                             Context context = (Context) XposedHelpers.getObjectField(param.thisObject, "mContext");
                             if (!isSecondScreenOn(context)) return;

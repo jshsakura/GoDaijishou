@@ -30,7 +30,17 @@ final class SystemSettings {
 
     /** Whether the top display should be treated as unusable right now. */
     static boolean topUnavailable() {
-        return topScreenOff && secondScreenOn;
+        return secondScreenOn && (topScreenOff || original());
+    }
+
+    /** Original mode: with the swivel open, the second screen shows the top screen (TopMirror). */
+    static boolean original() {
+        return screenMode == AppPreferences.SCREEN_MODE_ORIGINAL;
+    }
+
+    /** The second screen as a screen of its own, with this module's features for it. */
+    static boolean secondScreenMode() {
+        return !original();
     }
 
     /**
@@ -39,7 +49,7 @@ final class SystemSettings {
      * screen is in use, just shown below, and everything stays where it normally goes.
      */
     static boolean sendToBottom() {
-        return topUnavailable() && !TopMirror.isShowing();
+        return topUnavailable() && secondScreenMode() && !TopMirror.isShowing();
     }
 
     static volatile boolean forceRotation = false;
@@ -57,6 +67,8 @@ final class SystemSettings {
     // Battery bar look and position (AppPreferences.STRIP_STYLE_* / STRIP_POS_*).
     static volatile int stripStyle = AppPreferences.STRIP_STYLE_PILL;
     static volatile int stripPos = AppPreferences.STRIP_POS_RIGHT;
+    // AppPreferences.SCREEN_MODE_*.
+    static volatile int screenMode = AppPreferences.SCREEN_MODE_SECOND;
     // Current performance profile (PerfProfile.*), for the panel's highlight.
     static volatile int perfProfile = PerfProfile.NORMAL;
     // Report no fingerprint sensor (FingerprintHook).
@@ -159,6 +171,8 @@ final class SystemSettings {
             DisplayManager dm = context.getSystemService(DisplayManager.class);
             // Top panel power follows settings, the swivel state and display 0 state changes.
             addListener(() -> TopPanel.apply(dm));
+            // Original mode follows settings and the swivel (and comes back after a reboot).
+            addListener(() -> safely(TopMirror::apply));
             dm.registerDisplayListener(new DisplayManager.DisplayListener() {
                 @Override
                 public void onDisplayAdded(int displayId) {
@@ -258,7 +272,8 @@ final class SystemSettings {
             fingerprintOff = readFlag(cursor, AppPreferences.KEY_FINGERPRINT_OFF);
             int style = readInt(cursor, AppPreferences.KEY_BATTERY_STRIP_STYLE, stripStyle);
             int pos = readInt(cursor, AppPreferences.KEY_BATTERY_STRIP_POS, stripPos);
-            boolean changed = style != stripStyle || pos != stripPos
+            int mode = readInt(cursor, AppPreferences.KEY_SCREEN_MODE, screenMode);
+            boolean changed = style != stripStyle || pos != stripPos || mode != screenMode
                     || rotation != forceRotation || powerMenu != powerMenuOnSecondScreen
                     || topOff != topScreenOff
                     || chargeOnly != usbChargeOnly || volume != volumeOverlay
@@ -272,6 +287,7 @@ final class SystemSettings {
             labelHideFullscreen = hideFullscreen;
             stripStyle = style;
             stripPos = pos;
+            screenMode = mode;
             int idx = cursor.getColumnIndex(AppPreferences.KEY_PERF_PROFILE);
             if (idx >= 0) {
                 try {
@@ -307,7 +323,8 @@ final class SystemSettings {
                     usbChargeOnly, volumeOverlay, batteryStrip, labelHideFullscreen, fingerprintOff};
             StringBuilder b = new StringBuilder();
             for (boolean v : f) b.append(v ? '1' : '0');
-            b.append(':').append(perfProfile).append(':').append(stripStyle).append(':').append(stripPos);
+            b.append(':').append(perfProfile).append(':').append(stripStyle).append(':').append(stripPos)
+                    .append(':').append(screenMode);
             String value = b.toString();
             if (!value.equals(Settings.Global.getString(resolver, CACHE_KEY))) {
                 Settings.Global.putString(resolver, CACHE_KEY, value);
@@ -364,6 +381,7 @@ final class SystemSettings {
                 stripStyle = Integer.parseInt(parts[2]);
                 stripPos = Integer.parseInt(parts[3]);
             }
+            if (parts.length > 4) screenMode = Integer.parseInt(parts[4]);
             for (Runnable l : listeners) l.run();
         } catch (Throwable ignored) {
             ModuleLog.w(ignored);

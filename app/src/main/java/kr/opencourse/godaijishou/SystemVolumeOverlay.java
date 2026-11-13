@@ -56,7 +56,9 @@ final class SystemVolumeOverlay {
         context.registerReceiver(new BroadcastReceiver() {
             @Override
             public void onReceive(Context c, Intent intent) {
-                if (!SystemSettings.volumeOverlay) return; // cheapest check first
+                // Cheapest check first. A bottom screen mode feature: the stock screen mode
+                // keeps the phone's own volume panel.
+                if (!SystemSettings.volumeOverlay || SystemSettings.original()) return;
                 int stream = intent.getIntExtra(EXTRA_STREAM_TYPE, -1);
                 int value = intent.getIntExtra(EXTRA_STREAM_VALUE, -1);
                 if (value < 0 || !isUserFacingStream(stream)) return;
@@ -86,7 +88,8 @@ final class SystemVolumeOverlay {
     }
 
     private static int targetDisplayId() {
-        return SystemSettings.secondScreenOn
+        // The screen in use: in original mode the top screen (shown on the second one).
+        return SystemSettings.secondScreenOn && SystemSettings.secondScreenMode()
                 ? MainModule.SECOND_SCREEN_DISPLAY_ID : Display.DEFAULT_DISPLAY;
     }
 
