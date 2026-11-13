@@ -33,6 +33,8 @@ final class TopHomeHook {
     static final String TARGET_PACKAGE = "com.lge.launcher3";
     /** Settings.Global flag, 1 while the top screen is shown on the second screen. */
     static final String KEY_TOP_VIEW = "godaijishou_top_view";
+    /** Settings.Global, "scale,left,top,width,height": the top screen on the second one. */
+    static final String KEY_TOP_MAP = "godaijishou_top_view_map";
 
     private static final String POSTURE = "com.lge.systemservice.core.PostureManager";
     private static final int STATE_OPEN = 2;

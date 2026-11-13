@@ -37,6 +37,7 @@ public class MainModule implements IXposedHookLoadPackage {
         } else if (NavBarHook.SYSTEMUI.equals(pkg)) {
             safely(() -> NavBarHook.installSystemUi(cl));
             safely(() -> LockWallpaperHook.install(cl));
+            safely(() -> BottomGestureHook.install(cl));
         } else if ("android".equals(pkg)) {
             // Each system hook is independent: one missing method on a firmware must not
             // keep the others from installing.

@@ -87,6 +87,9 @@ final class TopMirror {
                             | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                     PixelFormat.OPAQUE);
             lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+            // The whole screen, the second screen's gesture bar strip too (its pill and
+            // gestures stand aside meanwhile, BottomGestureHook).
+            lp.setFitInsetsTypes(0);
             lp.setTitle("GoDaijishou:TopMirror");
 
             MirrorView v = new MirrorView(ui);
@@ -291,6 +294,21 @@ final class TopMirror {
         if (system != null) setTopView(false);
     }
 
+    private static String lastMap;
+
+    // For the second screen's gestures, which play edge swipes into the top screen.
+    private static void publishMap(float scale, float left, float top, int w, int h) {
+        String map = scale + "," + left + "," + top + "," + w + "," + h;
+        if (map.equals(lastMap)) return;
+        lastMap = map;
+        try {
+            android.provider.Settings.Global.putString(system.getContentResolver(),
+                    TopHomeHook.KEY_TOP_MAP, map);
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+        }
+    }
+
     private static void clearTopSize() {
         try {
             Object wms = XposedHelpers.callStaticMethod(
@@ -384,6 +402,7 @@ final class TopMirror {
             toTop.reset();
             toTop.setTranslate(-left, -top);
             toTop.postScale(1f / scale, 1f / scale);
+            publishMap(scale, left, top, size.x, size.y);
             boolean side = left >= top;
             if (side) placeControls(true, left, left + shownW + left / 2f, h / 2f);
             else placeControls(false, top, w / 2f, top + shownH + top / 2f);
