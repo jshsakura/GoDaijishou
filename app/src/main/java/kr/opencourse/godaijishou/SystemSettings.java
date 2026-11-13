@@ -61,6 +61,8 @@ final class SystemSettings {
     private static volatile boolean initialized = false;
     // The settings have been read at least once this boot.
     private static volatile boolean loaded = false;
+    // Past the app's own boot wait (PerfProfileReceiver, 20 s), so the two rarely overlap.
+    private static final long BOOT_PROFILE_DELAY_MS = 30_000;
     private static ContentResolver resolver;
     private static Handler handler;
     private static Context systemContext;
@@ -128,6 +130,12 @@ final class SystemSettings {
                     boolean retryOnly = Intent.ACTION_SCREEN_ON.equals(action)
                             || Intent.ACTION_USER_PRESENT.equals(action);
                     if (!retryOnly || !loaded) reload();
+                    // The app re-applies the profile once boot settles, but its process may be
+                    // reclaimed during that wait; ask again from here, where nothing gets
+                    // reclaimed (a no-op for Normal, which never writes at boot).
+                    if (Intent.ACTION_BOOT_COMPLETED.equals(action)) {
+                        handler.postDelayed(() -> PerfProfile.request(context, null), BOOT_PROFILE_DELAY_MS);
+                    }
                 }
             }, filter, null, handler);
 

@@ -46,7 +46,7 @@ final class SubDisplayApps {
     }
 
     private static void allow(Context context, String pkg) throws Exception {
-        if (pkg == null || context.getPackageManager().getLaunchIntentForPackage(pkg) == null) return;
+        if (pkg == null || !hasLauncherIcon(context, pkg)) return;
         // In system_server this is the service object itself (a local binder).
         Object atms = XposedHelpers.callStaticMethod(
                 Class.forName("android.app.ActivityTaskManager"), "getService");
@@ -54,5 +54,16 @@ final class SubDisplayApps {
         Map<?, ?> user = (Map<?, ?>) XposedHelpers.getObjectField(ex, "WING_WHITE_LIST_USER");
         if (user.containsKey(pkg)) return; // the user's own choice
         XposedHelpers.callMethod(atms, "updateLaunchedOnSubDisplayPackageByUser", pkg, true);
+    }
+
+    // Also before the first unlock, when the app's (credential-encrypted) activities don't
+    // resolve by default: an install then would otherwise look like one without an icon.
+    private static boolean hasLauncherIcon(Context context, String pkg) {
+        Intent launcher = new Intent(Intent.ACTION_MAIN)
+                .addCategory(Intent.CATEGORY_LAUNCHER)
+                .setPackage(pkg);
+        int flags = android.content.pm.PackageManager.MATCH_DIRECT_BOOT_AWARE
+                | android.content.pm.PackageManager.MATCH_DIRECT_BOOT_UNAWARE;
+        return !context.getPackageManager().queryIntentActivities(launcher, flags).isEmpty();
     }
 }
