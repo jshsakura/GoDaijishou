@@ -33,6 +33,15 @@ final class SystemSettings {
         return noTopScreen || (topScreenOff && secondScreenOn);
     }
 
+    /**
+     * Whether things meant for the top screen (dialogs, notification banners) should open on
+     * the second screen instead. Not while the top screen is mirrored there: then the top
+     * screen is in use, just shown below, and everything stays where it normally goes.
+     */
+    static boolean sendToBottom() {
+        return topUnavailable() && !TopMirror.isShowing();
+    }
+
     static volatile boolean forceRotation = false;
     static volatile boolean powerMenuOnSecondScreen = false;
     // "Bottom screen only": power the top panel off while the swivel is open.

@@ -39,7 +39,7 @@ final class LaunchRedirectHook {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) {
                         // Cheapest checks first: feature off or swivel closed -> untouched.
-                        if (!SystemSettings.topUnavailable()) return;
+                        if (!SystemSettings.sendToBottom()) return;
                         try {
                             redirect(param);
                         } catch (Throwable ignored) {

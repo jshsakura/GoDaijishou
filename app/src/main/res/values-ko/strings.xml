@@ -101,4 +101,5 @@
     <string name="scope_systemui_keyboard">• 시스템 UI (com.android.systemui)\n• LG 키보드 (com.lge.ime)</string>
     <string name="scope_popupcamera">• LG 팝업 카메라 (com.lge.popupcamera)</string>
     <string name="update_available">업데이트 v%1$s</string>
+    <string name="panel_top_mirror">상단 화면 보기</string>
 </resources>

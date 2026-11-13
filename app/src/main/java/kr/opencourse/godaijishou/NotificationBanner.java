@@ -81,7 +81,7 @@ final class NotificationBanner {
             protected void afterHookedMethod(MethodHookParam param) {
                 if (service == null) service = param.thisObject;
                 // Runs under the notification lock: cheap checks, copy the data, hand off.
-                if (!SystemSettings.topUnavailable() || SystemSettings.handler() == null) return;
+                if (!SystemSettings.sendToBottom() || SystemSettings.handler() == null) return;
                 try {
                     Item item = Item.from(param.args[0], (Integer) param.getResult());
                     if (item != null) SystemSettings.handler().post(() -> show(item));
@@ -180,7 +180,7 @@ final class NotificationBanner {
     // --- Window (settings thread only) ---
 
     private static void show(Item item) {
-        if (!SystemSettings.topUnavailable()) return;
+        if (!SystemSettings.sendToBottom()) return;
         try {
             remove();
             Context system = SystemSettings.context();
