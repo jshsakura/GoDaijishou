@@ -36,10 +36,14 @@
     <string name="app_title">GoDaijishou</string>
     <string name="status_active">Module running</string>
     <string name="status_inactive">Turn on in LSPosed, then reboot</string>
-    <string name="mode_second">Bottom screen</string>
-    <string name="mode_original">Stock screen</string>
-    <string name="mode_original_title">Stock screen</string>
+    <string name="mode_second">Second screen</string>
+    <string name="mode_original">Main screen</string>
+    <string name="mode_original_title">Main screen</string>
     <string name="mode_original_desc">With the swivel open the top panel turns off and the bottom screen shows the top screen as it is: apps, notifications, status bar and gestures work as on the folded phone. Needs LG Home and System UI in the LSPosed scope.</string>
+    <string name="mode_switch_title">Switch to %1$s?</string>
+    <string name="mode_switch_to_main">With the swivel open the top panel turns off and the bottom screen shows the top screen as it is. Second screen features (launcher, battery bar, volume bar...) rest meanwhile. To come back, pick Second screen in this app.</string>
+    <string name="mode_switch_to_second">The bottom screen becomes a second screen of its own again, with its features.</string>
+    <string name="mode_switch_ok">Switch</string>
     <string name="group_common">Both modes</string>
     <string name="group_screen">Screen</string>
     <string name="group_module">Module</string>

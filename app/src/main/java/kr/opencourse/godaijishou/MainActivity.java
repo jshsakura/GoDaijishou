@@ -372,7 +372,7 @@ public class MainActivity extends AppCompatActivity {
         styleChoice(buttons, prefs.getInt(key, def));
     }
 
-    // Stock screen or bottom screen: the tab picked is the mode. Each shows only its own
+    // Main screen or second screen: the tab picked is the mode. Each shows only its own
     // settings; the ones for both (performance, gesture bar, fingerprint, rotation) and the
     // module rows stay under either.
     private static final int[] BOTTOM_SCREEN_ONLY = {
@@ -393,11 +393,21 @@ public class MainActivity extends AppCompatActivity {
             t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 15);
             t.setTypeface(Typeface.DEFAULT_BOLD);
             t.setGravity(android.view.Gravity.CENTER);
+            final int label = TAB_LABELS[i];
+            // One mode at a time; switching asks first (it changes what the second screen is).
             t.setOnClickListener(v -> {
                 if (screenMode() == mode) return;
-                prefs.edit().putInt(AppPreferences.KEY_SCREEN_MODE, mode).commit();
-                getContentResolver().notifyChange(SettingsProvider.CONTENT_URI, null);
-                showMode(tabs);
+                new MaterialAlertDialogBuilder(this)
+                        .setTitle(getString(R.string.mode_switch_title, getString(label)))
+                        .setMessage(mode == AppPreferences.SCREEN_MODE_ORIGINAL
+                                ? R.string.mode_switch_to_main : R.string.mode_switch_to_second)
+                        .setPositiveButton(R.string.mode_switch_ok, (d, w) -> {
+                            prefs.edit().putInt(AppPreferences.KEY_SCREEN_MODE, mode).commit();
+                            getContentResolver().notifyChange(SettingsProvider.CONTENT_URI, null);
+                            showMode(tabs);
+                        })
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show();
             });
             tabs[i] = t;
             box.addView(t, new android.widget.LinearLayout.LayoutParams(0,
