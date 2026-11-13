@@ -30,6 +30,8 @@ public class MainModule implements IXposedHookLoadPackage {
             safely(LauncherHook::install);
         } else if (SwivelWarningHook.TARGET_PACKAGE.equals(pkg)) {
             safely(() -> SwivelWarningHook.install(cl));
+        } else if (TopHomeHook.TARGET_PACKAGE.equals(pkg)) {
+            safely(() -> TopHomeHook.install(cl));
         } else if (RetroArchHook.isTarget(pkg)) {
             safely(RetroArchHook::install);
         } else if (NavBarHook.SYSTEMUI.equals(pkg)) {

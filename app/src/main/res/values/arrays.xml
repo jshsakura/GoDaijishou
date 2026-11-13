@@ -8,6 +8,8 @@
         <item>com.android.systemui</item>
         <!-- LG keyboard (the Wing's own): keyboard bottom strip (optional) -->
         <item>com.lge.ime</item>
+        <!-- LG home: the top screen as a phone while shown on the second screen (optional) -->
+        <item>com.lge.launcher3</item>
         <!-- LG pop-up camera: swivel-mode camera notices (optional) -->
         <item>com.lge.popupcamera</item>
         <!-- RetroArch second screen black screen recovery (optional) -->

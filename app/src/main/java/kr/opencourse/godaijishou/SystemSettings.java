@@ -98,6 +98,8 @@ final class SystemSettings {
             // Status label on the second screen (same: drawn here, no permission).
             safely(() -> StatusLabel.install(context, handler));
             safely(() -> SubDisplayApps.install(context, handler));
+            // A top view left over from the last boot: give the top screen its size back.
+            handler.post(() -> TopMirror.resetAfterBoot(context));
             // USB mode (file transfer or charging only): set as the default whenever the choice
             // changes, and again on each new connection, so the developer option's default
             // configuration can't put the other one back.

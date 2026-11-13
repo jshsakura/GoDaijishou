@@ -94,6 +94,7 @@ final class TopMirror {
             windowManager.addView(v, lp);
             showing = true;
             addControls(ui); // after the mirror window, so above it and its mirrored windows
+            setTopView(true);
 
             // The top screen rotating or changing size: fit again. The swivel closing (second
             // screen off or gone): nothing to show it on, close.
@@ -132,6 +133,7 @@ final class TopMirror {
         }
         topListener = null;
         releaseMirror();
+        restoreTop();
         android.widget.LinearLayout c = controls;
         controls = null;
         if (c != null) {
@@ -201,7 +203,7 @@ final class TopMirror {
 
     // Lay the buttons out down the side bar, or across the bottom bar when the top screen
     // is landscape, centred in that bar.
-    private static void placeControls(boolean side, float barX, float barY) {
+    private static void placeControls(boolean side, float bar, float barX, float barY) {
         android.widget.LinearLayout c = controls;
         if (c == null || controlsLp == null) return;
         try {
@@ -217,6 +219,10 @@ final class TopMirror {
                 }
             }
             c.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+            // Edge to edge (the top screen sized to this one): no bar to hold them, the top
+            // screen's own back and home work there.
+            int thickness = side ? c.getMeasuredWidth() : c.getMeasuredHeight();
+            c.setVisibility(bar >= thickness ? View.VISIBLE : View.GONE);
             int x = Math.round(barX - c.getMeasuredWidth() / 2f);
             int y = Math.round(barY - c.getMeasuredHeight() / 2f);
             if (controlsLp.x == x && controlsLp.y == y) return;
@@ -242,6 +248,72 @@ final class TopMirror {
             } catch (Throwable t) {
                 ModuleLog.w(t);
             }
+        }
+    }
+
+    // --- The top screen as a phone, sized to the second screen ---
+
+    private static boolean sizeForced;
+
+    /**
+     * Tells LG's home that the swivel is "closed" (TopHomeHook), so the top screen behaves
+     * like the folded phone, and remembers it in a global flag that is also the marker for
+     * undoing the size below (cleared on hide and at every boot).
+     */
+    private static void setTopView(boolean on) {
+        try {
+            android.provider.Settings.Global.putInt(system.getContentResolver(),
+                    TopHomeHook.KEY_TOP_VIEW, on ? 1 : 0);
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+        }
+    }
+
+    /** The top screen laid out at the second screen's size: shown 1:1, edge to edge. */
+    private static void fitTop(int w, int h) {
+        if (w <= 0 || h <= 0) return;
+        try {
+            Object wms = XposedHelpers.callStaticMethod(
+                    Class.forName("android.view.WindowManagerGlobal"), "getWindowManagerService");
+            // In the top screen's natural (portrait) orientation; it rotates on its own.
+            XposedHelpers.callMethod(wms, "setForcedDisplaySize", TOP, Math.min(w, h), Math.max(w, h));
+            sizeForced = true;
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+        }
+    }
+
+    private static void restoreTop() {
+        if (sizeForced) {
+            sizeForced = false;
+            clearTopSize();
+        }
+        if (system != null) setTopView(false);
+    }
+
+    private static void clearTopSize() {
+        try {
+            Object wms = XposedHelpers.callStaticMethod(
+                    Class.forName("android.view.WindowManagerGlobal"), "getWindowManagerService");
+            XposedHelpers.callMethod(wms, "clearForcedDisplaySize", TOP);
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+        }
+    }
+
+    /**
+     * At boot: a top view left over from before (crash, power loss) must not keep the top
+     * screen at the second screen's size. The flag says whether it was ours to undo.
+     */
+    static void resetAfterBoot(Context context) {
+        try {
+            android.content.ContentResolver r = context.getContentResolver();
+            if (android.provider.Settings.Global.getInt(r, TopHomeHook.KEY_TOP_VIEW, 0) == 1) {
+                clearTopSize();
+                android.provider.Settings.Global.putInt(r, TopHomeHook.KEY_TOP_VIEW, 0);
+            }
+        } catch (Throwable t) {
+            ModuleLog.w(t);
         }
     }
 
@@ -300,6 +372,7 @@ final class TopMirror {
             Display d = getContext().getSystemService(DisplayManager.class).getDisplay(TOP);
             if (d != null) d.getRealSize(size);
             int w = r - l, h = b - t;
+            if (!sizeForced && view == this) fitTop(w, h); // relayouts once the size applies
             if (size.x <= 0 || size.y <= 0) return;
             srcW = size.x;
             srcH = size.y;
@@ -312,8 +385,8 @@ final class TopMirror {
             toTop.setTranslate(-left, -top);
             toTop.postScale(1f / scale, 1f / scale);
             boolean side = left >= top;
-            if (side) placeControls(true, left + shownW + left / 2f, h / 2f);
-            else placeControls(false, w / 2f, top + shownH + top / 2f);
+            if (side) placeControls(true, left, left + shownW + left / 2f, h / 2f);
+            else placeControls(false, top, w / 2f, top + shownH + top / 2f);
             if (mirror != null) {
                 SurfaceControl.Transaction tx = new SurfaceControl.Transaction();
                 place(tx);
