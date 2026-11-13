@@ -16,45 +16,60 @@
         android:paddingEnd="18dp"
         android:paddingBottom="24dp">
 
-        <!-- Title bar -->
+        <!-- Title bar: name over live status, version pill (turns into the update button) -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="52dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <!-- Logo: Baloo 2 ExtraBold typeface + yellow trailing dot, both set in code -->
-            <TextView
-                android:id="@+id/tv_logo"
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:includeFontPadding="false"
-                android:paddingTop="3dp"
-                android:text="@string/app_title"
-                android:textColor="@color/ft_ink"
-                android:textSize="28sp" />
+                android:orientation="vertical">
+
+                <!-- Logo: Baloo 2 ExtraBold typeface + yellow trailing dot, both set in code -->
+                <TextView
+                    android:id="@+id/tv_logo"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:includeFontPadding="false"
+                    android:paddingTop="3dp"
+                    android:text="@string/app_title"
+                    android:textColor="@color/ft_ink"
+                    android:textSize="25sp" />
+
+                <!-- Live module status (dot + text), set in code -->
+                <TextView
+                    android:id="@+id/tv_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="1dp"
+                    android:drawablePadding="6dp"
+                    android:gravity="center_vertical"
+                    android:text="@string/status_active"
+                    android:textColor="@color/ft_secondary"
+                    android:textSize="12sp" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/tv_version"
                 android:layout_width="wrap_content"
-                android:layout_height="28dp"
+                android:layout_height="30dp"
+                android:layout_marginStart="8dp"
                 android:background="@drawable/bg_ft_pill"
+                android:drawablePadding="6dp"
+                android:drawableStart="@drawable/ic_ft_github"
+                android:drawableTint="@color/ft_secondary"
                 android:gravity="center"
-                android:paddingStart="12dp"
+                android:paddingStart="11dp"
                 android:paddingEnd="12dp"
                 android:textColor="@color/ft_secondary"
                 android:textSize="13sp"
                 android:textStyle="bold" />
         </LinearLayout>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingStart="2dp"
-            android:text="@string/app_subtitle"
-            android:textColor="@color/ft_secondary"
-            android:textSize="13sp" />
 
         <!-- Reboot notice (shown only when needed) -->
         <LinearLayout
@@ -80,6 +95,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:lineSpacingMultiplier="1.2"
+                android:id="@+id/notice_reboot_text"
                 android:text="@string/notice_reboot_desc"
                 android:textColor="@color/ft_ink"
                 android:textSize="13sp" />
@@ -130,6 +146,7 @@
         <!-- Launcher -->
         <TextView
             style="@style/Ft.Group"
+            android:drawableStart="@drawable/ic_ft_apps"
             android:text="@string/row_launcher_title" />
 
         <!-- Launcher rows are added by MainActivity -->
@@ -142,6 +159,7 @@
         <!-- Screen -->
         <TextView
             style="@style/Ft.Group"
+            android:drawableStart="@drawable/ic_ft_display"
             android:text="@string/group_screen" />
 
         <LinearLayout
@@ -219,54 +237,138 @@
                 style="@style/Ft.Switch" />
         </LinearLayout>
 
+        <!-- Battery bar: one card. Header toggles it; under it the look, the position and
+             the fullscreen rule (segments built in MainActivity). -->
         <LinearLayout
-            android:id="@+id/row_battery_strip"
-            style="@style/Ft.Row">
+            style="@style/Ft.Row"
+            android:clickable="false"
+            android:focusable="false"
+            android:orientation="vertical">
 
-            <ImageView
-                style="@style/Ft.RowIcon"
-                android:importantForAccessibility="no"
-                android:src="@drawable/ic_ft_battery" />
+            <LinearLayout
+                android:id="@+id/row_battery_strip"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?android:attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-            <LinearLayout style="@style/Ft.RowText">
+                <ImageView
+                    style="@style/Ft.RowIcon"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_ft_battery" />
 
-                <TextView
-                    style="@style/Ft.RowTitle"
-                    android:text="@string/main_battery_strip_switch" />
+                <LinearLayout style="@style/Ft.RowText">
 
-                <TextView
-                    style="@style/Ft.RowDesc"
-                    android:text="@string/main_battery_strip_desc" />
+                    <TextView
+                        style="@style/Ft.RowTitle"
+                        android:text="@string/main_battery_strip_switch" />
+
+                    <TextView
+                        style="@style/Ft.RowDesc"
+                        android:text="@string/main_battery_strip_desc" />
+                </LinearLayout>
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/switch_battery_strip"
+                    style="@style/Ft.Switch" />
             </LinearLayout>
 
-            <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/switch_battery_strip"
-                style="@style/Ft.Switch" />
-        </LinearLayout>
+            <!-- Body: a table of settings, one per line, hairlines between -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_ft_table"
+                android:orientation="vertical">
 
-        <LinearLayout
-            android:id="@+id/row_label_hide_fullscreen"
-            style="@style/Ft.Row">
+                <LinearLayout
+                    android:id="@+id/row_strip_style"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="10dp">
 
-            <ImageView
-                style="@style/Ft.RowIcon"
-                android:importantForAccessibility="no"
-                android:src="@drawable/ic_ft_fullscreen" />
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/main_strip_style_title"
+                        android:textColor="@color/ft_ink"
+                        android:textSize="15sp" />
 
-            <LinearLayout style="@style/Ft.RowText">
+                    <LinearLayout
+                        android:id="@+id/strip_style_buttons"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal" />
+                </LinearLayout>
 
-                <TextView
-                    style="@style/Ft.RowTitle"
-                    android:text="@string/main_label_hide_fullscreen_switch" />
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginStart="16dp"
+                    android:background="@color/ft_line" />
 
-                <TextView
-                    style="@style/Ft.RowDesc"
-                    android:text="@string/main_label_hide_fullscreen_desc" />
+                <LinearLayout
+                    android:id="@+id/row_strip_pos"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="10dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/main_strip_pos_title"
+                        android:textColor="@color/ft_ink"
+                        android:textSize="15sp" />
+
+                    <LinearLayout
+                        android:id="@+id/strip_pos_buttons"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginStart="16dp"
+                    android:background="@color/ft_line" />
+
+                <LinearLayout
+                    android:id="@+id/row_label_hide_fullscreen"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="10dp"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/main_label_hide_fullscreen_switch"
+                        android:textColor="@color/ft_ink"
+                        android:textSize="15sp" />
+
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/switch_label_hide_fullscreen"
+                        style="@style/Ft.Switch" />
+                </LinearLayout>
             </LinearLayout>
-
-            <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/switch_label_hide_fullscreen"
-                style="@style/Ft.Switch" />
         </LinearLayout>
 
         <!-- Performance profile: title row, then eco / normal / turbo segments across the card -->
@@ -463,6 +565,7 @@
         <!-- Module -->
         <TextView
             style="@style/Ft.Group"
+            android:drawableStart="@drawable/ic_ft_tune"
             android:text="@string/group_module" />
 
         <LinearLayout
@@ -490,44 +593,29 @@
                 android:importantForAccessibility="no" />
         </LinearLayout>
 
-        <!-- USB mode: title row, then file transfer / charging only segments -->
+        <!-- USB mode: one row, title and the file transfer / charging only segments -->
         <LinearLayout
             android:id="@+id/row_usb_mode"
             style="@style/Ft.Row"
             android:clickable="false"
-            android:focusable="false"
-            android:gravity="start"
-            android:orientation="vertical">
+            android:focusable="false">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+            <ImageView
+                style="@style/Ft.RowIcon"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_ft_usb" />
 
-                <ImageView
-                    style="@style/Ft.RowIcon"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_ft_usb" />
-
-                <LinearLayout style="@style/Ft.RowText">
-
-                    <TextView
-                        style="@style/Ft.RowTitle"
-                        android:text="@string/row_usb_mode_title" />
-
-                    <TextView
-                        style="@style/Ft.RowDesc"
-                        android:text="@string/row_usb_mode_desc" />
-                </LinearLayout>
-            </LinearLayout>
+            <TextView
+                style="@style/Ft.RowTitle"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:text="@string/row_usb_mode_title" />
 
             <!-- Built in MainActivity -->
             <LinearLayout
                 android:id="@+id/usb_mode_buttons"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
                 android:orientation="horizontal" />
         </LinearLayout>
 

@@ -2,34 +2,42 @@
     <string name="app_name">GoDaijishou</string>
 
     <!-- Selector Activity -->
-    <string name="launcher_daijishou">다이지쇼 (Daijishou)</string>
+    <string name="launcher_daijishou">Daijishou</string>
     <string name="launcher_esde">ES-DE</string>
-    <string name="launcher_pegasus">페가수스 (Pegasus)</string>
+    <string name="launcher_pegasus">Pegasus</string>
     <!-- Toast Messages -->
     <string name="toast_app_not_installed">%s 앱이 설치되지 않았습니다.</string>
 
-    <string name="launcher_stock">LG 기본값 (LG Default)</string>
+    <string name="launcher_stock">LG Default</string>
     <string name="main_reboot_permission_denied">재부팅 권한이 거부되었습니다</string>
 
     <!-- Bottom screen only mode (black top screen) -->
-    <string name="main_no_top_screen_switch">상단 화면 없음</string>
-    <string name="main_no_top_screen_desc">상단 패널을 늘 끄고, 대화상자·알림·볼륨 바·안내 메시지를 하단 화면에 띄웁니다.</string>
+    <string name="main_no_top_screen_switch">상단 화면 끄기</string>
+    <string name="main_no_top_screen_desc">창과 알림을 모두 하단에서 받습니다.</string>
     <string name="main_top_blackout_switch">하단 화면 전용 모드</string>
-    <string name="main_top_blackout_desc">스위블이 열려 있는 동안 상단 패널 전원을 끄고, 상단에 뜨던 창은 하단 화면으로 보냅니다(시스템 프레임워크 필요).</string>
+    <string name="main_top_blackout_desc">스위블을 열 때만 상단을 끄고 창을 하단에 띄웁니다.</string>
     <string name="main_volume_overlay_switch">볼륨 표시</string>
-    <string name="main_battery_strip_switch">상태 라벨</string>
-    <string name="main_battery_strip_desc">하단 화면 오른쪽 위에 작은 반투명 라벨로 와이파이, LTE, 알림 개수, 배터리 %를 보여줍니다. 아무것도 가리지 않고 입력도 받지 않습니다.</string>
-    <string name="main_label_hide_fullscreen_switch">전체화면 앱은 알림바 숨김</string>
-    <string name="main_label_hide_fullscreen_desc">다이지쇼·게임처럼 전체화면인 앱에서는 위쪽 알림바(상태 라벨)를 숨깁니다.</string>
-    <string name="main_volume_overlay_desc">지금 쓰는 화면 오른쪽 가장자리에 얇은 세로 볼륨 바를 시스템이 직접 그립니다(추가 권한 없음). 입력을 가로채지 않습니다.</string>
+    <string name="main_battery_strip_switch">배터리 바</string>
+    <string name="main_battery_strip_desc">당기면 알림창이 열립니다.</string>
+    <string name="main_strip_style_title">모양</string>
+    <string name="strip_style_pill">플로팅</string>
+    <string name="strip_style_line">한 줄</string>
+    <string name="main_strip_pos_title">위치</string>
+    <string name="strip_pos_left">좌측</string>
+    <string name="strip_pos_center">중앙</string>
+    <string name="strip_pos_right">우측</string>
+    <string name="main_label_hide_fullscreen_switch">전체화면에서 숨기기</string>
+    <string name="main_label_hide_fullscreen_desc">끄면 배터리 바가 항상 보입니다.</string>
+    <string name="main_volume_overlay_desc">오른쪽 끝에 얇은 볼륨 바를 띄웁니다.</string>
 
     <!-- Rotation forcing (formerly GoRotation90) -->
     <string name="main_force_rotation_switch">자동회전 토글로 회전 강제</string>
-    <string name="main_force_rotation_desc">자동회전을 끄면 가로(90°), 켜면 세로로 고정됩니다. 스위치는 바로 적용되고, 처음 한 번만 LSPosed에서 \"시스템 프레임워크\"를 체크하고 재부팅하면 됩니다.</string>
+    <string name="main_force_rotation_desc">자동회전 끄면 가로, 켜면 세로로 고정합니다.</string>
 
     <!-- Settings screen (freetv style) -->
     <string name="app_title">GoDaijishou</string>
-    <string name="app_subtitle">LG Wing 커스텀 모듈</string>
+    <string name="status_active">모듈 작동 중</string>
+    <string name="status_inactive">LSPosed에서 켜고 재부팅</string>
     <string name="group_screen">화면</string>
     <string name="group_module">모듈</string>
     <string name="row_launcher_title">세컨드 스크린 홈</string>
@@ -37,15 +45,16 @@
     <string name="launcher_installed">설치됨</string>
     <string name="launcher_not_installed">설치 안 됨</string>
     <string name="row_lsposed_title">LSPosed 열기</string>
-    <string name="row_lsposed_desc">모듈을 켜고, 범위 화면의 ⋮ 메뉴에서 \"권장 항목 선택\"을 누른 뒤 재부팅하면 모든 기능이 적용됩니다.</string>
+    <string name="row_lsposed_desc">우측 상단 메뉴(⋮)에서 \"권장 항목 선택\" 후 재부팅</string>
     <string name="row_reboot_title">재부팅</string>
-    <string name="row_reboot_desc">모듈을 켜거나 스코프를 바꾼 뒤에만 필요합니다. 위 스위치들은 바로 적용됩니다.</string>
+    <string name="row_reboot_desc">모듈을 켜거나 범위를 바꾼 뒤에만 필요합니다.</string>
     <string name="row_debug_log_title">진단 로그</string>
-    <string name="row_debug_log_desc">모듈이 겪은 오류를 LSPosed 로그에 남깁니다. 문제를 찾을 때만 켭니다. 훅 설치 실패는 늘 남깁니다.</string>
+    <string name="row_debug_log_desc">문제를 찾을 때만 켜세요.</string>
     <string name="row_usb_mode_title">USB 모드</string>
-    <string name="row_usb_mode_desc">USB를 여기서 고른 모드로 연결합니다. 개발자 옵션의 기본 USB 구성도 같은 값으로 맞춰서, 그 설정 때문에 모드가 되돌아가지 않습니다. 연결한 뒤에 다른 모드를 직접 고를 수도 있습니다.</string>
+    <string name="row_usb_mode_desc">USB를 연결할 때마다 이 모드로 붙습니다.</string>
     <string name="usb_mode_mtp">파일 전송</string>
     <string name="usb_mode_charge">충전 전용</string>
+    <string name="notice_reboot_updated">앱이 업데이트됐어요. 재부팅해야 새 버전이 적용됩니다.</string>
     <string name="notice_reboot_title">재부팅이 필요해요</string>
     <string name="notice_reboot_desc">켜 둔 기능이 이번 부팅에서 아직 적용되지 않았습니다. LSPosed에서 GoDaijishou 범위에 \"권장 항목 선택\"을 한 뒤 재부팅하세요.</string>
     <string name="reboot_confirm_title">지금 재부팅할까요?</string>
@@ -57,7 +66,7 @@
 
     <!-- Second screen power menu -->
     <string name="main_power_menu_switch">전원 메뉴</string>
-    <string name="main_power_menu_desc">전원키를 길게 누르면 화면 가운데에 전원 메뉴가 오버레이로 뜹니다. 메뉴가 두 번 뜨지 않도록 Classic PowerMenu는 꺼주세요.</string>
+    <string name="main_power_menu_desc">전원키 길게: 화면 가운데 전원 메뉴</string>
     <string name="power_off">전원 끄기</string>
     <string name="power_restart">다시 시작</string>
     <string name="power_recovery">리커버리</string>
@@ -68,22 +77,22 @@
     <string name="notifications_battery_saver">절전</string>
     <string name="notifications_dismiss">지우기</string>
     <string name="notifications_block">다시 보지 않기</string>
-    <string name="notifications_clear_all">모두 지우기</string>
+    <string name="notifications_clear_all">지우기</string>
     <string name="notifications_empty">알림이 없습니다</string>
     <string name="main_perf_profile">성능 프로필</string>
-    <string name="main_perf_profile_desc">에코: 클럭 최저, 발열 최소. 일반: 순정보다 살짝 낮게. 터보: 최대 클럭, 쓰로틀 완화. 루트(Magisk) 필요.</string>
+    <string name="main_perf_profile_desc">에코: 클럭을 낮춰 발열 최소. 일반: 순정. 터보: 최저 클럭을 올림. 루트 필요.</string>
     <string name="main_perf_profile_no_root">루트 권한 없음: Magisk에서 GoDaijishou를 허용해 주세요</string>
     <string name="perf_eco">에코</string>
     <string name="perf_normal">일반</string>
     <string name="perf_turbo">터보</string>
     <string name="main_hide_swivel_warnings_switch">스위블 경고 끄기</string>
-    <string name="main_hide_swivel_warnings_desc">스위블 모드에서 카메라를 열 때마다 뜨는 LG 안내(카메라 화면이 잘려 보이거나, 스위블 다운해 주세요)를 띄우지 않습니다. LSPosed 범위에서 com.lge.popupcamera를 체크해야 합니다.</string>
+    <string name="main_hide_swivel_warnings_desc">카메라의 LG 스위블 안내를 끕니다.</string>
     <string name="main_slim_nav_pill_switch">제스처 바 슬림하게</string>
-    <string name="main_slim_nav_pill_desc">하단 제스처 바를 2/3 두께, 2/3 길이로 얇고 짧게 그립니다. 색과 제스처 동작은 그대로입니다. LSPosed에서 시스템 UI를 체크하세요.</string>
+    <string name="main_slim_nav_pill_desc">제스처 바를 2/3 크기로 그립니다.</string>
     <string name="main_hide_ime_nav_strip_switch">키보드 아래 여백 줄이기</string>
-    <string name="main_hide_ime_nav_strip_desc">키보드 밑의 키보드 내리기/전환 버튼 줄을 없애 제스처 바 높이만 남깁니다. LSPosed에서 시스템 UI와 LG 키보드를 체크하고 재부팅하세요.</string>
+    <string name="main_hide_ime_nav_strip_desc">키보드 밑 버튼 줄을 없앱니다.</string>
     <string name="main_fingerprint_off_switch">지문 센서 끄기</string>
-    <string name="main_fingerprint_off_desc">패스키·로그인에서 지문 대신 PIN을 씁니다. 등록된 지문은 그대로이고, 재부팅 후 적용됩니다.</string>
+    <string name="main_fingerprint_off_desc">로그인에 지문 대신 PIN (재부팅 후)</string>
     <string name="scope_dialog_title">LSPosed 설정이 필요해요</string>
     <string name="scope_dialog_message">이 기능은 LSPosed에서 GoDaijishou 모듈의 범위에 다음을 체크하고 재부팅해야 작동합니다.\n\n%1$s</string>
     <string name="scope_dialog_open">LSPosed 열기</string>
@@ -91,4 +100,5 @@
     <string name="scope_systemui">• 시스템 UI (com.android.systemui)</string>
     <string name="scope_systemui_keyboard">• 시스템 UI (com.android.systemui)\n• LG 키보드 (com.lge.ime)</string>
     <string name="scope_popupcamera">• LG 팝업 카메라 (com.lge.popupcamera)</string>
+    <string name="update_available">업데이트 v%1$s</string>
 </resources>

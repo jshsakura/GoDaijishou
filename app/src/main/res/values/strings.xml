@@ -12,24 +12,32 @@
     <string name="main_reboot_permission_denied">Reboot permission denied</string>
 
     <!-- Bottom screen only mode (black top screen) -->
-    <string name="main_no_top_screen_switch">No top screen</string>
-    <string name="main_no_top_screen_desc">The top panel stays off and dialogs, notifications, the volume bar and messages open on the bottom screen.</string>
+    <string name="main_no_top_screen_switch">Top screen off</string>
+    <string name="main_no_top_screen_desc">Windows and notifications all on the bottom.</string>
     <string name="main_top_blackout_switch">Bottom screen only</string>
-    <string name="main_top_blackout_desc">While the swivel is open, the top panel is powered off and anything that would open there appears on the bottom screen instead (needs System Framework).</string>
+    <string name="main_top_blackout_desc">Only with the swivel open: the top panel turns off and windows move down.</string>
     <string name="main_volume_overlay_switch">Volume overlay</string>
-    <string name="main_battery_strip_switch">Status label</string>
-    <string name="main_battery_strip_desc">A small translucent tab at the top right of the bottom screen shows Wi-Fi, mobile data, the notification count and battery %. Covers nothing, takes no input.</string>
-    <string name="main_label_hide_fullscreen_switch">Hide the status bar in fullscreen apps</string>
-    <string name="main_label_hide_fullscreen_desc">Fullscreen apps such as Daijishou and games hide the status label at the top.</string>
-    <string name="main_volume_overlay_desc">A slim vertical volume bar on the right edge of the screen in use, drawn by the system (no extra permission). Never takes input.</string>
+    <string name="main_battery_strip_switch">Battery bar</string>
+    <string name="main_battery_strip_desc">Pull it down for notifications.</string>
+    <string name="main_strip_style_title">Style</string>
+    <string name="strip_style_pill">Floating</string>
+    <string name="strip_style_line">Line</string>
+    <string name="main_strip_pos_title">Position</string>
+    <string name="strip_pos_left">Left</string>
+    <string name="strip_pos_center">Center</string>
+    <string name="strip_pos_right">Right</string>
+    <string name="main_label_hide_fullscreen_switch">Hide in fullscreen</string>
+    <string name="main_label_hide_fullscreen_desc">Off: the battery bar is always shown.</string>
+    <string name="main_volume_overlay_desc">A slim vertical volume bar on the right edge.</string>
 
     <!-- Rotation forcing (formerly GoRotation90) -->
     <string name="main_force_rotation_switch">Use auto-rotate toggle as rotation switch</string>
-    <string name="main_force_rotation_desc">Auto-rotate OFF locks landscape (90°), ON locks portrait. The switch applies instantly; the first time only, check \"System Framework\" in LSPosed and reboot.</string>
+    <string name="main_force_rotation_desc">Auto-rotate off locks landscape, on locks portrait.</string>
 
     <!-- Settings screen (freetv style) -->
     <string name="app_title">GoDaijishou</string>
-    <string name="app_subtitle">LG Wing customization module</string>
+    <string name="status_active">Module running</string>
+    <string name="status_inactive">Turn on in LSPosed, then reboot</string>
     <string name="group_screen">Screen</string>
     <string name="group_module">Module</string>
     <string name="row_launcher_title">Second screen home</string>
@@ -37,15 +45,16 @@
     <string name="launcher_installed">Installed</string>
     <string name="launcher_not_installed">Not installed</string>
     <string name="row_lsposed_title">Open LSPosed</string>
-    <string name="row_lsposed_desc">Enable the module, pick \"Select recommended\" from the ⋮ menu of its scope, then reboot: every feature applies.</string>
+    <string name="row_lsposed_desc">Top-right menu (⋮) → \"Select recommended\", then reboot</string>
     <string name="row_reboot_title">Reboot</string>
-    <string name="row_reboot_desc">Needed only after enabling the module or changing its scope. Switches above apply instantly.</string>
+    <string name="row_reboot_desc">Only needed after enabling the module or changing its scope.</string>
     <string name="row_debug_log_title">Diagnostic log</string>
-    <string name="row_debug_log_desc">Writes the errors the module runs into to the LSPosed log. Turn it on only while tracking down a problem. Hooks that fail to install are always logged.</string>
+    <string name="row_debug_log_desc">Turn on only to chase a problem: errors go to the LSPosed log.</string>
     <string name="row_usb_mode_title">USB mode</string>
-    <string name="row_usb_mode_desc">USB connects in the mode chosen here. It is also set as the default USB configuration in Developer options, so that setting no longer switches it back. You can still pick another mode by hand after connecting.</string>
+    <string name="row_usb_mode_desc">Every connection uses this mode; the default USB setting follows.</string>
     <string name="usb_mode_mtp">File transfer</string>
     <string name="usb_mode_charge">Charging only</string>
+    <string name="notice_reboot_updated">The app was updated. Reboot to run the new version.</string>
     <string name="notice_reboot_title">Reboot required</string>
     <string name="notice_reboot_desc">A feature you turned on is not loaded in this boot yet. In LSPosed, pick \"Select recommended\" in GoDaijishou\'s scope, then reboot.</string>
     <string name="reboot_confirm_title">Reboot now?</string>
@@ -57,7 +66,7 @@
 
     <!-- Second screen power menu -->
     <string name="main_power_menu_switch">Power menu</string>
-    <string name="main_power_menu_desc">Holding the power key opens the power menu as an overlay in the middle of the screen. Turn off Classic PowerMenu to avoid two menus.</string>
+    <string name="main_power_menu_desc">Hold the power key: the power menu opens mid-screen.</string>
     <string name="power_off">Power off</string>
     <string name="power_restart">Restart</string>
     <string name="power_recovery">Recovery</string>
@@ -68,22 +77,22 @@
     <string name="notifications_battery_saver">Battery saver</string>
     <string name="notifications_dismiss">Dismiss</string>
     <string name="notifications_block">Never show</string>
-    <string name="notifications_clear_all">Clear all</string>
+    <string name="notifications_clear_all">Clear</string>
     <string name="notifications_empty">No notifications</string>
     <string name="main_perf_profile">Performance profile</string>
-    <string name="main_perf_profile_desc">Eco: lowest clocks, least heat. Normal: a bit under stock. Turbo: full clocks, less throttling. Needs root (Magisk).</string>
+    <string name="main_perf_profile_desc">Eco: lower clocks, least heat. Normal: stock. Turbo: higher minimum clocks. Needs root.</string>
     <string name="main_perf_profile_no_root">No root: allow GoDaijishou in Magisk</string>
     <string name="perf_eco">Eco</string>
     <string name="perf_normal">Normal</string>
     <string name="perf_turbo">Turbo</string>
     <string name="main_hide_swivel_warnings_switch">Hide swivel warnings</string>
-    <string name="main_hide_swivel_warnings_desc">Skips LG\'s swivel-mode camera notices (camera may look cropped, swivel down to use the camera). Tick com.lge.popupcamera in the LSPosed scope.</string>
+    <string name="main_hide_swivel_warnings_desc">Skips LG\'s swivel notices each time the camera opens.</string>
     <string name="main_slim_nav_pill_switch">Slim gesture pill</string>
-    <string name="main_slim_nav_pill_desc">Draws the gesture pill at 2/3 thickness and 2/3 length. Color and gestures stay as they are. Check System UI in LSPosed.</string>
+    <string name="main_slim_nav_pill_desc">Draws the gesture pill at 2/3 size, thinner and shorter.</string>
     <string name="main_hide_ime_nav_strip_switch">Smaller gap under the keyboard</string>
-    <string name="main_hide_ime_nav_strip_desc">Removes the hide-keyboard / switcher row under the keyboard, leaving only the gesture bar\'s height. Check System UI and your keyboard app in LSPosed, then reboot.</string>
+    <string name="main_hide_ime_nav_strip_desc">Removes the button row under the keyboard.</string>
     <string name="main_fingerprint_off_switch">Turn off the fingerprint sensor</string>
-    <string name="main_fingerprint_off_desc">Passkeys and logins use your PIN instead of a fingerprint. Enrolled fingerprints are kept. Applies after a reboot.</string>
+    <string name="main_fingerprint_off_desc">Passkeys and logins use your PIN. Applies after a reboot.</string>
     <string name="scope_dialog_title">LSPosed setup needed</string>
     <string name="scope_dialog_message">This feature works once these are checked in the GoDaijishou module\'s scope in LSPosed, followed by a reboot.\n\n%1$s</string>
     <string name="scope_dialog_open">Open LSPosed</string>
@@ -91,4 +100,5 @@
     <string name="scope_systemui">• System UI (com.android.systemui)</string>
     <string name="scope_systemui_keyboard">• System UI (com.android.systemui)\n• LG keyboard (com.lge.ime)</string>
     <string name="scope_popupcamera">• LG pop-up camera (com.lge.popupcamera)</string>
+    <string name="update_available">Update v%1$s</string>
 </resources>

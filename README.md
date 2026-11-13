@@ -39,11 +39,17 @@ LG Wing의 두 번째 런처인 `com.lge.secondlauncher`의 홈 화면 동작을
 - 🔥 **발열 방지** — 런처끼리 튕겨내는 오실레이션 루프를 감지하면 쿨다운을 자동으로 늘리는 백오프로 CPU 폭주·발열을 차단합니다.
 - 🖥️ **검정화면 수정** *(v1.3)* — 게임(RetroArch 등) 실행 중 세컨드 스크린으로 복귀할 때 생기던 검정화면(소리만 나던) 문제를 해결. 세컨드 홈을 폴백용으로 유지하고, 복귀 시 레트로아크의 렌더링 서피스를 강제 재생성합니다. LSPosed 스코프에 RetroArch를 체크해야 동작합니다.
 - 🌙 **하단 화면 전용 모드** *(v1.5)* — 스위블이 열려 있는 동안 상단 패널 전원을 끄고, 상단에 뜨던 대화상자는 하단 화면으로 보냅니다. 렌더링·발열이 줄어듭니다.
-- 📵 **상단 화면 없음** *(v1.5)* — 하단 화면만 쓰는 윙용. 상단 패널을 늘 끄고 대화상자·알림·볼륨 바를 하단에 띄웁니다.
+- 📵 **상단 화면 끄기** *(v1.5)* — 하단 화면만 쓰는 윙용. 상단 패널을 늘 끄고 대화상자·알림·볼륨 바를 하단에 띄웁니다.
 - 🔊 **볼륨 바** *(v1.5)* — 지금 쓰는 화면 오른쪽 가장자리에 얇은 세로 볼륨 바. 시스템이 직접 그려서 추가 권한이 없고 입력을 가로채지 않습니다.
 - ⏻ **하단 전원 메뉴** *(v1.5)* — 스위블이 열려 있을 때 전원키를 길게 누르면 하단 화면에 전원 끄기·다시 시작·스크린샷·리커버리 메뉴가 뜹니다.
 - 🔄 **회전 강제** *(v1.5, 구 [GoRotation90](https://github.com/jshsakura/GoRotation90) 통합)* — 자동회전 토글을 회전 스위치로 사용합니다. 자동회전 OFF → 가로(90°) 고정, ON → 세로 고정. 설정 앱에서 켜고, LSPosed 스코프에 **시스템 프레임워크(android)** 를 체크해야 동작합니다. 꺼져 있으면 훅은 즉시 반환합니다.
 - 🔐 **루트·민감 권한 없음** *(v1.5)* — 앱은 루트 명령도, "다른 앱 위에 표시" 같은 권한도 쓰지 않습니다. 전원·스크린샷·화면 제어는 시스템 프레임워크 훅이 처리하고, 그 요청은 같은 서명의 앱만 보낼 수 있습니다. 모든 스위치는 첫 설정 후 재부팅 없이 바로 적용됩니다.
+
+- 🔋 **배터리 바** *(v1.6.1)* — 하단 화면 위쪽에 와이파이·LTE/5G·배터리·알림 개수를 띄웁니다. 모양(플로팅 / 한 줄)과 위치(좌·중앙·우), 전체화면에서 숨기기를 고를 수 있고 바로 바뀝니다. 바를 당기거나 누르면 알림창이 열립니다. 디자인이 바뀐 업데이트도 재부팅 없이 바로 반영됩니다.
+- 🔔 **알림창** *(v1.6.1)* — 시계·지우기·성능 프로필·차단 목록·설정 버튼을 한 줄에 두고, 닫기는 오른쪽 구석의 동그란 X로 따로 뺐습니다. 차단 목록에는 사용자가 직접 끈 알림만 나옵니다.
+- ⚡ **성능 프로필** — 에코 / 일반 / 터보. 일반은 완전한 순정으로, 부팅·절전 전환 때도 클럭을 건드리지 않습니다.
+- 📲 **새 앱 하단 화면 자동 허용** *(v1.6.1)* — 새로 설치한 앱을 LG 하단 화면 실행 허용 목록에 자동으로 넣어, 처음 실행할 때 묻는 창이 뜨지 않습니다. 사용자가 이미 고른 앱은 건드리지 않습니다.
+- 🔁 **재부팅 안내** *(v1.6.1)* — 시스템 쪽 코드가 바뀐 업데이트일 때만 재부팅을 안내합니다.
 
 > ⚠️ **알려진 한계**: RetroArch가 실행 중인 상태에서 프론트엔드로 다른 게임을 고르면 이전 게임이 다시 뜨거나 화면이 깨질 수 있습니다. RetroArch 1.16.0 이후 프론트엔드의 kill-before-launch가 깨진 [알려진 문제](https://github.com/TapiocaFox/Daijishou/issues/703)로, 모듈이 아닌 프론트엔드/RetroArch에서 해결돼야 하는 부분입니다. 게임을 바꿀 때는 RetroArch를 종료(또는 강제 종료)한 뒤 선택하세요.
 
@@ -82,6 +88,10 @@ LG Wing의 두 번째 런처인 `com.lge.secondlauncher`의 홈 화면 동작을
 - *(v1.5)* No-top-screen mode for Wings with only the bottom screen; volume bar and power menu on the bottom screen.
 - *(v1.5)* No root commands and no sensitive permissions in the app: privileged work is done by the System Framework hook.
 - *(v1.5)* Rotation forcing (merged from GoRotation90): the auto-rotate toggle acts as a rotation switch — OFF locks landscape (90°), ON locks portrait. Enable it in the settings app and add *System Framework* to the LSPosed scope.
+- *(v1.6.1)* Battery bar on the bottom screen (floating pill or one thin line; left / center / right; optionally hidden in fullscreen), applied instantly; pulling it opens the notification panel. Design updates apply without a reboot.
+- *(v1.6.1)* Notification panel header: clock, clear, performance profile, turned-off list and settings in one row, close as a separate round X in the corner.
+- *(v1.6.1)* Newly installed apps are added to LG's second-screen app list automatically; existing choices are kept.
+- *(v1.6.1)* Performance profile "Normal" is fully stock; the reboot notice shows only when hook code changed.
 - Known limitation: launching another game over a *running* RetroArch may bring back the previous game — a [known RetroArch ≥1.17 issue](https://github.com/TapiocaFox/Daijishou/issues/703) that belongs to the frontend/RetroArch side; quit RetroArch before switching games.
 
 **Requirements**: rooted LG Wing, LSPosed (or a compatible Xposed framework), and the target launcher installed.

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Launcher choice row: yellow check on the right when selected -->
+<!-- Launcher choice row: install label on the right, a yellow check in its place when selected -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     style="@style/Ft.Row">
 
@@ -19,13 +19,34 @@
             style="@style/Ft.RowDesc" />
     </LinearLayout>
 
-    <ImageView
-        android:id="@+id/choice_check"
-        android:layout_width="22dp"
-        android:layout_height="22dp"
-        android:layout_marginStart="8dp"
-        android:importantForAccessibility="no"
-        android:src="@drawable/ic_ft_check"
-        app:tint="@color/ft_butter"
-        xmlns:app="http://schemas.android.com/apk/res-auto" />
+    <!-- One slot on the right: install label, or (selected row) the check centred where the
+         label would be, so both line up across rows -->
+    <FrameLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp">
+
+        <TextView
+            android:id="@+id/choice_tag"
+            android:layout_width="wrap_content"
+            android:layout_height="24dp"
+            android:background="@drawable/bg_ft_pill"
+            android:gravity="center"
+            android:paddingStart="9dp"
+            android:paddingEnd="9dp"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/choice_check"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_gravity="center"
+            android:visibility="gone"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_ft_check"
+            app:tint="@color/ft_butter"
+            xmlns:app="http://schemas.android.com/apk/res-auto" />
+    </FrameLayout>
 </LinearLayout>

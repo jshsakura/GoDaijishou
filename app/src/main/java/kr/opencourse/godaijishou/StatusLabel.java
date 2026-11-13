@@ -6,12 +6,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Configuration;
 import android.content.res.Resources;
-import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.graphics.Path;
 import android.graphics.PixelFormat;
-import android.graphics.RectF;
-import android.graphics.Typeface;
 import android.hardware.display.DisplayManager;
 import android.net.ConnectivityManager;
 import android.net.Network;
@@ -41,53 +36,8 @@ final class StatusLabel {
 
     // WindowManager.LayoutParams.TYPE_VOLUME_OVERLAY (hidden): above apps and system bars.
     private static final int TYPE_OVERLAY = 2020;
-    private static final float HEIGHT_DP = 16f;
-    private static final float RIGHT_MARGIN_DP = 8f;
-    // The window is not touchable any more: no slack under the pill.
-    private static final float TOUCH_SLACK_DP = 0f;
-    // Pull-down grip over the battery: a little taller than the pill, and the finger has to
-    // travel this far down (mostly vertically) before the list opens.
-    private static final float GRIP_SLACK_DP = 6f;
+    // Pull-down distance before the list opens.
     private static final float PULL_DP = 14f;
-    private static final float PAD_DP = 6.5f;
-    private static final float GAP_DP = 5f;
-    // Pill floating just below the top edge.
-    private static final float TOP_MARGIN_DP = 1f;
-    private static final float ICON_DP = 10f;
-    private static final float TEXT_SP = 10.5f;
-    /** Colors for one system theme. Battery colors: muted, still readable on the background. */
-    private static final class Palette {
-        final int background, outline, ink, dim, bell, good, mid, low, warm, hot;
-        final int bubbleInk = 0xFF1A1A1E;
-
-        Palette(int background, int outline, int ink, int dim, int bell, int good, int mid, int low,
-                int warm, int hot) {
-            this.background = background;
-            this.outline = outline;
-            this.ink = ink;
-            this.dim = dim;
-            this.bell = bell;
-            this.good = good;
-            this.mid = mid;
-            this.low = low;
-            this.warm = warm;
-            this.hot = hot;
-        }
-    }
-
-    // FT ground / ink, well see-through, with pastel battery colors.
-    // The hairline outline keeps the pill's shape visible on black backgrounds.
-    private static final Palette DARK = new Palette(
-            0x8C121216, 0x40FFFFFF, 0xE6ECECF0, 0x52ECECF0, 0xE6FFC23D,
-            0xFF8FD1AE, 0xFFEBCB80, 0xFFE89A92,
-            0xFFF2A65A, 0xFFF26B5E);
-    // Inverted for light mode; battery colors deepened so they hold up on a light tab.
-    private static final Palette LIGHT = new Palette(
-            0x99F4F4F7, 0x24000000, 0xE61A1A1E, 0x521A1A1E, 0xFFC68A10,
-            0xFF3E9C6D, 0xFFB0821A, 0xFFC65A50,
-            0xFFD0771C, 0xFFCC3B30);
-    private static final int HIGH = 50;
-    private static final int LOW = 20;
     // Heat warning: battery temperature in tenths of a degree, or the system thermal status.
     private static final int WARM_TENTHS = 400; // 40.0 °C
     private static final int HOT_TENTHS = 450;  // 45.0 °C
@@ -96,10 +46,19 @@ final class StatusLabel {
     private static Context system;
     private static Handler handler;
     private static WindowManager windowManager;
-    private static LabelView view;
+    private static View view;
+    // StripView as loaded from the installed APK (see stripClass()); reloaded on app updates.
+    private static Class<?> stripClass;
+    private static String stripSource;
+    private static java.lang.reflect.Method setState, hitsPill, gripBottom;
     // Invisible strip along the top right: a tap on the pill or a downward pull opens the
     // notification list. Other taps are passed on, so app buttons under it (close X etc.) work.
     private static View grip;
+    // Horizontal span of the grip on the second screen (display pixels), for the swipe guard.
+    private static volatile int gripLeft = Integer.MAX_VALUE;
+    private static volatile int gripRight = Integer.MAX_VALUE;
+    // Look and position the windows were built with; a change rebuilds them.
+    private static int builtStyle = -1, builtPos = -1;
 
     private static int battery = -1;       // 0..100, -1 until the first battery broadcast
     private static boolean charging = false;
@@ -152,6 +111,20 @@ final class StatusLabel {
             }
         }, lock, null, h);
 
+        // App updated: draw with the new StripView right away, no reboot.
+        IntentFilter replaced = new IntentFilter(Intent.ACTION_PACKAGE_REPLACED);
+        replaced.addDataScheme("package");
+        context.registerReceiver(new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context c, Intent intent) {
+                android.net.Uri data = intent.getData();
+                if (data == null || !BuildConfig.APPLICATION_ID.equals(data.getSchemeSpecificPart())) return;
+                stripClass = null;
+                if (view != null) detach();
+                apply();
+            }
+        }, replaced, null, h);
+
         // Setting toggled or swivel opened/closed.
         SystemSettings.addListener(StatusLabel::apply);
         h.post(StatusLabel::apply);
@@ -162,6 +135,31 @@ final class StatusLabel {
      * same flag the system uses for its own status bar. finishPostLayoutPolicyLw runs after
      * every layout under the WindowManager lock, so the hook only compares and hands off.
      */
+    /**
+     * A pull from the top edge is also the system's "swipe from top": on the second screen it
+     * goes to LG's own panel (Control Assistant), which then slid down behind our list.
+     * Swipes that start on the grip are ours; everywhere else they reach LG as before.
+     */
+    static void installSwipeGuard(ClassLoader classLoader) {
+        XposedHelpers.findAndHookMethod("com.android.server.wm.DisplayPolicy$1", classLoader,
+                "onSwipeFromTopWithEvent", android.view.MotionEvent.class, new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) {
+                        View g = grip;
+                        if (g == null || g.getVisibility() != View.VISIBLE) return;
+                        android.view.MotionEvent ev = (android.view.MotionEvent) param.args[0];
+                        if (ev == null || ev.getX() < gripLeft || ev.getX() >= gripRight) return;
+                        int display;
+                        try {
+                            display = (Integer) XposedHelpers.callMethod(ev, "getDisplayId");
+                        } catch (Throwable t) {
+                            return;
+                        }
+                        if (display == MainModule.SECOND_SCREEN_DISPLAY_ID) param.setResult(null);
+                    }
+                });
+    }
+
     static void installFullscreenHook(ClassLoader classLoader) {
         XposedHelpers.findAndHookMethod("com.android.server.wm.DisplayPolicy", classLoader,
                 "finishPostLayoutPolicyLw", new XC_MethodHook() {
@@ -205,9 +203,57 @@ final class StatusLabel {
         });
     }
 
-    // The window has a fixed size (see LabelView.onMeasure); only the drawing changes.
+    // The window has a fixed size (see StripView.onMeasure); only the drawing changes.
     private static void refresh() {
-        if (view != null) view.invalidate();
+        View v = view;
+        if (v == null || setState == null) return;
+        android.os.Bundle state = new android.os.Bundle();
+        state.putInt(StripView.BATTERY, battery);
+        state.putBoolean(StripView.CHARGING, charging);
+        state.putInt(StripView.WIFI, wifiLevel);
+        state.putString(StripView.MOBILE, mobile ? mobileLabel() : null);
+        state.putInt(StripView.COUNT, notifications);
+        state.putInt(StripView.HEAT, heat());
+        try {
+            setState.invoke(v, state);
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+        }
+    }
+
+    /**
+     * StripView from the APK that is installed now, in a class loader of its own (parent: the
+     * boot class loader, so it shares nothing with the module code loaded at boot). An app
+     * update installs a new APK path, and the next call loads the new drawing from it.
+     * Falls back to the copy loaded at boot if that fails.
+     */
+    private static Class<?> stripClass() {
+        try {
+            String apk = system.getPackageManager()
+                    .getApplicationInfo(BuildConfig.APPLICATION_ID, 0).sourceDir;
+            if (stripClass == null || !apk.equals(stripSource)) {
+                ClassLoader loader = new dalvik.system.PathClassLoader(apk, View.class.getClassLoader());
+                bindStrip(loader.loadClass(StripView.class.getName()));
+                stripSource = apk;
+            }
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+            if (stripClass == null) {
+                try {
+                    bindStrip(StripView.class);
+                } catch (Throwable fatal) {
+                    ModuleLog.w(fatal);
+                }
+            }
+        }
+        return stripClass;
+    }
+
+    private static void bindStrip(Class<?> cls) throws NoSuchMethodException {
+        setState = cls.getMethod("setState", android.os.Bundle.class);
+        hitsPill = cls.getMethod("hitsPill", float.class, float.class);
+        gripBottom = cls.getMethod("gripBottom");
+        stripClass = cls;
     }
 
     private static void apply() {
@@ -217,13 +263,17 @@ final class StatusLabel {
             registerNetwork();
             registerThermal();
         }
+        if (view != null && (builtStyle != SystemSettings.stripStyle || builtPos != SystemSettings.stripPos)) {
+            detach(); // look or position changed: rebuild below
+        }
         if (want && view == null) attach();
         else if (!want && view != null) detach();
         if (view != null) {
             boolean hidden = SystemSettings.labelHideFullscreen && fullscreen;
             view.setVisibility(hidden ? View.GONE : View.VISIBLE);
-            if (grip != null) grip.setVisibility(hidden || locked() ? View.GONE : View.VISIBLE);
-            if (hidden) NotificationPanel.close();
+            // The pull-down spot works on every screen, fullscreen apps included (only the
+            // label hides there); never on the lock screen, which must not show notifications.
+            if (grip != null) grip.setVisibility(locked() ? View.GONE : View.VISIBLE);
         }
     }
 
@@ -315,9 +365,15 @@ final class StatusLabel {
             Context ui = system.createPackageContext(BuildConfig.APPLICATION_ID, 0).createDisplayContext(display);
             float density = ui.getResources().getDisplayMetrics().density;
 
+            builtStyle = SystemSettings.stripStyle;
+            builtPos = SystemSettings.stripPos;
+            boolean line = builtStyle == AppPreferences.STRIP_STYLE_LINE;
+            Class<?> cls = stripClass();
+            if (cls == null) return;
             // Drawing only: never touchable, so whatever sits under it keeps its taps.
+            // The thin line spans the width; the pill window hugs its side (or the middle).
             WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
-                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    line ? WindowManager.LayoutParams.MATCH_PARENT : WindowManager.LayoutParams.WRAP_CONTENT,
                     WindowManager.LayoutParams.WRAP_CONTENT,
                     TYPE_OVERLAY,
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
@@ -326,13 +382,15 @@ final class StatusLabel {
                             | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                             | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                     PixelFormat.TRANSLUCENT);
-            lp.gravity = Gravity.TOP | Gravity.END;
+            lp.gravity = Gravity.TOP | horizontalGravity(builtPos);
             lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
             lp.setTitle("GoDaijishou:StatusLabel");
 
-            LabelView v = new LabelView(ui);
+            View v = (View) cls.getConstructor(Context.class, int.class, int.class)
+                    .newInstance(ui, builtStyle, builtPos);
             windowManager.addView(v, lp);
             view = v;
+            refresh();
             attachGrip(ui, v, density);
         } catch (Throwable ignored) {
             ModuleLog.w(ignored);
@@ -340,23 +398,34 @@ final class StatusLabel {
         }
     }
 
-    // Pull-down strip along the top edge: the right third of the screen (it holds the label),
+    private static int horizontalGravity(int pos) {
+        if (pos == AppPreferences.STRIP_POS_LEFT) return Gravity.START;
+        if (pos == AppPreferences.STRIP_POS_CENTER) return Gravity.CENTER_HORIZONTAL;
+        return Gravity.END;
+    }
+
+    // Pull-down strip along the top edge: the third of the screen that holds the label,
     // as tall as the label plus a few dp. A tap on the pill or a downward pull opens the list.
     // Any other tap is handed on to whatever is underneath (an app's close button keeps
     // working): the strip steps aside for a moment and the tap is replayed at the same spot.
-    private static void attachGrip(Context ui, LabelView v, float density) {
+    private static void attachGrip(Context ui, View v, float density) {
         try {
-            int width = ui.getResources().getDisplayMetrics().widthPixels / 3;
+            int screen = ui.getResources().getDisplayMetrics().widthPixels;
+            int width = screen / 3;
+            int left = builtPos == AppPreferences.STRIP_POS_LEFT ? 0
+                    : builtPos == AppPreferences.STRIP_POS_CENTER ? (screen - width) / 2 : screen - width;
+            gripLeft = left;
+            gripRight = left + width;
             WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
                     width,
-                    Math.round(v.top + v.height + GRIP_SLACK_DP * density),
+                    (int) gripBottom.invoke(v),
                     TYPE_OVERLAY,
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
                             | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
                             | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                             | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                     PixelFormat.TRANSLUCENT);
-            lp.gravity = Gravity.TOP | Gravity.END;
+            lp.gravity = Gravity.TOP | horizontalGravity(builtPos);
             lp.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
             lp.setTitle("GoDaijishou:StatusLabelGrip");
             View g = new View(ui);
@@ -389,7 +458,7 @@ final class StatusLabel {
                     }
                     case android.view.MotionEvent.ACTION_UP:
                         if (!fired[0] && !moved[0]) {
-                            if (v.hitsPill(down[0], down[1])) {
+                            if (hits(v, down[0], down[1])) {
                                 if (!NotificationPanel.isOpen()) NotificationPanel.toggle();
                             } else {
                                 passTap(g, lp, down[0], down[1]);
@@ -409,6 +478,15 @@ final class StatusLabel {
         } catch (Throwable ignored) {
             ModuleLog.w(ignored);
             grip = null;
+        }
+    }
+
+    private static boolean hits(View v, float x, float y) {
+        try {
+            return (boolean) hitsPill.invoke(v, x, y);
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+            return false;
         }
     }
 
@@ -490,6 +568,8 @@ final class StatusLabel {
 
     private static void detach() {
         NotificationPanel.close();
+        gripLeft = Integer.MAX_VALUE;
+        gripRight = Integer.MAX_VALUE;
         View g = grip;
         grip = null;
         if (g != null) {
@@ -498,18 +578,13 @@ final class StatusLabel {
             } catch (RuntimeException ignored) {
             }
         }
-        LabelView v = view;
+        View v = view;
         view = null;
+        if (v == null) return;
         try {
             windowManager.removeView(v);
         } catch (RuntimeException ignored) {
         }
-    }
-
-    // The window's own configuration: WindowManager pushes dark/light switches to it.
-    private static Palette palette(Resources res) {
-        int night = res.getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
-        return night == Configuration.UI_MODE_NIGHT_YES ? DARK : LIGHT;
     }
 
     private static String mobileLabel() {
@@ -533,235 +608,6 @@ final class StatusLabel {
         } catch (Throwable t) {
             ModuleLog.w(t);
             return "LTE";
-        }
-    }
-
-    /**
-     * Draws ( [flame] [Wi-Fi] [LTE] [battery%] ) (n). The pill's right end and the battery
-     * are fixed; Wi-Fi and LTE sit left of the battery, and the rare heat flame goes on the
-     * far left, so it only grows the pill's outer end. The notification count is a small
-     * separate butter circle in its own fixed spot right of the pill, number only, and
-     * nothing at all when there are none.
-     */
-    private static final class LabelView extends View {
-        private final Paint bg = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint outline = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint ink = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint arc = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint text = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Path shape = new Path();
-        private final Path flame = new Path();
-        private final RectF rect = new RectF();
-        private final RectF oval = new RectF();
-        private final float pad;
-        private final float gap;
-        private final float radius;
-        private final float icon;
-        private final float rightMargin;
-        private final float slack;
-        private final float top;
-        private final float height;
-
-        LabelView(Context ui) {
-            super(ui);
-            float density = ui.getResources().getDisplayMetrics().density;
-            float scaled = ui.getResources().getDisplayMetrics().scaledDensity;
-            pad = PAD_DP * density;
-            gap = GAP_DP * density;
-            radius = HEIGHT_DP * density / 2f;
-            top = TOP_MARGIN_DP * density;
-            icon = ICON_DP * density;
-            rightMargin = RIGHT_MARGIN_DP * density;
-            slack = TOUCH_SLACK_DP * density;
-            height = HEIGHT_DP * density;
-            outline.setStyle(Paint.Style.STROKE);
-            outline.setStrokeWidth(Math.max(1f, 0.75f * density));
-            arc.setStyle(Paint.Style.STROKE);
-            arc.setStrokeCap(Paint.Cap.ROUND);
-            arc.setStrokeWidth(Math.max(1f, 1.1f * density));
-            text.setTextSize(TEXT_SP * scaled);
-            text.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
-        }
-
-        // A screen point on the pill or its count bubble (they share the right end).
-        boolean hitsPill(float rawX, float rawY) {
-            int[] at = new int[2];
-            getLocationOnScreen(at);
-            float right = getWidth() - rightMargin - bubbleWidth("99") - bubbleGap();
-            float left = right - pad * 2 - contentWidth(mobileText());
-            float x = rawX - at[0];
-            float y = rawY - at[1];
-            return x >= left && y <= top + height + GRIP_SLACK_DP * getResources().getDisplayMetrics().density;
-        }
-
-        // The battery slot (glyph + "100%"-wide number) sits at a fixed spot on the right;
-        // the other items are added or dropped on its left, so the battery never moves.
-        private float batterySlot() {
-            return batteryGlyphWidth() + gap * 0.5f + text.measureText("100%");
-        }
-
-        private float batteryGlyphWidth() {
-            return icon * 1.25f;
-        }
-
-        // Mobile data label in a fixed-width slot, so LTE <-> 5G doesn't shift anything.
-        private float mobileSlot() {
-            return Math.max(text.measureText("LTE"), text.measureText("5G"));
-        }
-
-        // Width of the pill's content for the current state.
-        private float contentWidth(String mobileText) {
-            float content = batterySlot();
-            if (wifiLevel >= 0) content += gap + icon;
-            if (mobileText != null) content += gap + mobileSlot();
-            if (heat() != HEAT_NONE) content += gap + icon * 0.75f;
-            return content;
-        }
-
-        // Widest possible pill: everything shown.
-        private float maxPillWidth() {
-            return pad * 2 + batterySlot() + gap + icon + gap + mobileSlot() + gap + icon * 0.75f;
-        }
-
-        // Count circle: the pill's height, widening only for two digits.
-        private float bubbleWidth(String count) {
-            return Math.max(height, text.measureText(count) + pad * 1.2f);
-        }
-
-        private float bubbleGap() {
-            return gap * 0.7f;
-        }
-
-        private String mobileText() {
-            return mobile ? mobileLabel() : null;
-        }
-
-        private String countText() {
-            return notifications > 0 ? String.valueOf(Math.min(notifications, 99)) : null;
-        }
-
-        @Override
-        protected void onMeasure(int widthSpec, int heightSpec) {
-            float w = maxPillWidth() + bubbleGap() + bubbleWidth("99") + rightMargin;
-            setMeasuredDimension((int) Math.ceil(w), (int) Math.ceil(top + height + slack));
-        }
-
-        @Override
-        protected void onConfigurationChanged(Configuration newConfig) {
-            super.onConfigurationChanged(newConfig);
-            invalidate(); // dark/light switch
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            if (battery < 0) return;
-            Palette p = palette(getResources());
-            bg.setColor(p.background);
-            String mobileText = mobileText();
-            String countText = countText();
-            String batteryText = battery + "%";
-
-            float h = height;
-            canvas.translate(0, top);
-            float right = getWidth() - rightMargin - bubbleWidth("99") - bubbleGap();
-            float left = right - pad * 2 - contentWidth(mobileText);
-            rect.set(left, 0, right, h);
-            shape.reset();
-            shape.addRoundRect(rect, radius, radius, Path.Direction.CW);
-            canvas.drawPath(shape, bg);
-            outline.setColor(p.outline);
-            canvas.drawPath(shape, outline);
-
-            Paint.FontMetrics fm = text.getFontMetrics();
-            float baseline = (h - fm.ascent - fm.descent) / 2f;
-            float cy = h / 2f;
-
-            // Battery: number right-aligned in its fixed slot, glyph at the slot's left edge.
-            int level = charging || battery >= HIGH ? p.good : battery >= LOW ? p.mid : p.low;
-            float x = right - pad;
-            text.setTextAlign(Paint.Align.RIGHT);
-            text.setColor(level);
-            canvas.drawText(batteryText, x, baseline, text);
-            text.setTextAlign(Paint.Align.LEFT);
-            x -= batterySlot();
-            drawBattery(canvas, x, cy, level, p);
-
-            // Then right to left: LTE, Wi-Fi, and the heat flame on the far left.
-            if (mobileText != null) {
-                x -= gap + mobileSlot();
-                text.setColor(p.ink);
-                text.setTextAlign(Paint.Align.CENTER);
-                canvas.drawText(mobileText, x + mobileSlot() / 2f, baseline, text);
-                text.setTextAlign(Paint.Align.LEFT);
-            }
-            if (wifiLevel >= 0) {
-                x -= gap + icon;
-                drawWifi(canvas, x, cy, p);
-            }
-            int heat = heat();
-            if (heat != HEAT_NONE) {
-                x -= gap + icon * 0.75f;
-                drawFlame(canvas, x, cy, icon * 0.75f, heat == HEAT_HOT ? p.hot : p.warm);
-            }
-
-            // Notification count: number only, in its own circle after the pill.
-            if (countText != null) {
-                float bLeft = right + bubbleGap();
-                rect.set(bLeft, 0, bLeft + bubbleWidth(countText), h);
-                ink.setColor(p.bell);
-                canvas.drawRoundRect(rect, h / 2f, h / 2f, ink);
-                text.setColor(p.bubbleInk);
-                text.setTextAlign(Paint.Align.CENTER);
-                canvas.drawText(countText, rect.centerX(), baseline, text);
-                text.setTextAlign(Paint.Align.LEFT);
-            }
-        }
-
-        // Three arcs over a dot; arcs above the signal level are drawn dim.
-        private void drawWifi(Canvas canvas, float x, float cy, Palette p) {
-            float cx = x + icon / 2f;
-            float base = cy + icon * 0.42f;
-            ink.setColor(p.ink);
-            canvas.drawCircle(cx, base - icon * 0.05f, icon * 0.09f, ink);
-            for (int i = 1; i <= 3; i++) {
-                float r = icon * 0.24f * i + icon * 0.04f;
-                oval.set(cx - r, base - r, cx + r, base + r);
-                arc.setColor(i <= wifiLevel ? p.ink : p.dim);
-                canvas.drawArc(oval, 225, 90, false, arc);
-            }
-        }
-
-        // Battery glyph: outlined body filled to the level, small nub on the right.
-        private void drawBattery(Canvas canvas, float x, float cy, int levelColor, Palette p) {
-            float w = batteryGlyphWidth() - icon * 0.12f;
-            float h = icon * 0.62f;
-            float r = h * 0.25f;
-            oval.set(x, cy - h / 2f, x + w, cy + h / 2f);
-            arc.setColor(p.ink);
-            canvas.drawRoundRect(oval, r, r, arc);
-            float inset = arc.getStrokeWidth() * 1.3f;
-            ink.setColor(levelColor);
-            float fillRight = x + inset + (w - inset * 2) * (battery / 100f);
-            canvas.drawRect(x + inset, cy - h / 2f + inset, fillRight, cy + h / 2f - inset, ink);
-            ink.setColor(p.ink);
-            canvas.drawRect(x + w, cy - h * 0.2f, x + w + icon * 0.12f, cy + h * 0.2f, ink);
-        }
-
-        // Flame: a teardrop with a pointed tip and a round base.
-        private void drawFlame(Canvas canvas, float x, float cy, float size, int color) {
-            float w = size;
-            float h = size * 1.25f;
-            float top = cy - h / 2f;
-            float bottom = cy + h / 2f;
-            float cx = x + w / 2f;
-            flame.reset();
-            flame.moveTo(cx + w * 0.08f, top);
-            flame.cubicTo(cx + w * 0.62f, top + h * 0.38f, x + w * 1.02f, top + h * 0.62f, cx + w * 0.38f, bottom - h * 0.08f);
-            flame.cubicTo(cx + w * 0.2f, bottom + h * 0.02f, cx - w * 0.2f, bottom + h * 0.02f, cx - w * 0.38f, bottom - h * 0.08f);
-            flame.cubicTo(x - w * 0.02f, top + h * 0.6f, cx - w * 0.36f, top + h * 0.36f, cx + w * 0.08f, top);
-            flame.close();
-            ink.setColor(color);
-            canvas.drawPath(flame, ink);
         }
     }
 }
