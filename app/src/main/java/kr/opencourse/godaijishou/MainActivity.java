@@ -378,64 +378,131 @@ public class MainActivity extends AppCompatActivity {
     private static final int[] BOTTOM_SCREEN_ONLY = {
             R.id.group_launcher, R.id.launcher_list, R.id.group_screen, R.id.row_top_blackout,
             R.id.row_volume_overlay, R.id.card_battery_strip, R.id.row_hide_swivel_warnings,
-            R.id.row_power_menu};
+            R.id.row_power_menu, R.id.row_fingerprint_off};
     // Tab order: stock first.
     private static final int[] TAB_MODES = {AppPreferences.SCREEN_MODE_ORIGINAL, AppPreferences.SCREEN_MODE_SECOND};
     private static final int[] TAB_LABELS = {R.string.mode_original, R.string.mode_second};
+    private static final int[] TAB_SUBS = {R.string.mode_original_sub, R.string.mode_second_sub};
+    private static final int[] TAB_ICONS = {R.drawable.ic_ft_phone, R.drawable.ic_ft_screens};
 
+    // Two cards side by side: icon, name, one line on what it is; the mode in use is filled
+    // and checked.
     private void buildModeTabs() {
         android.widget.LinearLayout box = findViewById(R.id.mode_tabs);
-        TextView[] tabs = new TextView[TAB_MODES.length];
+        float density = getResources().getDisplayMetrics().density;
+        int pad = Math.round(14 * density);
+        View[] tabs = new View[TAB_MODES.length];
         for (int i = 0; i < TAB_MODES.length; i++) {
             final int mode = TAB_MODES[i];
-            TextView t = new TextView(this);
-            t.setText(TAB_LABELS[i]);
-            t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 15);
-            t.setTypeface(Typeface.DEFAULT_BOLD);
-            t.setGravity(android.view.Gravity.CENTER);
             final int label = TAB_LABELS[i];
-            // One mode at a time; switching asks first (it changes what the second screen is).
-            t.setOnClickListener(v -> {
-                if (screenMode() == mode) return;
-                new MaterialAlertDialogBuilder(this)
-                        .setTitle(getString(R.string.mode_switch_title, getString(label)))
-                        .setMessage(mode == AppPreferences.SCREEN_MODE_ORIGINAL
-                                ? R.string.mode_switch_to_main : R.string.mode_switch_to_second)
-                        .setPositiveButton(R.string.mode_switch_ok, (d, w) -> {
-                            prefs.edit().putInt(AppPreferences.KEY_SCREEN_MODE, mode).commit();
-                            getContentResolver().notifyChange(SettingsProvider.CONTENT_URI, null);
-                            showMode(tabs);
-                        })
-                        .setNegativeButton(android.R.string.cancel, null)
-                        .show();
+            android.widget.FrameLayout card = new android.widget.FrameLayout(this);
+            android.widget.LinearLayout col = new android.widget.LinearLayout(this);
+            col.setOrientation(android.widget.LinearLayout.VERTICAL);
+            col.setPadding(pad, pad, pad, pad);
+
+            android.widget.ImageView icon = new android.widget.ImageView(this);
+            icon.setImageResource(TAB_ICONS[i]);
+            icon.setTag("icon");
+            col.addView(icon, new android.widget.LinearLayout.LayoutParams(
+                    Math.round(26 * density), Math.round(26 * density)));
+
+            TextView title = new TextView(this);
+            title.setText(label);
+            title.setTag("title");
+            title.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
+            title.setTypeface(Typeface.DEFAULT_BOLD);
+            android.widget.LinearLayout.LayoutParams tl = new android.widget.LinearLayout.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+            tl.topMargin = Math.round(12 * density);
+            col.addView(title, tl);
+
+            TextView sub = new TextView(this);
+            sub.setText(TAB_SUBS[i]);
+            sub.setTag("sub");
+            sub.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12);
+            android.widget.LinearLayout.LayoutParams sl = new android.widget.LinearLayout.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+            sl.topMargin = Math.round(2 * density);
+            col.addView(sub, sl);
+            card.addView(col);
+
+            android.widget.ImageView check = new android.widget.ImageView(this);
+            check.setImageResource(R.drawable.ic_ft_check);
+            check.setTag("check");
+            int cs = Math.round(20 * density);
+            android.widget.FrameLayout.LayoutParams cl = new android.widget.FrameLayout.LayoutParams(
+                    cs, cs, android.view.Gravity.TOP | android.view.Gravity.END);
+            cl.topMargin = cl.rightMargin = Math.round(12 * density);
+            card.addView(check, cl);
+
+            card.setClickable(true);
+            card.setFocusable(true);
+            card.setContentDescription(getString(label));
+            // Picking a card only shows that mode's options; the banner applies it.
+            card.setOnClickListener(v -> {
+                viewMode = mode;
+                showMode(tabs);
             });
-            tabs[i] = t;
-            box.addView(t, new android.widget.LinearLayout.LayoutParams(0,
-                    android.view.ViewGroup.LayoutParams.MATCH_PARENT, 1f));
+            tabs[i] = card;
+            android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(0,
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            if (i > 0) lp.leftMargin = Math.round(10 * density);
+            box.addView(card, lp);
         }
+        findViewById(R.id.btn_mode_apply).setOnClickListener(v -> {
+            prefs.edit().putInt(AppPreferences.KEY_SCREEN_MODE, viewMode).commit();
+            getContentResolver().notifyChange(SettingsProvider.CONTENT_URI, null);
+            showMode(tabs);
+        });
+        viewMode = screenMode();
         showMode(tabs);
+    }
+
+    // The mode whose options are on screen (not necessarily the one in use).
+    private int viewMode;
+
+    private static int labelOf(int mode) {
+        for (int i = 0; i < TAB_MODES.length; i++) if (TAB_MODES[i] == mode) return TAB_LABELS[i];
+        return TAB_LABELS[0];
     }
 
     private int screenMode() {
         return prefs.getInt(AppPreferences.KEY_SCREEN_MODE, AppPreferences.SCREEN_MODE_SECOND);
     }
 
-    private void showMode(TextView[] tabs) {
-        int mode = screenMode();
+    private void showMode(View[] tabs) {
+        int active = screenMode();
+        int mode = viewMode;
         float density = getResources().getDisplayMetrics().density;
         for (int i = 0; i < tabs.length; i++) {
             boolean on = TAB_MODES[i] == mode;
-            tabs[i].setTextColor(getColor(on ? R.color.ft_on_butter : R.color.ft_ink));
-            tabs[i].setSelected(on);
+            View card = tabs[i];
+            card.setSelected(on);
+            int ink = getColor(on ? R.color.ft_on_butter : R.color.ft_ink);
+            ((TextView) card.findViewWithTag("title")).setTextColor(ink);
+            TextView sub = card.findViewWithTag("sub");
+            sub.setTextColor(on ? ink : getColor(R.color.ft_secondary));
+            sub.setAlpha(on ? 0.75f : 1f);
+            ((android.widget.ImageView) card.findViewWithTag("icon"))
+                    .setImageTintList(android.content.res.ColorStateList.valueOf(ink));
+            android.widget.ImageView check = card.findViewWithTag("check");
+            check.setImageTintList(android.content.res.ColorStateList.valueOf(ink));
+            check.setVisibility(TAB_MODES[i] == active ? View.VISIBLE : View.INVISIBLE);
+            android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+            bg.setCornerRadius(18 * density);
             if (on) {
-                android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-                bg.setCornerRadius(12 * density);
                 bg.setColor(getColor(R.color.ft_butter));
-                tabs[i].setBackground(bg);
             } else {
-                tabs[i].setBackground(null);
+                bg.setColor(getColor(R.color.ft_surface));
+                bg.setStroke(Math.max(1, Math.round(density)), getColor(R.color.ft_line));
             }
+            card.setBackground(new android.graphics.drawable.RippleDrawable(
+                    android.content.res.ColorStateList.valueOf(getColor(R.color.ft_press)), bg, null));
         }
+        View banner = findViewById(R.id.mode_apply);
+        banner.setVisibility(mode == active ? View.GONE : View.VISIBLE);
+        ((TextView) findViewById(R.id.mode_apply_text)).setText(getString(R.string.mode_apply_hint,
+                getString(labelOf(mode)), getString(labelOf(active))));
         boolean bottom = mode == AppPreferences.SCREEN_MODE_SECOND;
         for (int id : BOTTOM_SCREEN_ONLY) {
             View v = findViewById(id);

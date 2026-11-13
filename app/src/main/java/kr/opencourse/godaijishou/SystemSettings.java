@@ -44,12 +44,13 @@ final class SystemSettings {
     }
 
     /**
-     * Whether things meant for the top screen (dialogs, notification banners) should open on
-     * the second screen instead. Not while the top screen is mirrored there: then the top
-     * screen is in use, just shown below, and everything stays where it normally goes.
+     * Whether things meant for the top screen (dialogs, calls, alarms) should open on the
+     * second screen instead: the top panel is off and nothing shows it. Not while the top
+     * screen is mirrored there (main screen mode, unlocked): then everything stays where it
+     * normally goes. Main screen mode on the lock screen counts as the second screen.
      */
     static boolean sendToBottom() {
-        return topUnavailable() && secondScreenMode() && !TopMirror.isShowing();
+        return topUnavailable() && !TopMirror.isShowing();
     }
 
     static volatile boolean forceRotation = false;
@@ -112,6 +113,7 @@ final class SystemSettings {
             safely(() -> SubDisplayApps.install(context, handler));
             // A top view left over from the last boot: give the top screen its size back.
             handler.post(() -> TopMirror.resetAfterBoot(context));
+            handler.post(DisplaySwap::watch);
             // USB mode (file transfer or charging only): set as the default whenever the choice
             // changes, and again on each new connection, so the developer option's default
             // configuration can't put the other one back.

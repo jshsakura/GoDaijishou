@@ -57,6 +57,9 @@ final class TopMirror {
 
     // Read by hooks on other threads (activity starts, notifications).
     private static volatile boolean showing;
+    // Swivel closed while in use: the window stays (off with the second screen) so that
+    // opening the swivel again shows the top screen at once, not LG's swivel home first.
+    private static boolean parked;
 
     private TopMirror() {
     }
@@ -75,8 +78,60 @@ final class TopMirror {
             return;
         }
         if (failed) return;
+        // Never over a lock screen: the second screen's own lock screen takes the unlock, the
+        // top screen is shown once the user is in (and hidden again when the screen goes off).
+        watchLock();
+        if (locked()) {
+            if (view != null) hide(true);
+            return;
+        }
         // Second screen off: asleep, or the swivel closing (the listener below tells them apart).
-        if (SystemSettings.secondScreenOn && view == null) show();
+        if (!SystemSettings.secondScreenOn) return;
+        if (view == null) show();
+        else if (parked) unpark();
+    }
+
+    private static boolean lockWatched;
+
+    private static boolean locked() {
+        try {
+            Context c = SystemSettings.context();
+            android.app.KeyguardManager km = c == null ? null : c.getSystemService(android.app.KeyguardManager.class);
+            return km == null || km.isKeyguardLocked();
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+            return true; // unsure: stay out of the way
+        }
+    }
+
+    private static void watchLock() {
+        if (lockWatched) return;
+        Context c = SystemSettings.context();
+        Handler h = SystemSettings.handler();
+        if (c == null || h == null) return;
+        try {
+            android.content.IntentFilter f = new android.content.IntentFilter();
+            f.addAction(android.content.Intent.ACTION_USER_PRESENT);
+            f.addAction(android.content.Intent.ACTION_SCREEN_ON);
+            f.addAction(android.content.Intent.ACTION_SCREEN_OFF);
+            c.registerReceiver(new android.content.BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, android.content.Intent intent) {
+                    try {
+                        if (android.content.Intent.ACTION_SCREEN_OFF.equals(intent.getAction())) {
+                            if (view != null) hide(true); // the lock screen comes next
+                        } else {
+                            apply();
+                        }
+                    } catch (Throwable t) {
+                        ModuleLog.w(t);
+                    }
+                }
+            }, f, null, h);
+            lockWatched = true;
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+        }
     }
 
     private static void show() {
@@ -93,7 +148,9 @@ final class TopMirror {
             WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
                     WindowManager.LayoutParams.MATCH_PARENT,
                     WindowManager.LayoutParams.MATCH_PARENT,
-                    WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+                    // Secure system overlay (hidden type 2015): above LG's second-screen panels
+                    // (ControlAssistant), so the second screen shows nothing but the top one.
+                    2015 /* TYPE_SECURE_SYSTEM_OVERLAY */,
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
                             | WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                     PixelFormat.OPAQUE);
@@ -122,11 +179,14 @@ final class TopMirror {
                         // LG's posture may still be settling: look a moment later.
                         if (d == null || d.getState() == Display.STATE_OFF) {
                             handler.postDelayed(TopMirror::endIfSwivelClosed, 600);
+                        } else if (d.getState() == Display.STATE_ON && parked) {
+                            unpark();
                         }
                     }
                 }
             };
             dm.registerDisplayListener(listener, handler);
+            handler.post(TopMirror::bringUpFromBelow);
         } catch (Throwable t) {
             ModuleLog.w(t);
             hide();
@@ -134,9 +194,20 @@ final class TopMirror {
     }
 
     static void hide() {
+        hide(false);
+    }
+
+    /**
+     * Takes the top screen off the second one. For the lock screen (keepSize) the top screen
+     * keeps the second screen's size: apps are not resized at every lock and unlock, and the
+     * home stays as it is; only the picture and the touches go.
+     */
+    private static void hide(boolean keepSize) {
         MirrorView v = view;
         view = null;
         showing = false;
+        parked = false;
+        TouchBypassHook.set(null); // touches back to the second screen first
         try {
             if (listener != null && system != null) {
                 system.getSystemService(DisplayManager.class).unregisterDisplayListener(listener);
@@ -146,11 +217,14 @@ final class TopMirror {
         }
         listener = null;
         releaseMirror();
-        if (sizeForced) {
+        if (sizeForced && !keepSize) {
             sizeForced = false;
             clearTopSize();
         }
-        if (system != null) setTopView(false);
+        if (system != null) {
+            if (keepSize && sizeForced) setTopMap(""); // no picture: nothing to play touches into
+            else setTopView(false);
+        }
         lastMap = null;
         if (v != null) {
             try {
@@ -160,13 +234,67 @@ final class TopMirror {
         }
     }
 
+    /**
+     * Apps that opened on the second screen meanwhile (a call or alarm on the lock screen)
+     * would be hidden under the top screen's picture: they move to the top screen.
+     */
+    private static void bringUpFromBelow() {
+        if (!showing) return;
+        try {
+            Object atm = XposedHelpers.callStaticMethod(
+                    Class.forName("android.app.ActivityTaskManager"), "getService");
+            java.util.List<?> tasks = (java.util.List<?>) XposedHelpers.callMethod(
+                    atm, "getAllRootTaskInfosOnDisplay", MainModule.SECOND_SCREEN_DISPLAY_ID);
+            if (tasks == null) return;
+            for (Object info : tasks) {
+                try {
+                    Object config = XposedHelpers.getObjectField(info, "configuration");
+                    Object wc = XposedHelpers.getObjectField(config, "windowConfiguration");
+                    int type = (int) XposedHelpers.callMethod(wc, "getActivityType");
+                    boolean visible = XposedHelpers.getBooleanField(info, "isVisible");
+                    if (type != 1 /* standard: not home, recents, assistant */ || !visible) continue;
+                    int id = XposedHelpers.getIntField(info, "taskId");
+                    XposedHelpers.callMethod(atm, "moveRootTaskToDisplay", id, TOP);
+                } catch (Throwable t) {
+                    ModuleLog.w(t);
+                }
+            }
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+        }
+    }
+
     private static void endIfSwivelClosed() {
         if (view == null) return;
         Display d = system.getSystemService(DisplayManager.class)
                 .getDisplay(MainModule.SECOND_SCREEN_DISPLAY_ID);
         if (d != null && d.getState() != Display.STATE_OFF) return; // back on already
         Boolean open = swivelOpen();
-        if (open == null || !open) hide(); // unknown: the safe side, the top screen as it was
+        if (open == null) hide(); // unknown: the safe side, the top screen as it was
+        else if (!open) park();
+    }
+
+    // Swivel closed: the top screen is the phone again, full size, its own touch panel.
+    private static void park() {
+        if (view == null || parked) return;
+        parked = true;
+        showing = false;
+        TouchBypassHook.set(null);
+        if (sizeForced) {
+            sizeForced = false;
+            clearTopSize();
+        }
+        setTopView(false);
+        lastMap = null;
+    }
+
+    // Swivel open again: back to the second screen's size and touches.
+    private static void unpark() {
+        if (view == null || !parked) return;
+        parked = false;
+        showing = true;
+        setTopView(true);
+        view.requestLayout(); // fits the size and hands the touches over again
     }
 
     /** LG's posture service: is the swivel open? null when it can't be asked. */
@@ -200,16 +328,22 @@ final class TopMirror {
         }
     }
 
-    // Where the top screen sits here, for the edge gestures played into it.
-    private static void publishMap(float scale, float left, float top, int w, int h) {
-        String map = scale + "," + left + "," + top + "," + w + "," + h;
-        if (map.equals(lastMap)) return;
-        lastMap = map;
+    private static void setTopMap(String map) {
         try {
             Settings.Global.putString(system.getContentResolver(), TopHomeHook.KEY_TOP_MAP, map);
         } catch (Throwable t) {
             ModuleLog.w(t);
         }
+    }
+
+    // Where the top screen sits here, for the edge gestures played into it.
+    private static void publishMap(float scale, float left, float top, int w, int h) {
+        String map = scale + "," + left + "," + top + "," + w + "," + h;
+        if (map.equals(lastMap)) return;
+        lastMap = map;
+        // The second screen's touches become the top screen's, where it is drawn.
+        TouchBypassHook.set(new float[] {scale, left, top, w, h});
+        setTopMap(map);
     }
 
     /** The top screen laid out at the second screen's size: shown 1:1, edge to edge. */
@@ -322,6 +456,7 @@ final class TopMirror {
         @Override
         protected void onLayout(boolean changed, int l, int t, int r, int b) {
             int w = r - l, h = b - t;
+            if (parked) return; // the swivel is closed: the top screen keeps its own size
             if (!sizeForced && view == this) fitTop(w, h); // relayouts once the size applies
             Point size = new Point();
             Display d = getContext().getSystemService(DisplayManager.class).getDisplay(TOP);

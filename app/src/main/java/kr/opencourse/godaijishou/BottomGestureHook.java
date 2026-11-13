@@ -37,6 +37,8 @@ final class BottomGestureHook {
 
     private static final Set<View> handles = Collections.newSetFromMap(new WeakHashMap<>());
     private static volatile boolean topView;
+    // The top screen's picture is up (on the lock screen it is not: gestures stay below).
+    private static volatile boolean pictureUp;
     // Where the top screen sits on the second one: scale, left, top (TopMirror publishes it).
     private static volatile float mapScale = 1f, mapLeft, mapTop;
     private static volatile int topW, topH;
@@ -68,14 +70,16 @@ final class BottomGestureHook {
         XposedBridge.hookAllMethods(handle, "onDraw", new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
-                if (topView && onSecondScreen(((View) param.thisObject).getContext())) param.setResult(null);
+                if (topView && pictureUp && onSecondScreen(((View) param.thisObject).getContext())) {
+                    param.setResult(null);
+                }
             }
         });
         // The pill's own swipe watcher: edge gestures go to the top screen, the rest passes.
         XposedBridge.hookAllMethods(receiver, "onInputEvent", new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
-                if (!topView && !forwarding) return;
+                if (!(topView && pictureUp) && !forwarding) return;
                 try {
                     View h = (View) XposedHelpers.getObjectField(param.thisObject, "this$0");
                     if (!onSecondScreen(h.getContext())) return;
@@ -99,7 +103,7 @@ final class BottomGestureHook {
         XposedBridge.hookAllMethods(back, "onInputEvent", new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
-                if (!topView) return;
+                if (!(topView && pictureUp)) return; // locked: the second screen's own
                 try {
                     if (XposedHelpers.getIntField(param.thisObject, "mDisplayId")
                             == MainModule.SECOND_SCREEN_DISPLAY_ID) {
@@ -118,7 +122,7 @@ final class BottomGestureHook {
             if (ev.getDownTime() == ownerDownTime) return; // another watcher has this one
             ownerDownTime = ev.getDownTime();
             owner = receiver;
-            forwarding = topView && atEdge(handle, ev.getX(), ev.getY());
+            forwarding = topView && pictureUp && atEdge(handle, ev.getX(), ev.getY());
             if (forwarding) {
                 Object monitor = XposedHelpers.getObjectField(handle, "mInputMonitor");
                 if (monitor != null) XposedHelpers.callMethod(monitor, "pilferPointers");
@@ -197,7 +201,8 @@ final class BottomGestureHook {
         // "scale,left,top,width,height" of the top screen on the second one.
         try {
             String map = Settings.Global.getString(app.getContentResolver(), TopHomeHook.KEY_TOP_MAP);
-            if (map != null) {
+            pictureUp = map != null && !map.isEmpty();
+            if (pictureUp) {
                 String[] p = map.split(",");
                 mapScale = Float.parseFloat(p[0]);
                 mapLeft = Float.parseFloat(p[1]);
@@ -206,6 +211,7 @@ final class BottomGestureHook {
                 topH = Integer.parseInt(p[4]);
             }
         } catch (Throwable t) {
+            pictureUp = false;
             mapScale = 1f;
             mapLeft = mapTop = 0;
         }

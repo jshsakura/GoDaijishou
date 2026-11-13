@@ -13,7 +13,7 @@
 
     <!-- Bottom screen only mode (black top screen) -->
     <string name="main_top_blackout_switch">하단 화면 전용 모드</string>
-    <string name="main_top_blackout_desc">스위블을 열면 상단을 끄고 창과 알림을 하단에 띄웁니다. 상단은 알림창의 화면 버튼으로 볼 수 있습니다.</string>
+    <string name="main_top_blackout_desc">스위블을 열면 상단을 끄고 창과 알림을 하단에 띄웁니다.</string>
     <string name="main_volume_overlay_switch">볼륨 표시</string>
     <string name="main_battery_strip_switch">배터리 바</string>
     <string name="main_battery_strip_desc">당기면 알림창이 열립니다.</string>
@@ -39,12 +39,12 @@
     <string name="group_screen">화면</string>
     <string name="mode_second">세컨드 스크린</string>
     <string name="mode_original">메인 화면</string>
+    <string name="mode_original_sub">하단을 순정 메인 화면으로</string>
+    <string name="mode_second_sub">하단 화면을 따로 활용</string>
+    <string name="mode_apply">적용하기</string>
+    <string name="mode_apply_hint">%1$s 옵션을 보고 있어요. 적용하기 전까지는 %2$s 사용 중입니다.</string>
     <string name="mode_original_title">메인 화면</string>
     <string name="mode_original_desc">스위블을 열면 상단을 끄고 하단에 상단 화면이 그대로 나옵니다. 앱·알림·상태바·제스처 모두 접었을 때 폰 그대로입니다. LSPosed 범위에 LG 홈과 시스템 UI가 필요합니다.</string>
-    <string name="mode_switch_title">%1$s으로 전환할까요?</string>
-    <string name="mode_switch_to_main">스위블을 열면 상단을 끄고 하단에 상단 화면이 그대로 나옵니다. 세컨드 스크린 기능(런처, 배터리 바, 볼륨 표시 등)은 쉬게 됩니다. 돌아오려면 이 앱에서 세컨드 스크린을 고르세요.</string>
-    <string name="mode_switch_to_second">하단이 다시 별도의 세컨드 스크린이 되고, 세컨드 스크린 기능이 켜집니다.</string>
-    <string name="mode_switch_ok">전환</string>
     <string name="group_common">공통</string>
     <string name="group_module">모듈</string>
     <string name="row_launcher_title">세컨드 스크린 홈</string>

@@ -18,15 +18,19 @@ import de.robv.android.xposed.XposedHelpers;
 
 /**
  * The top screen as a phone while it is shown on the second screen (scope: com.lge.launcher3).
+ * Not in SystemUI: told "closed", it drops the second screen's gesture watchers that hand
+ * edge swipes to the top screen (BottomGestureHook).
  *
- * With the swivel open LG's home (and its gesture navigation, quickstep) switch to swivel
- * mode: the clock and app wheel instead of the home screen, no gestures. Both learn the swivel
- * state from LG's PostureManager only: getSwivelState() (2 = open) and state callbacks
- * (100/101 opening/open, 200/201 closing/closed).
+ * With the swivel open LG's home, status bar, lock screen and quick settings switch to swivel
+ * mode (the clock and app wheel, the swivel shade, the lock screen on the second screen). They
+ * learn the swivel state from two LG classes only, PostureManager and DisplayManagerHelper:
+ * getSwivelState() (2 = open) and state callbacks (100/101 opening/open, 200/201
+ * closing/closed).
  *
- * While the top screen is mirrored to the second screen (TopMirror sets a global flag), this
- * process alone is told the swivel is closed, so the top screen behaves like the folded
- * phone. Nothing else in the system is touched; clearing the flag replays "open".
+ * While the top screen is mirrored to the second screen (TopMirror sets a global flag), these
+ * processes are told the swivel is closed, so the top screen behaves like the folded phone.
+ * The system server (displays, rotation, power) is not touched; clearing the flag replays
+ * "open".
  */
 final class TopHomeHook {
 
@@ -37,6 +41,7 @@ final class TopHomeHook {
     static final String KEY_TOP_MAP = "godaijishou_top_view_map";
 
     private static final String POSTURE = "com.lge.systemservice.core.PostureManager";
+    private static final String DISPLAY_HELPER = "com.lge.display.DisplayManagerHelper";
     private static final int STATE_OPEN = 2;
     private static final int STATE_CLOSED = 0;
     private static final int OPENING = 100, OPENED = 101, CLOSING = 200, CLOSED = 201;
@@ -51,8 +56,19 @@ final class TopHomeHook {
     }
 
     static void install(ClassLoader cl) {
-        Class<?> posture = XposedHelpers.findClass(POSTURE, cl);
-        XposedBridge.hookAllMethods(posture, "getSwivelState", new XC_MethodHook() {
+        for (String name : new String[] {POSTURE, DISPLAY_HELPER}) {
+            Class<?> c = XposedHelpers.findClassIfExists(name, cl);
+            if (c == null) continue;
+            try {
+                hookSource(c);
+            } catch (Throwable t) {
+                ModuleLog.w(t);
+            }
+        }
+    }
+
+    private static void hookSource(Class<?> source) {
+        XposedBridge.hookAllMethods(source, "getSwivelState", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
                 if (topView && Integer.valueOf(STATE_OPEN).equals(param.getResult())) {
@@ -60,18 +76,30 @@ final class TopHomeHook {
                 }
             }
         });
-        XposedBridge.hookAllMethods(posture, "registerPostureStateCallback", new XC_MethodHook() {
+        XC_MethodHook register = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
                 if (param.args.length > 0 && param.args[0] != null) callbacks.add(param.args[0]);
                 manager = new java.lang.ref.WeakReference<>(param.thisObject);
                 observe();
             }
-        });
-        XposedBridge.hookAllMethods(posture, "unregisterPostureStateCallback", new XC_MethodHook() {
+        };
+        XC_MethodHook unregister = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
                 if (param.args.length > 0) callbacks.remove(param.args[0]);
+            }
+        };
+        XposedBridge.hookAllMethods(source, "registerPostureStateCallback", register);
+        XposedBridge.hookAllMethods(source, "registerSwivelStateCallback", register);
+        XposedBridge.hookAllMethods(source, "unregisterPostureStateCallback", unregister);
+        XposedBridge.hookAllMethods(source, "unregisterSwivelStateCallback", unregister);
+        // getSwivelState() alone (no callback yet) must also start watching the flag.
+        XposedBridge.hookAllConstructors(source, new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) {
+                if (manager.get() == null) manager = new java.lang.ref.WeakReference<>(param.thisObject);
+                observe();
             }
         });
     }

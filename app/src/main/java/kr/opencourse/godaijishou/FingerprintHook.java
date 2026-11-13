@@ -34,7 +34,8 @@ final class FingerprintHook {
     }
 
     private static boolean off() {
-        return SystemSettings.fingerprintOff;
+        // Main screen mode is the stock phone: the sensor stays.
+        return SystemSettings.fingerprintOff && SystemSettings.secondScreenMode();
     }
 
     private static void hookFeature(ClassLoader cl) {
