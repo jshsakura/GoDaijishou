@@ -37,7 +37,11 @@ public class SettingsProvider extends ContentProvider {
         // the hook is loaded in this boot (used for the reboot notice).
         // Hooks in other processes say so with selection "hook:<name>" (SystemUI...).
         if (selection != null && selection.startsWith("hook:")) {
-            AppPreferences.markHookSeen(context, selection.substring(5));
+            String name = selection.substring(5);
+            boolean first = !AppPreferences.isHookActive(context, name);
+            AppPreferences.markHookSeen(context, name);
+            // First report this boot: system_server re-reads (main screen mode may be ready now).
+            if (first) context.getContentResolver().notifyChange(CONTENT_URI, null);
         } else if (Binder.getCallingUid() == Process.SYSTEM_UID) {
             AppPreferences.markSystemHookSeen(context, uri.getQueryParameter(PARAM_REV));
         }
@@ -65,6 +69,8 @@ public class SettingsProvider extends ContentProvider {
                 AppPreferences.STRIP_POS_RIGHT));
         String screenMode = String.valueOf(prefs.getInt(AppPreferences.KEY_SCREEN_MODE,
                 AppPreferences.SCREEN_MODE_SECOND));
+        String modeEpoch = String.valueOf(prefs.getInt(AppPreferences.KEY_MODE_EPOCH, 0));
+        String mainReady = AppPreferences.mainModeReady(context) ? "1" : "0";
 
         MatrixCursor cursor = new MatrixCursor(new String[]{
                 AppPreferences.KEY_LAUNCHER_PACKAGE,
@@ -84,11 +90,13 @@ public class SettingsProvider extends ContentProvider {
                 AppPreferences.KEY_DEBUG_LOG,
                 AppPreferences.KEY_BATTERY_STRIP_STYLE,
                 AppPreferences.KEY_BATTERY_STRIP_POS,
-                AppPreferences.KEY_SCREEN_MODE
+                AppPreferences.KEY_SCREEN_MODE,
+                AppPreferences.KEY_MODE_EPOCH,
+                AppPreferences.COL_MAIN_READY
         });
         cursor.addRow(new Object[]{targetPackage, targetActivity, forceRotation, powerMenu, topOff, chargeOnly, volume,
                 batteryStrip, labelHideFullscreen, perfProfile, hideSwivel, slimPill, imeStrip, fingerprintOff, debugLog,
-                stripStyle, stripPos, screenMode});
+                stripStyle, stripPos, screenMode, modeEpoch, mainReady});
         return cursor;
     }
 

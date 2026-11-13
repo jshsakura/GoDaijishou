@@ -450,12 +450,24 @@ public class MainActivity extends AppCompatActivity {
             box.addView(card, lp);
         }
         findViewById(R.id.btn_mode_apply).setOnClickListener(v -> {
-            prefs.edit().putInt(AppPreferences.KEY_SCREEN_MODE, viewMode).commit();
+            prefs.edit().putInt(AppPreferences.KEY_SCREEN_MODE, viewMode)
+                    .putInt(AppPreferences.KEY_MODE_EPOCH, prefs.getInt(AppPreferences.KEY_MODE_EPOCH, 0) + 1)
+                    .commit();
             getContentResolver().notifyChange(SettingsProvider.CONTENT_URI, null);
             showMode(tabs);
         });
         viewMode = screenMode();
         showMode(tabs);
+    }
+
+    // TopMirror's escape mark (Settings.Global, readable by apps) for the Apply in force.
+    private boolean mirrorEscaped() {
+        try {
+            int e = android.provider.Settings.Global.getInt(getContentResolver(), "godaijishou_mirror_escaped", -1);
+            return e == Integer.MAX_VALUE || e == prefs.getInt(AppPreferences.KEY_MODE_EPOCH, 0);
+        } catch (RuntimeException ex) {
+            return false;
+        }
     }
 
     // The mode whose options are on screen (not necessarily the one in use).
@@ -500,9 +512,16 @@ public class MainActivity extends AppCompatActivity {
                     android.content.res.ColorStateList.valueOf(getColor(R.color.ft_press)), bg, null));
         }
         View banner = findViewById(R.id.mode_apply);
-        banner.setVisibility(mode == active ? View.GONE : View.VISIBLE);
-        ((TextView) findViewById(R.id.mode_apply_text)).setText(getString(R.string.mode_apply_hint,
-                getString(labelOf(mode)), getString(labelOf(active))));
+        // Main screen mode left with volume up + down: still picked, but off until applied again.
+        boolean mainPicked = mode == active && active == AppPreferences.SCREEN_MODE_ORIGINAL;
+        // Picked but a hook it needs isn't loaded: it runs as second screen mode (fallback).
+        boolean notReady = mainPicked && !AppPreferences.mainModeReady(this);
+        boolean escaped = mainPicked && !notReady && mirrorEscaped();
+        banner.setVisibility(mode == active && !escaped && !notReady ? View.GONE : View.VISIBLE);
+        findViewById(R.id.btn_mode_apply).setVisibility(notReady ? View.GONE : View.VISIBLE);
+        ((TextView) findViewById(R.id.mode_apply_text)).setText(notReady ? getString(R.string.mode_fallback_hint)
+                : escaped ? getString(R.string.mode_escaped_hint)
+                : getString(R.string.mode_apply_hint, getString(labelOf(mode)), getString(labelOf(active))));
         boolean bottom = mode == AppPreferences.SCREEN_MODE_SECOND;
         for (int id : BOTTOM_SCREEN_ONLY) {
             View v = findViewById(id);

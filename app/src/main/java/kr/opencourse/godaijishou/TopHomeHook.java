@@ -1,40 +1,31 @@
 package kr.opencourse.godaijishou;
 
-import android.app.AndroidAppHelper;
-import android.app.Application;
-import android.database.ContentObserver;
-import android.net.Uri;
-import android.os.Handler;
-import android.os.Looper;
-import android.provider.Settings;
+import android.content.Context;
 
 import java.util.Collections;
 import java.util.Set;
-import java.util.WeakHashMap;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 
 /**
- * The top screen as a phone while it is shown on the second screen (scope: com.lge.launcher3).
- * Not in SystemUI: told "closed", it drops the second screen's gesture watchers that hand
- * edge swipes to the top screen (BottomGestureHook).
+ * LG's home is always the folded phone's home, never the swivel home (scope: com.lge.launcher3).
+ * Not in SystemUI: told "closed", it drops the second screen's gesture watchers.
  *
- * With the swivel open LG's home, status bar, lock screen and quick settings switch to swivel
- * mode (the clock and app wheel, the swivel shade, the lock screen on the second screen). They
- * learn the swivel state from two LG classes only, PostureManager and DisplayManagerHelper:
- * getSwivelState() (2 = open) and state callbacks (100/101 opening/open, 200/201
- * closing/closed).
- *
- * While the top screen is mirrored to the second screen (TopMirror sets a global flag), these
- * processes are told the swivel is closed, so the top screen behaves like the folded phone.
- * The system server (displays, rotation, power) is not touched; clearing the flag replays
- * "open".
+ * With the swivel open LG's home switches to the swivel home (the clock and app wheel made for
+ * the top screen turned sideways). It learns the swivel state from LG's PostureManager and
+ * DisplayManagerHelper only: getSwivelState() (2 = open) and state callbacks (100/101
+ * opening/open, 200/201 closing/closed), the first of which LG's service sends right when the
+ * callback registers. Here getSwivelState() always answers "closed" and every "opening/open"
+ * reaching a callback arrives as "closing/closed". The second screen runs its own launcher
+ * (com.lge.secondlauncher) and is not affected; nor is the system server (displays, rotation,
+ * power).
  */
 final class TopHomeHook {
 
     static final String TARGET_PACKAGE = "com.lge.launcher3";
+    static final String HOOK_NAME = "lghome";
     /** Settings.Global flag, 1 while the top screen is shown on the second screen. */
     static final String KEY_TOP_VIEW = "godaijishou_top_view";
     /** Settings.Global, "scale,left,top,width,height": the top screen on the second one. */
@@ -46,16 +37,33 @@ final class TopHomeHook {
     private static final int STATE_CLOSED = 0;
     private static final int OPENING = 100, OPENED = 101, CLOSING = 200, CLOSED = 201;
 
-    private static final Set<Object> callbacks = Collections.synchronizedSet(
-            Collections.newSetFromMap(new WeakHashMap<>()));
-    private static volatile boolean topView;
-    private static boolean observing;
-    private static java.lang.ref.WeakReference<Object> manager = new java.lang.ref.WeakReference<>(null);
+    // Callback classes whose onSwivelStateChanged is already rewritten.
+    private static final Set<Class<?>> hookedCallbacks = Collections.synchronizedSet(new java.util.HashSet<>());
 
     private TopHomeHook() {
     }
 
     static void install(ClassLoader cl) {
+        // Tells the app (and through it system_server) that LG's home is hooked this boot:
+        // main screen mode needs it and falls back to second screen mode without it.
+        XposedBridge.hookAllMethods(android.app.Application.class, "onCreate", new XC_MethodHook() {
+            private boolean reported;
+
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) {
+                if (reported) return;
+                reported = true;
+                Context app = (Context) param.thisObject;
+                new Thread(() -> {
+                    try (android.database.Cursor c = app.getContentResolver().query(
+                            SettingsProvider.CONTENT_URI, null, "hook:" + HOOK_NAME, null, null)) {
+                        // nothing to read
+                    } catch (Throwable t) {
+                        ModuleLog.w(t);
+                    }
+                }, "GoDaijishou-report").start();
+            }
+        });
         for (String name : new String[] {POSTURE, DISPLAY_HELPER}) {
             Class<?> c = XposedHelpers.findClassIfExists(name, cl);
             if (c == null) continue;
@@ -71,92 +79,36 @@ final class TopHomeHook {
         XposedBridge.hookAllMethods(source, "getSwivelState", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
-                if (topView && Integer.valueOf(STATE_OPEN).equals(param.getResult())) {
-                    param.setResult(STATE_CLOSED);
-                }
+                if (Integer.valueOf(STATE_OPEN).equals(param.getResult())) param.setResult(STATE_CLOSED);
             }
         });
+        // Every callback handed in gets its "open" events turned into "closed" ones.
         XC_MethodHook register = new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
-                if (param.args.length > 0 && param.args[0] != null) callbacks.add(param.args[0]);
-                manager = new java.lang.ref.WeakReference<>(param.thisObject);
-                observe();
-            }
-        };
-        XC_MethodHook unregister = new XC_MethodHook() {
-            @Override
-            protected void beforeHookedMethod(MethodHookParam param) {
-                if (param.args.length > 0) callbacks.remove(param.args[0]);
+                if (param.args.length > 0 && param.args[0] != null) folded(param.args[0].getClass());
             }
         };
         XposedBridge.hookAllMethods(source, "registerPostureStateCallback", register);
         XposedBridge.hookAllMethods(source, "registerSwivelStateCallback", register);
-        XposedBridge.hookAllMethods(source, "unregisterPostureStateCallback", unregister);
-        XposedBridge.hookAllMethods(source, "unregisterSwivelStateCallback", unregister);
-        // getSwivelState() alone (no callback yet) must also start watching the flag.
-        XposedBridge.hookAllConstructors(source, new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) {
-                if (manager.get() == null) manager = new java.lang.ref.WeakReference<>(param.thisObject);
-                observe();
-            }
-        });
     }
 
-    // Watch the flag once there is an application to read it with.
-    private static synchronized void observe() {
-        if (observing) return;
-        Application app = AndroidAppHelper.currentApplication();
-        if (app == null) return;
-        observing = true;
-        Handler main = new Handler(Looper.getMainLooper());
-        Uri uri = Settings.Global.getUriFor(KEY_TOP_VIEW);
-        ContentObserver observer = new ContentObserver(main) {
-            @Override
-            public void onChange(boolean selfChange) {
-                apply(app);
+    private static void folded(Class<?> callback) {
+        for (Class<?> c = callback; c != null && c != Object.class; c = c.getSuperclass()) {
+            if (!hookedCallbacks.add(c)) return; // this class (and its parents) done already
+            try {
+                XposedBridge.hookAllMethods(c, "onSwivelStateChanged", new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) {
+                        if (param.args.length == 0 || !(param.args[0] instanceof Integer)) return;
+                        int s = (Integer) param.args[0];
+                        if (s == OPENING) param.args[0] = CLOSING;
+                        else if (s == OPENED) param.args[0] = CLOSED;
+                    }
+                });
+            } catch (Throwable t) {
+                ModuleLog.w(t);
             }
-        };
-        try {
-            app.getContentResolver().registerContentObserver(uri, false, observer);
-        } catch (Throwable t) {
-            ModuleLog.w(t);
-        }
-        main.post(() -> apply(app));
-    }
-
-    private static void apply(Application app) {
-        boolean want = Settings.Global.getInt(app.getContentResolver(), KEY_TOP_VIEW, 0) == 1;
-        if (want == topView) return;
-        topView = want;
-        // Back from the top view: say "open" only if the swivel still is (closing it for real
-        // ends the top view, and LG already told this process).
-        if (!want && !reallyOpen()) return;
-        // Replay the swivel moving, as LG's service would send it.
-        int[] events = want ? new int[] {CLOSING, CLOSED} : new int[] {OPENING, OPENED};
-        Object[] targets;
-        synchronized (callbacks) {
-            targets = callbacks.toArray();
-        }
-        for (Object cb : targets) {
-            for (int event : events) {
-                try {
-                    XposedHelpers.callMethod(cb, "onSwivelStateChanged", event);
-                } catch (Throwable t) {
-                    ModuleLog.w(t);
-                }
-            }
-        }
-    }
-
-    private static boolean reallyOpen() {
-        Object m = manager.get();
-        if (m == null) return true;
-        try {
-            return (int) XposedHelpers.callMethod(m, "getSwivelState") == STATE_OPEN;
-        } catch (Throwable t) {
-            return true;
         }
     }
 }

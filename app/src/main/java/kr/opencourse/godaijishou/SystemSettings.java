@@ -33,10 +33,16 @@ final class SystemSettings {
         return secondScreenOn && (topScreenOff || original());
     }
 
-    /** Original mode: with the swivel open, the second screen shows the top screen (TopMirror). */
+    /**
+     * Original mode: with the swivel open, the second screen shows the top screen (TopMirror).
+     * Picked but not ready (a hook it needs isn't loaded this boot): second screen mode.
+     */
     static boolean original() {
-        return screenMode == AppPreferences.SCREEN_MODE_ORIGINAL;
+        return screenMode == AppPreferences.SCREEN_MODE_ORIGINAL && mainReady;
     }
+
+    // AppPreferences.mainModeReady, as the app's provider last said.
+    static volatile boolean mainReady = false;
 
     /** The second screen as a screen of its own, with this module's features for it. */
     static boolean secondScreenMode() {
@@ -55,7 +61,7 @@ final class SystemSettings {
 
     static volatile boolean forceRotation = false;
     static volatile boolean powerMenuOnSecondScreen = false;
-    // "Bottom screen only": power the top panel off while the swivel is open.
+    // "Turn off top screen" (second screen mode): power the top panel off while the swivel is open.
     static volatile boolean topScreenOff = false;
     // USB mode: charging only (true) or file transfer (false).
     static volatile boolean usbChargeOnly = false;
@@ -70,6 +76,8 @@ final class SystemSettings {
     static volatile int stripPos = AppPreferences.STRIP_POS_RIGHT;
     // AppPreferences.SCREEN_MODE_*.
     static volatile int screenMode = AppPreferences.SCREEN_MODE_SECOND;
+    // AppPreferences.KEY_MODE_EPOCH; -1 until the app's settings have been read this boot.
+    static volatile int modeEpoch = -1;
     // Current performance profile (PerfProfile.*), for the panel's highlight.
     static volatile int perfProfile = PerfProfile.NORMAL;
     // Report no fingerprint sensor (FingerprintHook).
@@ -124,7 +132,10 @@ final class SystemSettings {
                 @Override
                 public void onReceive(Context c, Intent intent) {
                     boolean connected = intent.getBooleanExtra("connected", false);
-                    if (connected && !wasConnected) SystemActions.applyUsbMode(context, true);
+                    // The sticky state handed over at registration is no new plug-in.
+                    if (connected && !wasConnected && !isInitialStickyBroadcast()) {
+                        SystemActions.applyUsbMode(context, true);
+                    }
                     wasConnected = connected;
                 }
             }, new IntentFilter("android.hardware.usb.action.USB_STATE"), null, handler);
@@ -275,7 +286,10 @@ final class SystemSettings {
             int style = readInt(cursor, AppPreferences.KEY_BATTERY_STRIP_STYLE, stripStyle);
             int pos = readInt(cursor, AppPreferences.KEY_BATTERY_STRIP_POS, stripPos);
             int mode = readInt(cursor, AppPreferences.KEY_SCREEN_MODE, screenMode);
+            int epoch = readInt(cursor, AppPreferences.KEY_MODE_EPOCH, 0);
+            boolean ready = readFlag(cursor, AppPreferences.COL_MAIN_READY);
             boolean changed = style != stripStyle || pos != stripPos || mode != screenMode
+                    || epoch != modeEpoch || ready != mainReady
                     || rotation != forceRotation || powerMenu != powerMenuOnSecondScreen
                     || topOff != topScreenOff
                     || chargeOnly != usbChargeOnly || volume != volumeOverlay
@@ -290,6 +304,8 @@ final class SystemSettings {
             stripStyle = style;
             stripPos = pos;
             screenMode = mode;
+            modeEpoch = epoch;
+            mainReady = ready;
             int idx = cursor.getColumnIndex(AppPreferences.KEY_PERF_PROFILE);
             if (idx >= 0) {
                 try {

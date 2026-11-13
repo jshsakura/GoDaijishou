@@ -31,8 +31,8 @@ import de.robv.android.xposed.XposedHelpers;
  * gestures hand edge swipes to the top screen's (BottomGestureHook). Notifications and
  * dialogs stay on the top screen (SystemSettings.sendToBottom).
  *
- * Follows the setting and the swivel: on while "bottom screen only" is on in original mode
- * and the swivel is open. The screen sleeping (the second screen goes off too) keeps it;
+ * Follows the setting and the swivel: on in original (main screen) mode while the swivel
+ * is open. The screen sleeping (the second screen goes off too) keeps it;
  * only the swivel really closing (LG's posture service) ends it, undoing everything. The
  * top screen rotating (a landscape app) is fitted again, letterboxed.
  *
@@ -70,14 +70,14 @@ final class TopMirror {
 
     /** Re-evaluates on every settings or swivel change. */
     static void apply() {
-        boolean wanted = SystemSettings.topScreenOff
-                && SystemSettings.screenMode == AppPreferences.SCREEN_MODE_ORIGINAL;
+        // Main screen mode alone: the top-panel switch belongs to second screen mode only.
+        boolean wanted = SystemSettings.original(); // picked and every hook it needs loaded
         if (!wanted) {
             failed = false;
             if (view != null) hide();
             return;
         }
-        if (failed) return;
+        if (failed || escaped()) return;
         // Never over a lock screen: the second screen's own lock screen takes the unlock, the
         // top screen is shown once the user is in (and hidden again when the screen goes off).
         watchLock();
@@ -89,6 +89,59 @@ final class TopMirror {
         if (!SystemSettings.secondScreenOn) return;
         if (view == null) show();
         else if (parked) unpark();
+    }
+
+    // --- Escape (SafetyEscape): off until main screen mode is picked again, across reboots ---
+
+    // Holds the mode epoch (AppPreferences.KEY_MODE_EPOCH) the escape was made under, or
+    // ANY_EPOCH when made before the app's settings were read; NONE when not escaped.
+    private static final String KEY_ESCAPED = "godaijishou_mirror_escaped";
+    private static final int NONE = -1, ANY_EPOCH = Integer.MAX_VALUE;
+    private static Integer escapedCache; // read once per boot, then kept here
+
+    /** Volume up + down: the mirror goes now and stays off. Settings thread. */
+    static void escape() {
+        if (SystemSettings.original()) {
+            int epoch = SystemSettings.modeEpoch;
+            storeEscaped(epoch < 0 ? ANY_EPOCH : epoch);
+        }
+        if (view != null) hide();
+    }
+
+    // Escaped under the mode Apply now in force: picking the mode again ends it.
+    private static boolean escaped() {
+        Integer e = escapedCache;
+        if (e == null) {
+            try {
+                Context c = SystemSettings.context();
+                e = c == null ? NONE : Settings.Global.getInt(c.getContentResolver(), KEY_ESCAPED, NONE);
+            } catch (Throwable t) {
+                ModuleLog.w(t);
+                e = NONE;
+            }
+            escapedCache = e;
+        }
+        if (e == NONE) return false;
+        int epoch = SystemSettings.modeEpoch;
+        if (epoch < 0) return true; // not known yet this boot: stay out of the way
+        if (e == ANY_EPOCH) {
+            storeEscaped(epoch); // pin it to the Apply in force
+            return true;
+        }
+        if (e == epoch) return true;
+        storeEscaped(NONE);
+        return false;
+    }
+
+    private static void storeEscaped(int value) {
+        if (escapedCache != null && escapedCache == value) return;
+        escapedCache = value;
+        try {
+            Context c = SystemSettings.context();
+            if (c != null) Settings.Global.putInt(c.getContentResolver(), KEY_ESCAPED, value);
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+        }
     }
 
     private static boolean lockWatched;
@@ -364,6 +417,48 @@ final class TopMirror {
         } catch (Throwable t) {
             ModuleLog.w(t);
         }
+        setTopOffset(0, 0);
+    }
+
+    private static int offsetX, offsetY;
+
+    /**
+     * The forced (smaller) top screen sits centred on its panel: 340 px down on the Wing. The
+     * second screen's touches arrive in panel space untranslated (TouchBypassHook), so they
+     * landed 340 px too high and the dock and pill were out of reach. Pinned to the panel's
+     * corner instead, panel space and the top screen's space are the same: touches land 1:1.
+     */
+    private static void alignTopToCorner(Display d, int w, int h) {
+        try {
+            Display.Mode mode = d.getMode();
+            int pw = mode.getPhysicalWidth(), ph = mode.getPhysicalHeight();
+            int r = d.getRotation();
+            if (r == android.view.Surface.ROTATION_90 || r == android.view.Surface.ROTATION_270) {
+                int t = pw;
+                pw = ph;
+                ph = t;
+            }
+            setTopOffset(-Math.max(0, (pw - w) / 2), -Math.max(0, (ph - h) / 2));
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+        }
+    }
+
+    private static void setTopOffset(int x, int y) {
+        if (x == offsetX && y == offsetY) return;
+        try {
+            ClassLoader cl = MainModule.systemLoader;
+            if (cl == null) return;
+            Class<?> dmi = XposedHelpers.findClass("android.hardware.display.DisplayManagerInternal", cl);
+            Object local = XposedHelpers.callStaticMethod(
+                    XposedHelpers.findClass("com.android.server.LocalServices", cl), "getService", dmi);
+            if (local == null) return;
+            XposedHelpers.callMethod(local, "setDisplayOffsets", TOP, x, y);
+            offsetX = x;
+            offsetY = y;
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+        }
     }
 
     private static Object wms() throws ClassNotFoundException {
@@ -462,6 +557,7 @@ final class TopMirror {
             Display d = getContext().getSystemService(DisplayManager.class).getDisplay(TOP);
             if (d != null) d.getRealSize(size);
             if (size.x <= 0 || size.y <= 0 || w <= 0 || h <= 0) return;
+            if (sizeForced) alignTopToCorner(d, size.x, size.y); // touches 1:1 (again after rotating)
             scale = Math.min((float) w / size.x, (float) h / size.y);
             shownW = size.x * scale;
             shownH = size.y * scale;

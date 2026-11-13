@@ -21,6 +21,8 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
 public class MainModule implements IXposedHookLoadPackage {
 
     static final int SECOND_SCREEN_DISPLAY_ID = 4;
+    // system_server's class loader (services classes such as LocalServices); null elsewhere.
+    static volatile ClassLoader systemLoader;
 
     @Override
     public void handleLoadPackage(final LoadPackageParam lpparam) throws Throwable {
@@ -39,6 +41,7 @@ public class MainModule implements IXposedHookLoadPackage {
             safely(() -> LockWallpaperHook.install(cl));
             safely(() -> BottomGestureHook.install(cl));
         } else if ("android".equals(pkg)) {
+            systemLoader = cl;
             // Each system hook is independent: one missing method on a firmware must not
             // keep the others from installing.
             safely(() -> RotationHook.install(cl));
@@ -50,6 +53,7 @@ public class MainModule implements IXposedHookLoadPackage {
             safely(() -> FingerprintHook.install(cl));
             safely(() -> TouchBypassHook.install(cl));
             safely(() -> DisplaySwap.install(cl));
+            safely(() -> SafetyEscape.install(cl));
         } else if (!BuildConfig.APPLICATION_ID.equals(pkg)) {
             // Anything else in the scope is a keyboard app: only the bottom strip option.
             safely(NavBarHook::installIme);

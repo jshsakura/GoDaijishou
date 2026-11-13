@@ -19,7 +19,7 @@ public class AppPreferences {
     public static final String KEY_FORCE_ROTATION = "force_rotation";
     // Power menu on the second screen (system_server hook).
     public static final String KEY_POWER_MENU_SECOND_SCREEN = "power_menu_second_screen";
-    // "Bottom screen only": power the top panel off while the swivel is open (system_server hook).
+    // "Turn off top screen" (second screen mode): power the top panel off while the swivel is open (system_server hook).
     public static final String KEY_TOP_SCREEN_OFF = "top_screen_off";
     // "No top screen": top panel always off, everything goes to the second screen (system_server hook).
     // Retired: folded into KEY_TOP_SCREEN_OFF (see migrateNoTopScreen).
@@ -40,6 +40,8 @@ public class AppPreferences {
     // the top screen itself, the phone as when folded (SCREEN_MODE_ORIGINAL, TopMirror).
     public static final String KEY_SCREEN_MODE = "screen_mode";
     public static final int SCREEN_MODE_SECOND = 0, SCREEN_MODE_ORIGINAL = 1;
+    // Bumped on every mode Apply: a volume up + down escape lasts until the next one.
+    public static final String KEY_MODE_EPOCH = "mode_epoch";
     // Skip LG's swivel-mode camera notices (scope com.lge.popupcamera).
     public static final String KEY_HIDE_SWIVEL_WARNINGS = "hide_swivel_warnings";
     // Thinner, narrower gesture pill that hides until the bottom edge is touched (scope SystemUI).
@@ -118,6 +120,18 @@ public class AppPreferences {
     static void markHookSeen(Context context, String name) {
         prefs(context, MODE_PREF_FILE_NAME)
                 .edit().putLong(KEY_SYSTEM_HOOK_BOOT + "_" + name, currentBootTime()).apply();
+    }
+
+    // Provider column: main screen mode can run (every hook it needs is loaded this boot).
+    static final String COL_MAIN_READY = "main_ready";
+
+    /**
+     * Main screen mode needs system_server, SystemUI (gestures) and LG's home (normal home, not
+     * the swivel one). Without any of them it falls back to second screen mode.
+     */
+    public static boolean mainModeReady(Context context) {
+        return isSystemHookActive(context) && isHookActive(context, "systemui")
+                && isHookActive(context, TopHomeHook.HOOK_NAME);
     }
 
     public static boolean isHookActive(Context context, String name) {

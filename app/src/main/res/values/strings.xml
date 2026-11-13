@@ -11,8 +11,8 @@
     <string name="launcher_stock">LG Default</string>
     <string name="main_reboot_permission_denied">Reboot permission denied</string>
 
-    <!-- Bottom screen only mode (black top screen) -->
-    <string name="main_top_blackout_switch">Bottom screen only</string>
+    <!-- Top screen off (second screen mode) -->
+    <string name="main_top_blackout_switch">Turn off top screen</string>
     <string name="main_top_blackout_desc">With the swivel open, the top panel turns off and windows and notifications come down.</string>
     <string name="main_volume_overlay_switch">Volume overlay</string>
     <string name="main_battery_strip_switch">Battery bar</string>
@@ -42,6 +42,8 @@
     <string name="mode_second_sub">The bottom screen on its own</string>
     <string name="mode_apply">Apply</string>
     <string name="mode_apply_hint">Showing %1$s options. %2$s is in use until you apply.</string>
+    <string name="mode_escaped_hint">Main screen mode was turned off with volume up + down. Apply to turn it on again.</string>
+    <string name="mode_fallback_hint">Needs System UI and LG Home in the LSPosed scope. Runs as second screen until then (reboot after checking them).</string>
     <string name="mode_original_title">Main screen</string>
     <string name="mode_original_desc">With the swivel open the top panel turns off and the bottom screen shows the top screen as it is: apps, notifications, status bar and gestures work as on the folded phone. Needs LG Home and System UI in the LSPosed scope.</string>
     <string name="group_common">Both modes</string>

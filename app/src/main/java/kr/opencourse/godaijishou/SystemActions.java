@@ -110,6 +110,7 @@ final class SystemActions {
     // UsbManager.FUNCTION_MTP; FUNCTION_NONE (0) is charging only. adb is added on top of
     // either when it is enabled.
     private static final long USB_FUNCTION_MTP = 1L << 2;
+    private static final long USB_FUNCTION_ADB = 1L << 0; // UsbManager.FUNCTION_ADB
 
     /**
      * Applies the chosen USB mode. The default for connections is what Developer options
@@ -123,8 +124,15 @@ final class SystemActions {
         try {
             Object usb = context.getSystemService(Context.USB_SERVICE);
             if (usb == null) return;
-            XposedHelpers.callMethod(usb, "setScreenUnlockedFunctions", functions);
-            if (connected) XposedHelpers.callMethod(usb, "setCurrentFunctions", functions);
+            // Only on a real change: each write can re-enumerate the port (adb drops off), and
+            // this runs on every settings, swivel and screen change.
+            if ((long) XposedHelpers.callMethod(usb, "getScreenUnlockedFunctions") != functions) {
+                XposedHelpers.callMethod(usb, "setScreenUnlockedFunctions", functions);
+            }
+            if (connected && ((long) XposedHelpers.callMethod(usb, "getCurrentFunctions")
+                    & ~USB_FUNCTION_ADB) != functions) {
+                XposedHelpers.callMethod(usb, "setCurrentFunctions", functions);
+            }
         } catch (Throwable t) {
             ModuleLog.w(t);
         }

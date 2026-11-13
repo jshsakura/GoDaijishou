@@ -33,8 +33,15 @@ final class DisplaySwap {
     private static Object mapper;   // LogicalDisplayMapper
     private static Object syncRoot; // DisplayManagerService.SyncRoot (the display manager's lock)
     private static volatile Object override; // Layout handed out while not null
+    // The layout in force before the latest set(): resetLayoutLocked compares it with the new
+    // one to find the displays that change (enabled or disabled). Handing it the new layout
+    // twice hides that display 4 comes back, leaving it disabled with no touch viewport.
+    private static Object previous;
+    private static boolean previousIsStock; // previous is the firmware's own (no override)
+    private static boolean inReset; // inside resetLayoutLocked (under the display lock)
+    private static int resetGets;
     private static Object topAddress, bottomAddress; // the panels as the system first had them
-    private static boolean everSwapped;
+    private static volatile boolean swapped; // the second screen's panel is display 0 now
     private static boolean watching;
 
     private DisplaySwap() {
@@ -58,7 +65,27 @@ final class DisplaySwap {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
                         Object o = override;
-                        if (o != null) param.setResult(o);
+                        if (o == null) return;
+                        // resetLayoutLocked asks for the "from" layout first, then the "to" one.
+                        if (inReset && resetGets++ == 0) {
+                            if (!previousIsStock) param.setResult(previous);
+                            return; // stock: the firmware's own layout
+                        }
+                        param.setResult(o);
+                    }
+                });
+        XposedBridge.hookAllMethods(
+                XposedHelpers.findClass("com.android.server.display.LogicalDisplayMapper", cl),
+                "resetLayoutLocked", new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) {
+                        inReset = true;
+                        resetGets = 0;
+                    }
+
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) {
+                        inReset = false;
                     }
                 });
     }
@@ -94,6 +121,18 @@ final class DisplaySwap {
         }
     }
 
+    /** Whether display 0 is the second screen's panel right now (TopPanel keeps its hands off). */
+    static boolean isSwapped() {
+        return swapped;
+    }
+
+    /** Restores at once (SafetyEscape); settings thread. */
+    static void restoreNow() {
+        Handler h = SystemSettings.handler();
+        if (h != null) h.removeCallbacks(TIMEOUT);
+        TIMEOUT.run();
+    }
+
     private static final Runnable TIMEOUT = () -> {
         try {
             Context c = SystemSettings.context();
@@ -108,7 +147,10 @@ final class DisplaySwap {
     static void set(boolean swapped) {
         Object m = mapper, lock = syncRoot;
         if (m == null || lock == null) return;
-        if (!swapped && !everSwapped) return; // nothing to restore
+        // Restore only from a swap: every screen-off asks, and re-laying out an unswapped phone
+        // for nothing would only risk it.
+        if (!swapped && !DisplaySwap.swapped) return;
+        if (swapped && DisplaySwap.swapped) return;
         try {
             synchronized (lock) {
                 if (topAddress == null && !readAddresses(m)) return;
@@ -121,15 +163,68 @@ final class DisplaySwap {
                 // Display 4 keeps its number; off while the top panel is behind it.
                 XposedHelpers.callMethod(layout, "createDisplayLocked", other, false, !swapped,
                         MainModule.SECOND_SCREEN_DISPLAY_ID);
+                previousIsStock = override == null;
+                previous = override;
                 override = layout;
-                everSwapped = true;
+                DisplaySwap.swapped = swapped;
                 int state = XposedHelpers.getIntField(m, "mDeviceState");
                 XposedHelpers.callMethod(m, "setDeviceStateLocked", state, false);
             }
         } catch (Throwable t) {
             ModuleLog.w(t);
         }
+        if (!swapped) {
+            verifyAttempts = 0;
+            Handler h = SystemSettings.handler();
+            if (h != null) {
+                h.removeCallbacks(VERIFY);
+                h.postDelayed(VERIFY, VERIFY_DELAY_MS);
+            }
+        }
     }
+
+    // --- After a restore: display 4 must be enabled again, or its touches go nowhere ---
+
+    private static final long VERIFY_DELAY_MS = 2_000;
+    private static final int PHASE_ENABLED = 1; // LogicalDisplay.DISPLAY_PHASE_ENABLED
+    private static int verifyAttempts;
+
+    private static final Runnable VERIFY = new Runnable() {
+        @Override
+        public void run() {
+            if (swapped) return;
+            Object m = mapper, lock = syncRoot;
+            if (m == null || lock == null) return;
+            boolean ok;
+            try {
+                synchronized (lock) {
+                    Object d = XposedHelpers.callMethod(m, "getDisplayLocked",
+                            MainModule.SECOND_SCREEN_DISPLAY_ID, true);
+                    ok = d != null && (int) XposedHelpers.callMethod(d, "getPhase") == PHASE_ENABLED;
+                    if (!ok && d != null && verifyAttempts == 0) {
+                        XposedHelpers.callMethod(d, "setPhase", PHASE_ENABLED);
+                        XposedHelpers.callMethod(m, "updateLogicalDisplaysLocked");
+                    }
+                }
+            } catch (Throwable t) {
+                ModuleLog.w(t);
+                ok = false;
+            }
+            if (ok) return;
+            Handler h = SystemSettings.handler();
+            if (verifyAttempts++ == 0 && h != null) {
+                h.postDelayed(this, VERIFY_DELAY_MS); // look again after the nudge
+                return;
+            }
+            // Still no second screen to touch: a reboot always starts unswapped.
+            try {
+                Context c = SystemSettings.context();
+                c.getSystemService(android.os.PowerManager.class).reboot("godaijishou-display-recover");
+            } catch (Throwable t) {
+                ModuleLog.w(t);
+            }
+        }
+    };
 
     // The panels behind display 0 (top) and display 4 (second screen), before any swap.
     private static boolean readAddresses(Object m) {

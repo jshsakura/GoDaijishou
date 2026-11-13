@@ -27,9 +27,13 @@ final class TopPanel {
 
     /** Re-evaluates and applies the panel state. Called on settings / display events. */
     static void apply(DisplayManager dm) {
+        // Swapped: display 0 is the second screen's panel; never power that one off.
+        if (DisplaySwap.isSwapped()) return;
         Display top = dm.getDisplay(Display.DEFAULT_DISPLAY);
         boolean topOn = top != null && top.getState() == Display.STATE_ON;
-        boolean wantOff = SystemSettings.topUnavailable() && topOn;
+        // Main screen mode keeps the top panel powered: it paces the frames (vsync) the mirror
+        // shows below; with it off the picture tore across the second screen while scrolling.
+        boolean wantOff = SystemSettings.topUnavailable() && !SystemSettings.original() && topOn;
 
         if (wantOff) {
             // Re-apply on every relevant event: the system may have powered it back on.

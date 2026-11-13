@@ -84,7 +84,26 @@ final class NavBarHook {
                     }
                     int stock = (Integer) full;
                     boolean shortBar = imeStripOff() && v.getHeight() > 0 && v.getHeight() < stock;
-                    XposedHelpers.setIntField(v, "mFullgestureNavHeight", shortBar ? v.getHeight() : stock);
+                    int fullNow = shortBar ? v.getHeight() : stock;
+                    XposedHelpers.setIntField(v, "mFullgestureNavHeight", fullNow);
+                    // The pill rises with the swipe (mDy) up to half a bar above the window's
+                    // top: in the short bar it vanished as soon as the finger left it. Kept
+                    // inside the window instead (LG's own count is put back after the draw).
+                    float dy = XposedHelpers.getFloatField(v, "mDy");
+                    int h = v.getHeight();
+                    // Both options off: LG's pill exactly as stock.
+                    if (dy != 0 && h > 0 && (shortBar || slimPill(v.getContext()))) {
+                        float hh = slimPill(v.getContext()) ? stockOf(v, "mHandleHeight") * THICKNESS
+                                : stockOf(v, "mHandleHeight");
+                        float center = h - fullNow / 2f; // the pill's resting middle
+                        float up = Math.max(0f, center - hh / 2f);       // room to the top
+                        float down = Math.max(0f, h - center - hh / 2f); // room to the bottom
+                        float kept = Math.max(-down, Math.min(up, dy));
+                        if (kept != dy) {
+                            param.setObjectExtra("gdj_dy", dy);
+                            XposedHelpers.setFloatField(v, "mDy", kept);
+                        }
+                    }
                 } catch (Throwable ignored) {
                     ModuleLog.w(ignored);
                 }
@@ -109,10 +128,27 @@ final class NavBarHook {
                     }
                 }
             }
+
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) {
+                Object dy = param.getObjectExtra("gdj_dy");
+                if (!(dy instanceof Float)) return;
+                try {
+                    XposedHelpers.setFloatField(param.thisObject, "mDy", (Float) dy); // LG's own count
+                } catch (Throwable ignored) {
+                    ModuleLog.w(ignored);
+                }
+            }
         });
     }
 
     private static final String[] SIZE_FIELDS = {"mHandleWidth", "mHandleMaxWidth", "mHandleHeight", "mRadius"};
+
+    // A size field's stock value (remembered before slimming), or its current one.
+    private static float stockOf(View v, String field) {
+        Object orig = XposedHelpers.getAdditionalInstanceField(v, "gdj_" + field);
+        return orig instanceof Float ? (Float) orig : XposedHelpers.getFloatField(v, field);
+    }
 
     // Tells the app "the SystemUI hook is loaded this boot" (the app warns when it isn't).
     private static boolean reported = false;
