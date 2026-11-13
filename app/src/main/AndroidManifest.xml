@@ -7,6 +7,8 @@
         android:protectionLevel="signature" />
     <uses-permission android:name="kr.opencourse.godaijishou.permission.SYSTEM_ACTION" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Update check: one request to the GitHub releases API, at most every 6 hours -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Package visibility for checking other apps -->
     <queries>

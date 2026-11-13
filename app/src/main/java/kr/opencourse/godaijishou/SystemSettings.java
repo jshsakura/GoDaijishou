@@ -47,6 +47,9 @@ final class SystemSettings {
     static volatile boolean batteryStrip = false;
     // Hide the status label while the second screen shows a fullscreen app.
     static volatile boolean labelHideFullscreen = false;
+    // Battery bar look and position (AppPreferences.STRIP_STYLE_* / STRIP_POS_*).
+    static volatile int stripStyle = AppPreferences.STRIP_STYLE_PILL;
+    static volatile int stripPos = AppPreferences.STRIP_POS_RIGHT;
     // Current performance profile (PerfProfile.*), for the panel's highlight.
     static volatile int perfProfile = PerfProfile.NORMAL;
     // Report no fingerprint sensor (FingerprintHook).
@@ -85,6 +88,7 @@ final class SystemSettings {
             safely(() -> SystemVolumeOverlay.install(context, handler));
             // Status label on the second screen (same: drawn here, no permission).
             safely(() -> StatusLabel.install(context, handler));
+            safely(() -> SubDisplayApps.install(context, handler));
             // USB mode (file transfer or charging only): set as the default whenever the choice
             // changes, and again on each new connection, so the developer option's default
             // configuration can't put the other one back.
@@ -207,10 +211,24 @@ final class SystemSettings {
         }
     }
 
+    // Integer column (old app builds don't have it: keep the current value).
+    private static int readInt(Cursor cursor, String key, int fallback) {
+        int idx = cursor.getColumnIndex(key);
+        if (idx < 0) return fallback;
+        try {
+            return Integer.parseInt(cursor.getString(idx));
+        } catch (RuntimeException e) {
+            return fallback;
+        }
+    }
+
     private static void reload() {
         Cursor cursor = null;
         try {
-            cursor = resolver.query(SettingsProvider.CONTENT_URI, null, null, null, null);
+            // Tells the app which hook code this boot runs (see BuildConfig.HOOK_REV).
+            cursor = resolver.query(SettingsProvider.CONTENT_URI.buildUpon()
+                    .appendQueryParameter(SettingsProvider.PARAM_REV, BuildConfig.HOOK_REV).build(),
+                    null, null, null, null);
             if (cursor == null || !cursor.moveToFirst()) return; // keep current values
             loaded = true;
             boolean rotation = readFlag(cursor, AppPreferences.KEY_FORCE_ROTATION);
@@ -222,7 +240,10 @@ final class SystemSettings {
             boolean strip = readFlag(cursor, AppPreferences.KEY_BATTERY_STRIP);
             boolean hideFullscreen = readFlag(cursor, AppPreferences.KEY_LABEL_HIDE_FULLSCREEN);
             fingerprintOff = readFlag(cursor, AppPreferences.KEY_FINGERPRINT_OFF);
-            boolean changed = rotation != forceRotation || powerMenu != powerMenuOnSecondScreen
+            int style = readInt(cursor, AppPreferences.KEY_BATTERY_STRIP_STYLE, stripStyle);
+            int pos = readInt(cursor, AppPreferences.KEY_BATTERY_STRIP_POS, stripPos);
+            boolean changed = style != stripStyle || pos != stripPos
+                    || rotation != forceRotation || powerMenu != powerMenuOnSecondScreen
                     || topOff != topScreenOff || noTop != noTopScreen
                     || chargeOnly != usbChargeOnly || volume != volumeOverlay
                     || strip != batteryStrip || hideFullscreen != labelHideFullscreen;
@@ -234,6 +255,8 @@ final class SystemSettings {
             volumeOverlay = volume;
             batteryStrip = strip;
             labelHideFullscreen = hideFullscreen;
+            stripStyle = style;
+            stripPos = pos;
             int idx = cursor.getColumnIndex(AppPreferences.KEY_PERF_PROFILE);
             if (idx >= 0) {
                 try {
@@ -269,7 +292,7 @@ final class SystemSettings {
                     usbChargeOnly, volumeOverlay, batteryStrip, labelHideFullscreen, fingerprintOff};
             StringBuilder b = new StringBuilder();
             for (boolean v : f) b.append(v ? '1' : '0');
-            b.append(':').append(perfProfile);
+            b.append(':').append(perfProfile).append(':').append(stripStyle).append(':').append(stripPos);
             String value = b.toString();
             if (!value.equals(Settings.Global.getString(resolver, CACHE_KEY))) {
                 Settings.Global.putString(resolver, CACHE_KEY, value);
@@ -319,8 +342,13 @@ final class SystemSettings {
             batteryStrip = value.charAt(6) == '1';
             labelHideFullscreen = value.charAt(7) == '1';
             fingerprintOff = value.length() > 8 && value.charAt(8) == '1';
-            int colon = value.indexOf(':');
-            if (colon > 0) perfProfile = Integer.parseInt(value.substring(colon + 1));
+            // "flags:perf[:style:pos]" (the last two are newer)
+            String[] parts = value.split(":");
+            if (parts.length > 1) perfProfile = Integer.parseInt(parts[1]);
+            if (parts.length > 3) {
+                stripStyle = Integer.parseInt(parts[2]);
+                stripPos = Integer.parseInt(parts[3]);
+            }
             for (Runnable l : listeners) l.run();
         } catch (Throwable ignored) {
             ModuleLog.w(ignored);

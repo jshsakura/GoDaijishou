@@ -28,6 +28,12 @@ public class AppPreferences {
     public static final String KEY_BATTERY_STRIP = "battery_strip";
     // Hide the status label while the second screen's top app is fullscreen (system_server hook).
     public static final String KEY_LABEL_HIDE_FULLSCREEN = "label_hide_fullscreen";
+    // Battery bar look: STRIP_STYLE_PILL (floating pill) or STRIP_STYLE_LINE (thin full-width line).
+    public static final String KEY_BATTERY_STRIP_STYLE = "battery_strip_style";
+    public static final int STRIP_STYLE_PILL = 0, STRIP_STYLE_LINE = 1;
+    // Where its content (and the pull-down spot) sits: STRIP_POS_LEFT / CENTER / RIGHT.
+    public static final String KEY_BATTERY_STRIP_POS = "battery_strip_pos";
+    public static final int STRIP_POS_LEFT = 0, STRIP_POS_CENTER = 1, STRIP_POS_RIGHT = 2;
     // Skip LG's swivel-mode camera notices (scope com.lge.popupcamera).
     public static final String KEY_HIDE_SWIVEL_WARNINGS = "hide_swivel_warnings";
     // Thinner, narrower gesture pill that hides until the bottom edge is touched (scope SystemUI).
@@ -46,6 +52,7 @@ public class AppPreferences {
     // App-only state, kept apart from the provider-exposed settings.
     private static final String MODE_PREF_FILE_NAME = "Godaijishou_mode_prefs";
     private static final String KEY_SYSTEM_HOOK_BOOT = "system_hook_boot";
+    private static final String KEY_SYSTEM_HOOK_REV = "system_hook_rev";
     private static final long BOOT_MATCH_TOLERANCE_MS = 10_000;
 
     private static volatile boolean migrated = false;
@@ -81,9 +88,17 @@ public class AppPreferences {
     }
 
     /** Records that the system_server hook read the settings during this boot. */
-    static void markSystemHookSeen(Context context) {
-        prefs(context, MODE_PREF_FILE_NAME)
-                .edit().putLong(KEY_SYSTEM_HOOK_BOOT, currentBootTime()).apply();
+    static void markSystemHookSeen(Context context, String rev) {
+        prefs(context, MODE_PREF_FILE_NAME).edit()
+                .putLong(KEY_SYSTEM_HOOK_BOOT, currentBootTime())
+                .putString(KEY_SYSTEM_HOOK_REV, rev)
+                .apply();
+    }
+
+    /** Whether the running hook was built from different code than this APK (needs a reboot). */
+    public static boolean isHookOutdated(Context context) {
+        String rev = prefs(context, MODE_PREF_FILE_NAME).getString(KEY_SYSTEM_HOOK_REV, null);
+        return !BuildConfig.HOOK_REV.equals(rev);
     }
 
     /** Whether the system_server hook is loaded in this boot (switches apply without a reboot). */

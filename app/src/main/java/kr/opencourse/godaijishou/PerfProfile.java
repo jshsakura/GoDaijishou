@@ -14,12 +14,13 @@ import java.nio.charset.StandardCharsets;
  * saver flips (LG's saver rewrites clocks on its own).
  *
  * ECO: every core and the GPU capped hard, for the least battery and heat; normal throttling.
- * NORMAL: a little under stock, normal throttling.
+ * NORMAL: stock. Nothing is written at boot or on battery saver flips (LG's own governor and
+ * saver run untouched); switching back to it only undoes what ECO / PERFORMANCE changed.
  * PERFORMANCE: stock max, raised minimums, LG thermal mitigation relaxed.
  *
  * SD765G (lito): policy0 = 6 little cores (1.8 GHz), policy6 = big (2.2), policy7 = prime (2.4),
  * GPU 625 MHz. Targets are picked from each policy's own frequency table at apply time:
- * ECO 1.36 / 1.09 / 1.09 GHz, NORMAL 1.80 / 1.90 / 2.00 GHz, PERFORMANCE 1.80 / 2.21 / 2.40 GHz.
+ * ECO 1.36 / 1.09 / 1.09 GHz, PERFORMANCE 1.80 / 2.21 / 2.40 GHz with raised minimums.
  */
 final class PerfProfile {
 
@@ -88,7 +89,11 @@ final class PerfProfile {
                 // persist.* lives on in /data/property even after the module that set it is gone,
                 // so write the persistent copy too (-p), not only the runtime value.
                 + "if command -v resetprop >/dev/null; then rp='resetprop -p'; else rp=setprop; fi\n"
-                + "$rp " + THROTTLE_PROP + " " + (profile == PERFORMANCE ? "true" : "false") + "\n";
+                // Not set at all on stock: only performance adds it, the others remove it again.
+                + (profile == PERFORMANCE
+                    ? "$rp " + THROTTLE_PROP + " true\n"
+                    : "if command -v resetprop >/dev/null; then resetprop -p -d " + THROTTLE_PROP
+                        + "; else setprop " + THROTTLE_PROP + " false; fi\n");
         try {
             java.lang.Process su = new ProcessBuilder("su").redirectErrorStream(true).start();
             try (OutputStream in = su.getOutputStream()) {

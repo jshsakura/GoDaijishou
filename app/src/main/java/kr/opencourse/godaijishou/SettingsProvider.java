@@ -17,6 +17,9 @@ import java.util.Objects;
 
 public class SettingsProvider extends ContentProvider {
 
+    /** Query parameter: the BuildConfig.HOOK_REV the system_server hook was loaded with. */
+    static final String PARAM_REV = "rev";
+
     // Authority other processes (the hooks) use to find this provider
     private static final String AUTHORITY = "kr.opencourse.godaijishou.provider";
     public static final Uri CONTENT_URI = Uri.parse("content://" + AUTHORITY + "/settings");
@@ -36,7 +39,7 @@ public class SettingsProvider extends ContentProvider {
         if (selection != null && selection.startsWith("hook:")) {
             AppPreferences.markHookSeen(context, selection.substring(5));
         } else if (Binder.getCallingUid() == Process.SYSTEM_UID) {
-            AppPreferences.markSystemHookSeen(context);
+            AppPreferences.markSystemHookSeen(context, uri.getQueryParameter(PARAM_REV));
         }
         SharedPreferences prefs = AppPreferences.settings(context);
 
@@ -56,6 +59,10 @@ public class SettingsProvider extends ContentProvider {
         String fingerprintOff = prefs.getBoolean(AppPreferences.KEY_FINGERPRINT_OFF, false) ? "1" : "0";
         String debugLog = prefs.getBoolean(AppPreferences.KEY_DEBUG_LOG, false) ? "1" : "0";
         String perfProfile = String.valueOf(prefs.getInt(AppPreferences.KEY_PERF_PROFILE, PerfProfile.NORMAL));
+        String stripStyle = String.valueOf(prefs.getInt(AppPreferences.KEY_BATTERY_STRIP_STYLE,
+                AppPreferences.STRIP_STYLE_PILL));
+        String stripPos = String.valueOf(prefs.getInt(AppPreferences.KEY_BATTERY_STRIP_POS,
+                AppPreferences.STRIP_POS_RIGHT));
 
         MatrixCursor cursor = new MatrixCursor(new String[]{
                 AppPreferences.KEY_LAUNCHER_PACKAGE,
@@ -73,10 +80,13 @@ public class SettingsProvider extends ContentProvider {
                 AppPreferences.KEY_SLIM_NAV_PILL,
                 AppPreferences.KEY_HIDE_IME_NAV_STRIP,
                 AppPreferences.KEY_FINGERPRINT_OFF,
-                AppPreferences.KEY_DEBUG_LOG
+                AppPreferences.KEY_DEBUG_LOG,
+                AppPreferences.KEY_BATTERY_STRIP_STYLE,
+                AppPreferences.KEY_BATTERY_STRIP_POS
         });
         cursor.addRow(new Object[]{targetPackage, targetActivity, forceRotation, powerMenu, topOff, noTop, chargeOnly, volume,
-                batteryStrip, labelHideFullscreen, perfProfile, hideSwivel, slimPill, imeStrip, fingerprintOff, debugLog});
+                batteryStrip, labelHideFullscreen, perfProfile, hideSwivel, slimPill, imeStrip, fingerprintOff, debugLog,
+                stripStyle, stripPos});
         return cursor;
     }
 

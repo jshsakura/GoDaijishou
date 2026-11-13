@@ -68,6 +68,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        drawBehindBars();
 
         prefs = AppPreferences.settings(this);
 
@@ -75,7 +76,9 @@ public class MainActivity extends AppCompatActivity {
         topBlackoutSwitch = findViewById(R.id.switch_top_blackout);
         forceRotationSwitch = findViewById(R.id.switch_force_rotation);
         rebootNotice = findViewById(R.id.notice_reboot);
-        ((TextView) findViewById(R.id.tv_version)).setText("v" + BuildConfig.VERSION_NAME);
+        TextView version = findViewById(R.id.tv_version);
+        version.setText("v" + BuildConfig.VERSION_NAME);
+        version.setOnClickListener(v -> openReleases()); // GitHub mark: the project's releases
 
         // Yellow trailing dot, like the freetv logo
         SpannableString logo = new SpannableString(getString(R.string.app_title) + ".");
@@ -111,6 +114,12 @@ public class MainActivity extends AppCompatActivity {
         findViewById(R.id.row_lsposed).setOnClickListener(v -> openLsposed());
         findViewById(R.id.btn_notice_lsposed).setOnClickListener(v -> openLsposed());
         buildUsbModeButtons();
+        buildChoice(R.id.strip_style_buttons, AppPreferences.KEY_BATTERY_STRIP_STYLE,
+                AppPreferences.STRIP_STYLE_PILL,
+                new int[]{R.string.strip_style_pill, R.string.strip_style_line});
+        buildChoice(R.id.strip_pos_buttons, AppPreferences.KEY_BATTERY_STRIP_POS,
+                AppPreferences.STRIP_POS_RIGHT,
+                new int[]{R.string.strip_pos_left, R.string.strip_pos_center, R.string.strip_pos_right});
         bindSystemHookSwitch(R.id.row_debug_log, findViewById(R.id.switch_debug_log), AppPreferences.KEY_DEBUG_LOG);
 
         // These need an extra LSPosed scope: turning one on explains which, unless that
@@ -133,8 +142,105 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         updateRebootNotice();
+        updateStatus();
         updateLauncherRows(); // reflect apps installed/removed while we were away
+        UpdateCheck.run(this, this::showUpdate);
         if (perfButtons != null) stylePerfButtons(perfButtons); // may have changed in the panel
+    }
+
+    // The list runs on under the gesture bar instead of stopping above it (the bar area was a
+    // separate band that made the last card look cut off). The content keeps its padding plus
+    // the bars' size, so nothing ends up under the status label or the gesture pill.
+    private void drawBehindBars() {
+        getWindow().setDecorFitsSystemWindows(false);
+        getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+        getWindow().setNavigationBarContrastEnforced(false);
+        android.view.ViewGroup scroll = (android.view.ViewGroup) ((android.view.ViewGroup)
+                findViewById(android.R.id.content)).getChildAt(0);
+        scroll.setClipToPadding(false);
+        View column = scroll.getChildAt(0);
+        final int top = column.getPaddingTop(), bottom = column.getPaddingBottom();
+        scroll.setOnApplyWindowInsetsListener((v, insets) -> {
+            android.graphics.Insets bars = insets.getInsets(android.view.WindowInsets.Type.systemBars()
+                    | android.view.WindowInsets.Type.displayCutout());
+            column.setPadding(column.getPaddingLeft(), top + bars.top, column.getPaddingRight(), bottom + bars.bottom);
+            return insets;
+        });
+    }
+
+    // Header subtitle: whether the hooks loaded this boot. Everything here is an LSPosed
+    // hook, so "not running" means LSPosed scope/reboot; tapping it opens LSPosed.
+    private android.animation.ValueAnimator dotPulse;
+
+    private void stopDotPulse() {
+        if (dotPulse != null) {
+            dotPulse.cancel();
+            dotPulse = null;
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        stopDotPulse();
+    }
+
+    private void updateStatus() {
+        TextView status = findViewById(R.id.tv_status);
+        boolean active = AppPreferences.isSystemHookActive(this)
+                || AppPreferences.isHookActive(this, "systemui");
+        int tint = getColor(active ? R.color.ft_good : R.color.ft_pending);
+        status.setText(active ? R.string.status_active : R.string.status_inactive);
+        status.setTextColor(getColor(active ? R.color.ft_secondary : R.color.ft_pending));
+        android.graphics.drawable.Drawable dot = getDrawable(R.drawable.ic_ft_dot);
+        if (dot != null) {
+            dot = dot.mutate();
+            dot.setTint(tint);
+            status.setCompoundDrawablesRelativeWithIntrinsicBounds(dot, null, null, null);
+        }
+        // Running: the dot breathes slowly (only while visible; stopped in onPause).
+        stopDotPulse();
+        if (active && dot != null) {
+            final android.graphics.drawable.Drawable d = dot;
+            dotPulse = android.animation.ValueAnimator.ofInt(255, 70);
+            dotPulse.setDuration(1100);
+            dotPulse.setRepeatMode(android.animation.ValueAnimator.REVERSE);
+            dotPulse.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+            dotPulse.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
+            dotPulse.addUpdateListener(a -> {
+                d.setAlpha((Integer) a.getAnimatedValue());
+                status.invalidate();
+            });
+            dotPulse.start();
+        }
+        status.setOnClickListener(active ? null : v -> openLsposed());
+        status.setClickable(!active);
+    }
+
+    // Newer release on GitHub: the version pill turns butter and opens the release page.
+    private void showUpdate(String version) {
+        if (isFinishing()) return;
+        TextView pill = findViewById(R.id.tv_version);
+        pill.setText(getString(R.string.update_available, version));
+        pill.setTextColor(getColor(R.color.ft_on_butter));
+        android.graphics.drawable.Drawable arrow = getDrawable(R.drawable.ic_ft_download);
+        if (arrow != null) {
+            arrow = arrow.mutate();
+            arrow.setTint(getColor(R.color.ft_on_butter));
+            int size = Math.round(15 * getResources().getDisplayMetrics().density);
+            arrow.setBounds(0, 0, size, size);
+            pill.setCompoundDrawablesRelative(arrow, null, null, null);
+        }
+        pill.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.ft_butter)));
+        pill.setCompoundDrawableTintList(null); // the download arrow carries its own tint
+    }
+
+    private void openReleases() {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(UpdateCheck.RELEASES_PAGE)));
+        } catch (Exception ignored) {
+            // no browser
+        }
     }
 
     // --- Performance profile ---
@@ -205,10 +311,10 @@ public class MainActivity extends AppCompatActivity {
             final boolean chargeOnly = i == 1;
             TextView b = new TextView(this);
             b.setText(labels[i]);
-            b.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14);
+            b.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 13);
             b.setTypeface(Typeface.DEFAULT_BOLD);
             b.setGravity(android.view.Gravity.CENTER);
-            b.setCompoundDrawablePadding(Math.round(6 * density));
+            b.setCompoundDrawablePadding(Math.round(4 * density));
             b.setTag(icons[i]);
             buttons[i] = b;
             android.widget.FrameLayout cell = new android.widget.FrameLayout(this);
@@ -222,12 +328,66 @@ public class MainActivity extends AppCompatActivity {
                 getContentResolver().notifyChange(SettingsProvider.CONTENT_URI, null);
                 styleUsbModeButtons(buttons);
             });
+            int pad = Math.round(11 * density);
+            cell.setPadding(pad, 0, pad, 0);
             android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(
-                    0, Math.round(44 * density), 1f);
-            if (i > 0) lp.setMarginStart(Math.round(8 * density));
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT, Math.round(36 * density));
+            if (i > 0) lp.setMarginStart(Math.round(6 * density));
             box.addView(cell, lp);
         }
         styleUsbModeButtons(buttons);
+    }
+
+    // Compact text segments for an int setting (value = segment index), like the USB row.
+    // The system_server hook rebuilds the battery bar when the provider reports the change.
+    private void buildChoice(int boxId, String key, int def, int[] labels) {
+        android.widget.LinearLayout box = findViewById(boxId);
+        float density = getResources().getDisplayMetrics().density;
+        TextView[] buttons = new TextView[labels.length];
+        for (int i = 0; i < labels.length; i++) {
+            final int value = i;
+            TextView b = new TextView(this);
+            b.setText(labels[i]);
+            b.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 13);
+            b.setTypeface(Typeface.DEFAULT_BOLD);
+            b.setGravity(android.view.Gravity.CENTER);
+            buttons[i] = b;
+            android.widget.FrameLayout cell = new android.widget.FrameLayout(this);
+            cell.addView(b, new android.widget.FrameLayout.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.Gravity.CENTER));
+            cell.setClickable(true);
+            cell.setContentDescription(getString(labels[i]));
+            cell.setOnClickListener(v -> {
+                prefs.edit().putInt(key, value).commit();
+                getContentResolver().notifyChange(SettingsProvider.CONTENT_URI, null);
+                styleChoice(buttons, prefs.getInt(key, def));
+            });
+            int pad = Math.round(12 * density);
+            cell.setPadding(pad, 0, pad, 0);
+            android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT, Math.round(34 * density));
+            if (i > 0) lp.setMarginStart(Math.round(6 * density));
+            box.addView(cell, lp);
+        }
+        styleChoice(buttons, prefs.getInt(key, def));
+    }
+
+    private void styleChoice(TextView[] buttons, int selected) {
+        float density = getResources().getDisplayMetrics().density;
+        for (int i = 0; i < buttons.length; i++) {
+            boolean on = i == selected;
+            buttons[i].setTextColor(getColor(on ? R.color.ft_on_butter : R.color.ft_ink));
+            android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+            bg.setCornerRadius(12 * density);
+            if (on) {
+                bg.setColor(getColor(R.color.ft_butter));
+            } else {
+                bg.setColor(getColor(R.color.ft_surface));
+                bg.setStroke(Math.max(1, Math.round(density)), getColor(R.color.ft_line));
+            }
+            ((View) buttons[i].getParent()).setBackground(bg);
+        }
     }
 
     // Selected: butter fill with dark ink. Other: outlined.
@@ -239,12 +399,12 @@ public class MainActivity extends AppCompatActivity {
             int ink = getColor(on ? R.color.ft_on_butter : R.color.ft_ink);
             android.graphics.drawable.Drawable icon = getDrawable((Integer) buttons[i].getTag()).mutate();
             icon.setTint(ink);
-            int size = Math.round(18 * density);
+            int size = Math.round(15 * density);
             icon.setBounds(0, 0, size, size);
             buttons[i].setCompoundDrawablesRelative(icon, null, null, null);
             buttons[i].setTextColor(ink);
             android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-            bg.setCornerRadius(14 * density);
+            bg.setCornerRadius(12 * density);
             if (on) {
                 bg.setColor(getColor(R.color.ft_butter));
             } else {
@@ -336,7 +496,14 @@ public class MainActivity extends AppCompatActivity {
                 && !AppPreferences.isHookActive(this, "systemui")) {
             needReboot = true;
         }
-        rebootNotice.setVisibility(needReboot ? View.VISIBLE : View.GONE);
+        // Updated since this boot with changed hook code: system_server and SystemUI still run
+        // the code loaded at boot, so ask for a reboot. Updates that only touch this screen or
+        // the battery strip's look (StripView, reloaded live) need none.
+        boolean updated = !needReboot && AppPreferences.isSystemHookActive(this)
+                && AppPreferences.isHookOutdated(this);
+        ((TextView) findViewById(R.id.notice_reboot_text)).setText(
+                updated ? R.string.notice_reboot_updated : R.string.notice_reboot_desc);
+        rebootNotice.setVisibility(needReboot || updated ? View.VISIBLE : View.GONE);
     }
 
     private void confirmReboot() {
@@ -361,22 +528,47 @@ public class MainActivity extends AppCompatActivity {
 
     // --- Open LSPosed ---
 
-    // The parasitic LSPosed manager lives inside this com.android.shell activity.
-    // Launching it with the LAUNCH_MANAGER category makes LSPosed show the manager UI.
+    // The parasitic LSPosed manager lives inside this com.android.shell activity; launching
+    // it with the LAUNCH_MANAGER category makes LSPosed show the manager UI. A normal app may
+    // not start that activity (not exported to us), so it goes through root or the hook.
     private void openLsposed() {
         // 1) Standalone manager app installed (non-parasitic mode)
         Intent app = getPackageManager().getLaunchIntentForPackage(LSPOSED_MANAGER_PACKAGE);
         if (app != null && tryStart(app)) return;
 
-        // 2) Launch the parasitic manager directly
-        Intent parasitic = new Intent(Intent.ACTION_MAIN)
-                .setComponent(new ComponentName(LSPOSED_HOST_PACKAGE, LSPOSED_HOST_ACTIVITY))
-                .addCategory(LSPOSED_LAUNCH_CATEGORY)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        if (tryStart(parasitic)) return;
+        // 2) Root: the documented `am start` way. LSPosed only exists on a rooted phone,
+        //    and this still works when the module itself is off (the case that needs LSPosed).
+        int displayId = getDisplay() != null ? getDisplay().getDisplayId() : Display.DEFAULT_DISPLAY;
+        String cmd = "am start --display " + displayId
+                + " -c " + LSPOSED_LAUNCH_CATEGORY
+                + " -n " + LSPOSED_HOST_PACKAGE + "/" + LSPOSED_HOST_ACTIVITY + "\n";
+        new Thread(() -> {
+            boolean ok = runAsRoot(cmd);
+            runOnUiThread(() -> {
+                if (ok || isFinishing()) return;
+                // 3) No root grant: the system_server hook can open it if it is loaded
+                if (AppPreferences.isSystemHookActive(this)) {
+                    SystemActions.send(this, SystemActions.OP_OPEN_LSPOSED, displayId);
+                } else {
+                    Toast.makeText(this, R.string.toast_lsposed_open_failed, Toast.LENGTH_LONG).show();
+                }
+            });
+        }, "open-lsposed").start();
+    }
 
-        // 3) Blocked for a normal app: ask the system_server hook to open it
-        requestSystemAction(SystemActions.OP_OPEN_LSPOSED);
+    // Runs one command through su; false when there is no root or it was denied.
+    private static boolean runAsRoot(String cmd) {
+        try {
+            java.lang.Process su = new ProcessBuilder("su").redirectErrorStream(true).start();
+            try (java.io.OutputStream in = su.getOutputStream()) {
+                in.write((cmd + "exit $?\n").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            }
+            String out = new String(su.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            return su.waitFor() == 0 && !out.contains("Error");
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+            return false;
+        }
     }
 
     private boolean tryStart(Intent intent) {
@@ -410,32 +602,36 @@ public class MainActivity extends AppCompatActivity {
             String pkg = LAUNCHER_PACKAGES[i];
             View row = launcherRows[i];
             boolean isSelected = pkg == null ? selected == null : pkg.equals(selected);
-            row.findViewById(R.id.choice_check).setVisibility(isSelected ? View.VISIBLE : View.INVISIBLE);
+            // Check and install label share the right edge: the selected row shows the check.
+            row.findViewById(R.id.choice_check).setVisibility(isSelected ? View.VISIBLE : View.GONE);
             TextView desc = row.findViewById(R.id.choice_desc);
+            TextView tag = row.findViewById(R.id.choice_tag);
             boolean installed = pkg == null || isInstalled(pkg);
-            if (pkg == null) {
-                desc.setText(R.string.launcher_stock_desc);
-                desc.setTextColor(getColor(R.color.ft_secondary));
-            } else if (installed) {
-                desc.setText(R.string.launcher_installed);
-                desc.setTextColor(getColor(R.color.ft_good));
+            // Install state goes to the label on the right; the stock row has none.
+            if (pkg == null && !isSelected) {
+                tag.setVisibility(View.GONE);
             } else {
-                desc.setText(R.string.launcher_not_installed);
-                desc.setTextColor(getColor(R.color.ft_secondary));
+                // Selected: keep the label's footprint (invisible) so the check sits where
+                // the labels of the other rows are.
+                tag.setVisibility(isSelected ? View.INVISIBLE : View.VISIBLE);
+                tag.setText(installed ? R.string.launcher_installed : R.string.launcher_not_installed);
+                tag.setTextColor(getColor(installed ? R.color.ft_good : R.color.ft_secondary));
+                tag.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                        getColor(installed ? R.color.ft_green_tint : R.color.ft_line)));
             }
-            // Target package under the status, small and quiet (stock: LG's second home).
+            // Under the title: the target package, small and quiet (stock: LG's second home,
+            // after its one-line description).
             String target = pkg != null ? pkg : LauncherHook.TARGET_PACKAGE;
-            android.text.SpannableStringBuilder text = new android.text.SpannableStringBuilder(desc.getText());
-            text.append('\n');
+            android.text.SpannableStringBuilder text = new android.text.SpannableStringBuilder();
+            if (pkg == null) text.append(getString(R.string.launcher_stock_desc)).append('\n');
             int start = text.length();
             text.append(target);
             int end = text.length();
-            text.setSpan(new ForegroundColorSpan(getColor(R.color.ft_secondary)), start, end,
-                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             text.setSpan(new android.text.style.RelativeSizeSpan(0.9f), start, end,
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             text.setSpan(new android.text.style.TypefaceSpan("monospace"), start, end,
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            desc.setTextColor(getColor(R.color.ft_secondary));
             desc.setText(text);
             // Dim launchers that are not installed so the usable ones stand out.
             row.setAlpha(installed ? 1f : 0.45f);
@@ -470,40 +666,50 @@ public class MainActivity extends AppCompatActivity {
     // waiting for the next time the user goes home there. No-op while the swivel is closed.
     private void showHomeOnSecondScreen(String pkg) {
         DisplayManager dm = getSystemService(DisplayManager.class);
-        if (dm == null || !Screens.isSecondScreenOn(dm)) return;
+        if (dm == null || !Screens.isSecondScreenOn(dm)) {
+            android.util.Log.w("GoDaijishou", "showHome: second screen off");
+            return;
+        }
         Intent home;
         if (pkg != null) {
             home = getPackageManager().getLaunchIntentForPackage(pkg);
             if (home == null) return;
         } else {
             home = stockSecondHome();
-            if (home == null) return;
+            if (home == null) {
+                android.util.Log.w("GoDaijishou", "showHome: no LG home intent");
+                return;
+            }
         }
         home.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
         home.putExtra(LauncherHook.EXTRA_REFRESH, true);
         try {
             startActivity(home, ActivityOptions.makeBasic()
                     .setLaunchDisplayId(MainModule.SECOND_SCREEN_DISPLAY_ID).toBundle());
-        } catch (RuntimeException ignored) {
+        } catch (RuntimeException e) {
             // The setting is saved either way; it applies on the next home press.
+            android.util.Log.w("GoDaijishou", "showHome failed", e);
         }
     }
 
     // LG's second home as an explicit component, so it starts at once like the others
     // (an implicit SECONDARY_HOME intent may not resolve for an ordinary app).
+    // LG's second home declares no HOME/SECONDARY_HOME filter of its own (the system starts it
+    // by component), only MAIN + LAUNCHER_APP. Prefer the all-apps home the system uses.
+    private static final String LG_SECOND_HOME = "com.lge.secondlauncher.AllAppsLauncherExtension";
+
     private Intent stockSecondHome() {
         Intent probe = new Intent(Intent.ACTION_MAIN)
-                .addCategory(Intent.CATEGORY_SECONDARY_HOME)
+                .addCategory("android.intent.category.LAUNCHER_APP")
                 .setPackage(LauncherHook.TARGET_PACKAGE);
         java.util.List<android.content.pm.ResolveInfo> found =
                 getPackageManager().queryIntentActivities(probe, 0);
-        if (found != null && !found.isEmpty()) {
-            android.content.pm.ActivityInfo a = found.get(0).activityInfo;
-            return new Intent(Intent.ACTION_MAIN)
-                    .addCategory(Intent.CATEGORY_SECONDARY_HOME)
-                    .setClassName(a.packageName, a.name);
+        if (found == null || found.isEmpty()) return null;
+        android.content.pm.ActivityInfo pick = found.get(0).activityInfo;
+        for (android.content.pm.ResolveInfo r : found) {
+            if (LG_SECOND_HOME.equals(r.activityInfo.name)) pick = r.activityInfo;
         }
-        return getPackageManager().getLaunchIntentForPackage(LauncherHook.TARGET_PACKAGE);
+        return new Intent(Intent.ACTION_MAIN).setClassName(pick.packageName, pick.name);
     }
 
     private boolean isInstalled(String pkg) {

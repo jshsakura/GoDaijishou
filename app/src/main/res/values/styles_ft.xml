@@ -3,15 +3,21 @@
     <!-- Implicit parent of the dotted styles -->
     <style name="Ft" />
     <!-- Group title -->
+    <!-- Section title: a small pill with a butter icon (icon set per title in the layout) -->
     <style name="Ft.Group">
-        <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:paddingStart">4dp</item>
-        <item name="android:paddingTop">18dp</item>
-        <item name="android:paddingBottom">8dp</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">30dp</item>
+        <item name="android:layout_marginTop">22dp</item>
+        <item name="android:layout_marginBottom">10dp</item>
+        <item name="android:background">@drawable/bg_ft_pill</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingStart">11dp</item>
+        <item name="android:paddingEnd">13dp</item>
+        <item name="android:drawablePadding">6dp</item>
+        <item name="android:drawableTint">@color/ft_butter</item>
         <item name="android:textSize">13sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textColor">@color/ft_secondary</item>
+        <item name="android:textColor">@color/ft_ink</item>
     </style>
 
     <!-- Rounded card row (touch and gamepad focus) -->

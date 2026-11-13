@@ -52,7 +52,11 @@ final class RetroArchHook {
         XposedHelpers.findAndHookMethod(Activity.class, "onResume", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
-                maybeRecoverSurface((Activity) param.thisObject);
+                try {
+                    maybeRecoverSurface((Activity) param.thisObject);
+                } catch (Throwable t) {
+                    ModuleLog.w(t); // never disturb RetroArch
+                }
             }
         });
 
@@ -60,8 +64,10 @@ final class RetroArchHook {
                 boolean.class, new XC_MethodHook() {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) {
-                        if ((Boolean) param.args[0]) {
-                            maybeRecoverSurface((Activity) param.thisObject);
+                        try {
+                            if ((Boolean) param.args[0]) maybeRecoverSurface((Activity) param.thisObject);
+                        } catch (Throwable t) {
+                            ModuleLog.w(t); // never disturb RetroArch
                         }
                     }
                 });

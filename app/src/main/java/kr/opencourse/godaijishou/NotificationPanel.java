@@ -62,12 +62,6 @@ final class NotificationPanel {
     // Panel mode: current notifications, or the channels that are turned off.
     private static boolean showingBlocked = false;
     private static android.widget.ImageView blockedToggle;
-    // Undo for the last "never show": a single icon under the list for a few seconds.
-    private static FrameLayout undoSlot;
-    private static final long UNDO_MS = 4000;
-    private static final Runnable hideUndo = () -> {
-        if (undoSlot != null) undoSlot.removeAllViews();
-    };
 
     private NotificationPanel() {
     }
@@ -201,12 +195,6 @@ final class NotificationPanel {
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP));
             int headerSpace = Math.round((32 + 8 + 8) * density); // band + gap
             scroll.setPadding(0, headerSpace, 0, 0);
-            // Undo floats over the bottom of the list for a few seconds.
-            undoSlot = new FrameLayout(ui);
-            FrameLayout.LayoutParams undoLp = new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM);
-            undoLp.bottomMargin = Math.round(8 * density);
-            stack.addView(undoSlot, undoLp);
             // The panel takes the whole screen; the list scrolls inside it.
             column.addView(stack, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
@@ -251,7 +239,8 @@ final class NotificationPanel {
         }
     }
 
-    // Header floating over the list: [bell Notifications]  [clear all]  [profile | blocked | close].
+    // Header floating over the list: [clock]  [clear all]
+    // [profile | blocked | settings]  (close), the close circle apart in the corner.
     // Each group is its own pill on the panel color, so cards scrolling up slide under them.
     private static View header(float density) {
         LinearLayout row = new LinearLayout(ui);
@@ -266,31 +255,44 @@ final class NotificationPanel {
         int bandPad = Math.round(4 * density);
         row.setPadding(bandPad, bandPad, bandPad, bandPad);
 
-        TextView title = new TextView(ui);
-        title.setText(R.string.notifications_title);
-        title.setTextColor(ui.getColor(R.color.ft_ink));
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
-        withIcon(title, R.drawable.ic_ft_bell, ui.getColor(R.color.ft_butter), 15, density);
-        int tp = Math.round(12 * density);
-        title.setPadding(tp, 0, tp, 0);
-        title.setBackground(pill(density, false));
-        row.addView(title, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, pillHeight));
+        int tp = Math.round(10 * density);
 
-        // Clock beside the title: big, tabular digits, follows the 12/24h setting.
+        // Clock in the title spot, as its own pill: sun / moon, a small 오전·오후 and big tabular digits.
+        LinearLayout clockBox = new LinearLayout(ui);
+        clockBox.setOrientation(LinearLayout.HORIZONTAL);
+        clockBox.setGravity(Gravity.CENTER_VERTICAL);
+        final android.widget.TextClock period = new android.widget.TextClock(ui);
+        period.setFormat12Hour("a");
+        period.setFormat24Hour("a");
+        period.setTextColor(ui.getColor(R.color.ft_secondary));
+        period.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        period.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        period.setIncludeFontPadding(false);
+        dayIcon(period, density);
+        period.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence c, int a, int b, int d) { }
+            @Override public void onTextChanged(CharSequence c, int a, int b, int d) { }
+            @Override public void afterTextChanged(android.text.Editable e) { dayIcon(period, density); }
+        });
+        clockBox.addView(period);
         android.widget.TextClock clock = new android.widget.TextClock(ui);
-        clock.setFormat24Hour("H:mm");
+        clock.setFormat24Hour("h:mm");
         clock.setFormat12Hour("h:mm");
         clock.setTextColor(ui.getColor(R.color.ft_ink));
         clock.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
         clock.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
         clock.setFontFeatureSettings("tnum");
         clock.setLetterSpacing(0.02f);
-        clock.setGravity(Gravity.CENTER_VERTICAL);
+        clock.setIncludeFontPadding(false);
+        LinearLayout.LayoutParams timeLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        timeLp.setMarginStart(Math.round(4 * density));
+        clockBox.addView(clock, timeLp);
         LinearLayout.LayoutParams clockLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, pillHeight);
-        clockLp.setMarginStart(Math.round(10 * density));
-        row.addView(clock, clockLp);
+        clockBox.setPadding(tp, 0, Math.round(12 * density), 0);
+        clockBox.setBackground(pill(density, false));
+        row.addView(clockBox, clockLp);
 
         row.addView(new View(ui), new LinearLayout.LayoutParams(0, 1, 1f));
 
@@ -338,12 +340,32 @@ final class NotificationPanel {
         });
         tools.addView(blockedToggle, new LinearLayout.LayoutParams(buttonSize, buttonSize));
 
-        // Close: always reachable, whatever the list covers.
+        // Settings: back to the GoDaijishou app on this screen.
+        android.widget.ImageView settings = toolButton(density);
+        styleTool(settings, R.drawable.ic_ft_settings, false, density);
+        settings.setOnClickListener(v -> {
+            close();
+            openApp();
+        });
+        tools.addView(settings, new LinearLayout.LayoutParams(buttonSize, buttonSize));
+
+        row.addView(tools, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, pillHeight));
+
+        // Close: its own circle in the corner, apart from the tools so it isn't hit by mistake.
         android.widget.ImageView close = toolButton(density);
         styleTool(close, R.drawable.ic_ft_close, false, density);
+        GradientDrawable ring = new GradientDrawable();
+        ring.setShape(GradientDrawable.OVAL);
+        ring.setColor(ui.getColor(R.color.ft_surface));
+        ring.setStroke(Math.max(1, Math.round(density)), ui.getColor(R.color.ft_line));
+        close.setBackground(ring);
+        int closePad = Math.round(8 * density);
+        close.setPadding(closePad, closePad, closePad, closePad);
+        close.setContentDescription(ui.getString(android.R.string.cancel));
         close.setOnClickListener(v -> close());
-        tools.addView(close, new LinearLayout.LayoutParams(buttonSize, buttonSize));
-        row.addView(tools, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, pillHeight));
+        LinearLayout.LayoutParams closeLp = new LinearLayout.LayoutParams(pillHeight, pillHeight);
+        closeLp.setMarginStart(Math.round(10 * density));
+        row.addView(close, closeLp);
 
         // The header drags the panel up too, like the handle.
         row.setOnTouchListener(dragToClose(density, false));
@@ -351,6 +373,25 @@ final class NotificationPanel {
     }
 
     private static TextView clearButton;
+
+    // Starts the app's settings screen on the second screen (from system_server: as the user).
+    private static void openApp() {
+        try {
+            android.content.Intent intent = new android.content.Intent()
+                    .setClassName(BuildConfig.APPLICATION_ID, MainActivity.class.getName())
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                            | android.content.Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+            android.os.Bundle options = android.app.ActivityOptions.makeBasic()
+                    .setLaunchDisplayId(MainModule.SECOND_SCREEN_DISPLAY_ID).toBundle();
+            android.os.UserHandle current = (android.os.UserHandle) de.robv.android.xposed.XposedHelpers
+                    .getStaticObjectField(android.os.UserHandle.class, "CURRENT");
+            de.robv.android.xposed.XposedHelpers.callMethod(SystemSettings.context(), "startActivityAsUser",
+                    new Class<?>[]{android.content.Intent.class, android.os.Bundle.class, android.os.UserHandle.class},
+                    intent, options, current);
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+        }
+    }
 
     // Rounded pill on the panel color with a hairline; filled butter when active.
     private static GradientDrawable pill(float density, boolean active) {
@@ -434,6 +475,15 @@ final class NotificationPanel {
     }
 
     // Leading icon in the text's color.
+    // Sun from 6:00 to 17:59, moon otherwise (re-checked whenever 오전/오후 or the minute ticks).
+    private static void dayIcon(TextView period, float density) {
+        int hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY);
+        boolean day = hour >= 6 && hour < 18;
+        withIcon(period, day ? R.drawable.ic_ft_sun : R.drawable.ic_ft_moon,
+                ui.getColor(R.color.ft_butter), 13, density);
+        period.setCompoundDrawablePadding(Math.round(4 * density));
+    }
+
     private static void withIcon(TextView view, int iconRes, int color, int sizeDp, float density) {
         android.graphics.drawable.Drawable d = ui.getDrawable(iconRes);
         if (d == null) return;
@@ -1095,7 +1145,6 @@ final class NotificationPanel {
     // Turns off the notification's channel ("never show this kind again"), like long-press
     // > turn off in the shade. Goes through the service binder; system_server may call it.
     private static void block(List<Entry> targets) {
-        List<Runnable> restores = new ArrayList<>();
         java.util.Set<String> done = new java.util.HashSet<>();
         for (Entry e : targets) {
             if (e.channelId == null || !done.add(e.pkg + "|" + e.uid + "|" + e.channelId)) continue;
@@ -1104,15 +1153,36 @@ final class NotificationPanel {
                 NotificationChannel channel = (NotificationChannel) XposedHelpers.callMethod(binder,
                         "getNotificationChannelForPackage", e.pkg, e.uid, e.channelId, null, false);
                 if (channel == null) continue;
-                int previous = channel.getImportance();
                 channel.setImportance(NotificationManager.IMPORTANCE_NONE);
+                // Marked as the user's choice, like turning it off in Settings: the turned-off
+                // list only shows channels the user switched off (see blockedChannels).
+                lockImportance(channel);
                 XposedHelpers.callMethod(binder, "updateNotificationChannelForPackage", e.pkg, e.uid, channel);
-                restores.add(() -> unblock(e.pkg, e.uid, e.channelId, previous));
             } catch (Throwable ignored) {
                 ModuleLog.w(ignored);
             }
         }
-        if (!restores.isEmpty()) showUndo(restores);
+    }
+
+    // NotificationChannel.USER_LOCKED_IMPORTANCE (hidden): the user set this importance.
+    private static final int USER_LOCKED_IMPORTANCE = 0x00000004;
+
+    private static void lockImportance(NotificationChannel channel) {
+        try {
+            XposedHelpers.callMethod(channel, "lockFields", USER_LOCKED_IMPORTANCE);
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+        }
+    }
+
+    private static boolean userLockedImportance(NotificationChannel channel) {
+        try {
+            int locked = (int) XposedHelpers.callMethod(channel, "getUserLockedFields");
+            return (locked & USER_LOCKED_IMPORTANCE) != 0;
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+            return true; // unknown firmware: show it rather than hide a real one
+        }
     }
 
     private static Object binder() {
@@ -1145,23 +1215,6 @@ final class NotificationPanel {
         return NotificationManager.IMPORTANCE_DEFAULT;
     }
 
-    // One round butter undo icon under the list for a few seconds.
-    private static void showUndo(List<Runnable> restores) {
-        if (undoSlot == null) return;
-        float density = ui.getResources().getDisplayMetrics().density;
-        undoSlot.removeAllViews();
-        android.widget.ImageView undo = iconButton(R.drawable.ic_ft_undo, true, density);
-        int size = Math.round(36 * density);
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(size, size, Gravity.CENTER);
-        undoSlot.addView(undo, lp);
-        undo.setOnClickListener(v -> {
-            for (Runnable r : restores) r.run();
-            undoSlot.removeAllViews();
-        });
-        SystemSettings.handler().removeCallbacks(hideUndo);
-        SystemSettings.handler().postDelayed(hideUndo, UNDO_MS);
-    }
-
     // --- Turned-off channels ---
 
     private static final class Blocked {
@@ -1188,6 +1241,10 @@ final class NotificationPanel {
                     for (Object o : channels) {
                         NotificationChannel c = (NotificationChannel) o;
                         if (c.getImportance() != NotificationManager.IMPORTANCE_NONE) continue;
+                        // Only what the user turned off. Apps create some channels off on
+                        // purpose (KakaoTalk's muted chats) or lower their own (Gmail per
+                        // account): turning those on here would undo the app's own setting.
+                        if (!userLockedImportance(c)) continue;
                         Blocked b = new Blocked();
                         b.pkg = app.packageName;
                         b.uid = app.uid;

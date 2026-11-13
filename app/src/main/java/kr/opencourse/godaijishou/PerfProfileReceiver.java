@@ -30,6 +30,10 @@ public class PerfProfileReceiver extends BroadcastReceiver {
                     // Lets system_server pick up the new value (panel highlight).
                     context.getContentResolver().notifyChange(SettingsProvider.CONTENT_URI, null);
                 }
+                // Normal is stock: only an explicit switch to it (undoing eco / turbo) writes
+                // anything; boot and battery saver re-applies leave LG's clocks alone.
+                boolean explicit = PerfProfile.ACTION_SET.equals(action) && intent.hasExtra(PerfProfile.EXTRA_PROFILE);
+                if (profile == PerfProfile.NORMAL && !explicit) return;
                 if (boot) {
                     try {
                         Thread.sleep(BOOT_SETTLE_MS);
