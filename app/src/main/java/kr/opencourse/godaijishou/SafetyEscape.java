@@ -46,8 +46,7 @@ final class SafetyEscape {
         Handler h = SystemSettings.handler();
         if (h == null) return;
         h.post(() -> {
-            DisplaySwap.restoreNow();
-            TopMirror.escape();
+            MainScreen.escape();
         });
     }
 }

@@ -101,11 +101,17 @@ final class TopMirror {
 
     /** Volume up + down: the mirror goes now and stays off. Settings thread. */
     static void escape() {
-        if (SystemSettings.original()) {
+        // Picked is enough (the hooks it needs may not have reported yet this boot).
+        if (SystemSettings.screenMode == AppPreferences.SCREEN_MODE_ORIGINAL) {
             int epoch = SystemSettings.modeEpoch;
             storeEscaped(epoch < 0 ? ANY_EPOCH : epoch);
         }
         if (view != null) hide();
+    }
+
+    /** Main screen mode was left with volume up + down (for the Apply in force). */
+    static boolean isEscaped() {
+        return escaped();
     }
 
     // Escaped under the mode Apply now in force: picking the mode again ends it.

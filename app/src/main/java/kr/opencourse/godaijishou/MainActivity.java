@@ -377,8 +377,8 @@ public class MainActivity extends AppCompatActivity {
     // module rows stay under either.
     private static final int[] BOTTOM_SCREEN_ONLY = {
             R.id.group_launcher, R.id.launcher_list, R.id.group_screen, R.id.row_top_blackout,
-            R.id.row_volume_overlay, R.id.card_battery_strip, R.id.row_hide_swivel_warnings,
-            R.id.row_power_menu, R.id.row_fingerprint_off};
+            R.id.row_volume_overlay, R.id.card_battery_strip,
+            R.id.row_power_menu};
     // Tab order: stock first.
     private static final int[] TAB_MODES = {AppPreferences.SCREEN_MODE_ORIGINAL, AppPreferences.SCREEN_MODE_SECOND};
     private static final int[] TAB_LABELS = {R.string.mode_original, R.string.mode_second};

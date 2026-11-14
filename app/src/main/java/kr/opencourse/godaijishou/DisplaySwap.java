@@ -113,7 +113,8 @@ final class DisplaySwap {
             c.registerReceiver(new BroadcastReceiver() {
                 @Override
                 public void onReceive(Context context, Intent intent) {
-                    TIMEOUT.run();
+                    // Only the adb test switch ends with the screen; main screen mode stays.
+                    if (Settings.Global.getInt(c.getContentResolver(), KEY_TEST, 0) == 1) TIMEOUT.run();
                 }
             }, f, null, h);
         } catch (Throwable t) {
@@ -173,6 +174,9 @@ final class DisplaySwap {
         } catch (Throwable t) {
             ModuleLog.w(t);
         }
+        // SystemUI used to follow through SwivelFold (folded lock screen); dropped, the swivel
+        // lock got stuck. MainScreen unswaps before the lock screen instead.
+        // (SystemUI is not told: SwivelFold is not installed, see MainModule.)
         if (!swapped) {
             verifyAttempts = 0;
             Handler h = SystemSettings.handler();
@@ -180,6 +184,29 @@ final class DisplaySwap {
                 h.removeCallbacks(VERIFY);
                 h.postDelayed(VERIFY, VERIFY_DELAY_MS);
             }
+        }
+    }
+
+    private static void publish(boolean on) {
+        try {
+            Context c = SystemSettings.context();
+            if (c != null) Settings.Global.putInt(c.getContentResolver(), SwivelFold.KEY_SWAPPED, on ? 1 : 0);
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+        }
+    }
+
+    /**
+     * At boot, before SystemUI starts: never swapped yet, whatever the last boot left (a
+     * folded SystemUI over an unswapped phone would keep the second screen's lock shut).
+     */
+    static void clearAtBoot(Context c) {
+        try {
+            if (Settings.Global.getInt(c.getContentResolver(), SwivelFold.KEY_SWAPPED, 0) != 0) {
+                Settings.Global.putInt(c.getContentResolver(), SwivelFold.KEY_SWAPPED, 0);
+            }
+        } catch (Throwable t) {
+            ModuleLog.w(t);
         }
     }
 

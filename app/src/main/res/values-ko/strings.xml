@@ -45,6 +45,9 @@
     <string name="mode_apply_hint">%1$s 옵션을 보고 있어요. 적용하기 전까지는 %2$s 사용 중입니다.</string>
     <string name="mode_escaped_hint">볼륨 위+아래로 메인 화면 모드를 껐어요. 다시 켜려면 적용하세요.</string>
     <string name="mode_fallback_hint">LSPosed 범위에 시스템 UI와 LG 홈이 필요해요. 적용되기 전까지는 세컨드 스크린으로 동작합니다(재부팅 필요).</string>
+    <string name="main_confirm_title">이 화면을 메인 화면으로 쓸까요?</string>
+    <string name="main_confirm_keep">유지</string>
+    <string name="main_confirm_count">%d초 뒤 원래대로 돌아갑니다</string>
     <string name="mode_original_title">메인 화면</string>
     <string name="mode_original_desc">스위블을 열면 상단을 끄고 하단에 상단 화면이 그대로 나옵니다. 앱·알림·상태바·제스처 모두 접었을 때 폰 그대로입니다. LSPosed 범위에 LG 홈과 시스템 UI가 필요합니다.</string>
     <string name="group_common">공통</string>

@@ -110,11 +110,13 @@ final class RotationHook {
     // Apps on the second screen ask for their own orientation (LG's touchpad asks for
     // landscape, photo viewers follow the sensor). With forcing on, the second screen follows
     // the auto-rotate toggle like the main one, so one setting decides for every screen.
+    // Main screen mode (DisplaySwap): the second screen's panel is display 0, the same rule.
     private static boolean isSecondScreen(Object displayRotation) {
         try {
             Object displayContent = XposedHelpers.getObjectField(displayRotation, "mDisplayContent");
-            return (int) XposedHelpers.callMethod(displayContent, "getDisplayId")
-                    == MainModule.SECOND_SCREEN_DISPLAY_ID;
+            int id = (int) XposedHelpers.callMethod(displayContent, "getDisplayId");
+            if (DisplaySwap.isSwapped()) return id == android.view.Display.DEFAULT_DISPLAY;
+            return id == MainModule.SECOND_SCREEN_DISPLAY_ID;
         } catch (Throwable t) {
             ModuleLog.w(t);
             return false;

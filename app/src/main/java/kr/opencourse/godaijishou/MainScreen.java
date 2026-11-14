@@ -1,0 +1,302 @@
+package kr.opencourse.godaijishou;
+
+import android.content.Context;
+import android.content.res.Resources;
+import android.graphics.Color;
+import android.graphics.PixelFormat;
+import android.graphics.drawable.GradientDrawable;
+import android.hardware.display.DisplayManager;
+import android.os.Handler;
+import android.provider.Settings;
+import android.util.TypedValue;
+import android.view.Display;
+import android.view.Gravity;
+import android.view.WindowManager;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+/**
+ * Main screen mode: the second screen's panel is the phone's main display (DisplaySwap), so
+ * the lock screen, status bar, shade, home, brightness and every app run on it natively
+ * (system_server, settings thread only).
+ *
+ * Never a way to get stuck:
+ * - A newly applied mode is a trial: the swapped screen asks to keep it, and without a tap
+ *   within 20 seconds everything goes back (as when a display resolution is changed). Only a
+ *   kept mode is swapped again at the next boots.
+ * - Volume up + down (SafetyEscape) restores at once, also across reboots, until the mode is
+ *   applied again in the app.
+ * - A restore is checked (DisplaySwap): second screen touches back, or a reboot.
+ * - Picked without the hooks it needs (SystemSettings.mainReady), a trial does not start.
+ */
+final class MainScreen {
+
+    // Settings.Global: the mode epoch (AppPreferences.KEY_MODE_EPOCH) the user kept.
+    private static final String KEY_KEPT = "godaijishou_main_kept";
+    private static final int CONFIRM_SECONDS = 20;
+
+    private static boolean trial;
+    // The swap is this mode's own (not the adb test switch): only then does it undo it.
+    private static boolean ownSwap;
+    private static int trialEpoch;
+    private static int secondsLeft;
+    private static WindowManager confirmWm;
+    private static LinearLayout confirmView;
+    private static TextView countView;
+
+    private MainScreen() {
+    }
+
+    /** Re-evaluates on every settings or display change. */
+    static void apply() {
+        boolean picked = SystemSettings.screenMode == AppPreferences.SCREEN_MODE_ORIGINAL;
+        if (!picked || TopMirror.isEscaped()) {
+            endTrial();
+            if (ownSwap && DisplaySwap.isSwapped()) DisplaySwap.set(false);
+            ownSwap = false;
+            return;
+        }
+        int epoch = SystemSettings.modeEpoch;
+        if (epoch < 0) return; // the app's settings not read yet this boot
+        watchPresent();
+        // Locked or asleep: unswapped. LG's lock screen takes the unlock on the second screen
+        // only (its swivel lock), and swapped it never let go; so the swap is for the unlocked
+        // phone, undone when the screen goes off and done again on USER_PRESENT.
+        if (!present()) {
+            if (trial) {
+                escape(); // locked during the trial: not kept
+            } else if (ownSwap && DisplaySwap.isSwapped()) {
+                DisplaySwap.set(false);
+                ownSwap = false;
+            }
+            return;
+        }
+        if (kept() == epoch) {
+            if (!DisplaySwap.isSwapped()) DisplaySwap.set(true);
+            ownSwap = DisplaySwap.isSwapped();
+            return;
+        }
+        if (trial || !SystemSettings.mainReady) return;
+        startTrial(epoch);
+    }
+
+    private static boolean presentWatched;
+
+    private static void watchPresent() {
+        if (presentWatched) return;
+        Context c = SystemSettings.context();
+        Handler h = SystemSettings.handler();
+        if (c == null || h == null) return;
+        try {
+            c.registerReceiver(new android.content.BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, android.content.Intent intent) {
+                    apply();
+                }
+            }, filter(android.content.Intent.ACTION_USER_PRESENT, android.content.Intent.ACTION_SCREEN_OFF),
+                    null, h);
+            presentWatched = true;
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+        }
+    }
+
+    private static android.content.IntentFilter filter(String... actions) {
+        android.content.IntentFilter f = new android.content.IntentFilter();
+        for (String a : actions) f.addAction(a);
+        return f;
+    }
+
+    private static boolean present() {
+        try {
+            Context c = SystemSettings.context();
+            android.app.KeyguardManager km = c.getSystemService(android.app.KeyguardManager.class);
+            android.os.PowerManager pm = c.getSystemService(android.os.PowerManager.class);
+            return km != null && !km.isKeyguardLocked() && pm != null && pm.isInteractive();
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+            return false;
+        }
+    }
+
+    /** Volume up + down. */
+    static void escape() {
+        endTrial();
+        ownSwap = false;
+        TopMirror.escape();
+        DisplaySwap.restoreNow();
+    }
+
+    // --- Trial ---
+
+    private static void startTrial(int epoch) {
+        Handler h = SystemSettings.handler();
+        if (h == null) return;
+        DisplaySwap.set(true);
+        ownSwap = DisplaySwap.isSwapped();
+        if (!DisplaySwap.isSwapped()) { // could not swap: stay as it is, don't try again
+            TopMirror.escape();
+            return;
+        }
+        trial = true;
+        trialEpoch = epoch;
+        secondsLeft = CONFIRM_SECONDS;
+        // Ask once the swapped display has settled.
+        h.postDelayed(MainScreen::showConfirm, 1_000);
+        h.postDelayed(TICK, 1_000);
+    }
+
+    private static final Runnable TICK = new Runnable() {
+        @Override
+        public void run() {
+            if (!trial) return;
+            if (--secondsLeft <= 0) {
+                // Nobody kept it (the screen or its touches may not work): back as it was.
+                escape();
+                return;
+            }
+            updateCount();
+            Handler h = SystemSettings.handler();
+            if (h != null) h.postDelayed(this, 1_000);
+        }
+    };
+
+    private static void keep() {
+        if (!trial) return;
+        try {
+            Settings.Global.putInt(SystemSettings.context().getContentResolver(), KEY_KEPT, trialEpoch);
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+            return; // not stored: let the trial run out rather than swap at every boot unasked
+        }
+        endTrial();
+    }
+
+    private static void endTrial() {
+        trial = false;
+        Handler h = SystemSettings.handler();
+        if (h != null) h.removeCallbacks(TICK);
+        removeConfirm();
+    }
+
+    private static int kept() {
+        try {
+            return Settings.Global.getInt(SystemSettings.context().getContentResolver(), KEY_KEPT, -1);
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+            return -1;
+        }
+    }
+
+    // --- The "keep this screen?" card, on the swapped main display ---
+
+    private static void showConfirm() {
+        if (!trial || confirmView != null) return;
+        try {
+            Context system = SystemSettings.context();
+            Display main = system.getSystemService(DisplayManager.class).getDisplay(Display.DEFAULT_DISPLAY);
+            if (main == null) return;
+            Context ui = system.createDisplayContext(main);
+            Resources app = system.createPackageContext(BuildConfig.APPLICATION_ID, 0).getResources();
+            float dp = ui.getResources().getDisplayMetrics().density;
+
+            LinearLayout card = new LinearLayout(ui);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setGravity(Gravity.CENTER_HORIZONTAL);
+            int pad = Math.round(24 * dp);
+            card.setPadding(pad, pad, pad, pad);
+            // Fixed width: the countdown changing its text never resizes (and redraws) the window.
+            card.setMinimumWidth(Math.round(300 * dp));
+            GradientDrawable bg = new GradientDrawable();
+            bg.setColor(0xF0202024);
+            bg.setCornerRadius(24 * dp);
+            card.setBackground(bg);
+
+            TextView title = new TextView(ui);
+            title.setText(text(app, "main_confirm_title", "Keep this as the main screen?"));
+            title.setTextColor(Color.WHITE);
+            title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+            title.setGravity(Gravity.CENTER);
+            card.addView(title);
+
+            countView = new TextView(ui);
+            countView.setTextColor(0xFFBBBBBB);
+            countView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+            countView.setGravity(Gravity.CENTER);
+            LinearLayout.LayoutParams cl = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            cl.topMargin = Math.round(8 * dp);
+            card.addView(countView, cl);
+
+            TextView keep = new TextView(ui);
+            keep.setText(text(app, "main_confirm_keep", "Keep"));
+            keep.setTextColor(0xFF1A1A1A);
+            keep.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+            keep.setGravity(Gravity.CENTER);
+            int kp = Math.round(14 * dp);
+            keep.setPadding(kp * 3, kp, kp * 3, kp);
+            GradientDrawable kb = new GradientDrawable();
+            kb.setColor(0xFFFFC83D);
+            kb.setCornerRadius(16 * dp);
+            keep.setBackground(kb);
+            keep.setOnClickListener(v -> keep());
+            LinearLayout.LayoutParams kl = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            kl.topMargin = Math.round(20 * dp);
+            card.addView(keep, kl);
+
+            WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
+                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    WindowManager.LayoutParams.WRAP_CONTENT,
+                    // System error layer: above the lock screen and apps, and touchable (a secure
+                    // system overlay is forced untouchable: taps went through to the app below).
+                    2010 /* TYPE_SYSTEM_ERROR */,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                            | WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                    PixelFormat.TRANSLUCENT);
+            lp.gravity = Gravity.CENTER;
+            lp.setTitle("GoDaijishou:MainConfirm");
+
+            countText = text(app, "main_confirm_count", "Back to the second screen in %d s");
+            confirmWm = ui.getSystemService(WindowManager.class);
+            confirmView = card;
+            updateCount();
+            confirmWm.addView(card, lp);
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+            confirmView = null; // the trial still runs out and restores
+        }
+    }
+
+    private static String countText = "Back to the second screen in %d s";
+
+    private static void updateCount() {
+        TextView v = countView;
+        if (v == null) return;
+        try {
+            v.setText(String.format(countText, secondsLeft));
+        } catch (RuntimeException e) {
+            v.setText(String.valueOf(secondsLeft));
+        }
+    }
+
+    private static void removeConfirm() {
+        LinearLayout v = confirmView;
+        confirmView = null;
+        countView = null;
+        if (v == null || confirmWm == null) return;
+        try {
+            confirmWm.removeView(v);
+        } catch (RuntimeException ignored) {
+        }
+    }
+
+    private static String text(Resources r, String name, String fallback) {
+        try {
+            int id = r.getIdentifier(name, "string", BuildConfig.APPLICATION_ID);
+            return id == 0 ? fallback : r.getString(id);
+        } catch (RuntimeException e) {
+            return fallback;
+        }
+    }
+}

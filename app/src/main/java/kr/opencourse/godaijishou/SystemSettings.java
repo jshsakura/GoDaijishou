@@ -56,7 +56,8 @@ final class SystemSettings {
      * normally goes. Main screen mode on the lock screen counts as the second screen.
      */
     static boolean sendToBottom() {
-        return topUnavailable() && !TopMirror.isShowing();
+        // Swapped: the main display is the panel in front of the user; everything stays there.
+        return topUnavailable() && !TopMirror.isShowing() && !DisplaySwap.isSwapped();
     }
 
     static volatile boolean forceRotation = false;
@@ -106,6 +107,7 @@ final class SystemSettings {
         try {
             systemContext = context;
             resolver = context.getContentResolver();
+            DisplaySwap.clearAtBoot(context); // here, not posted: SystemUI may read it next
             HandlerThread thread = new HandlerThread("GoDaijishou-settings", Process.THREAD_PRIORITY_BACKGROUND);
             thread.start();
             handler = new Handler(thread.getLooper());
@@ -185,7 +187,8 @@ final class SystemSettings {
             // Top panel power follows settings, the swivel state and display 0 state changes.
             addListener(() -> TopPanel.apply(dm));
             // Original mode follows settings and the swivel (and comes back after a reboot).
-            addListener(() -> safely(TopMirror::apply));
+            // Main screen mode: the second screen's panel as the main display (no mirror).
+            addListener(() -> safely(MainScreen::apply));
             dm.registerDisplayListener(new DisplayManager.DisplayListener() {
                 @Override
                 public void onDisplayAdded(int displayId) {
