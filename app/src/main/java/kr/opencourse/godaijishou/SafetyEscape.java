@@ -11,7 +11,7 @@ import de.robv.android.xposed.XposedHelpers;
  * Screen mode keys, needing no picture and no touch (system_server):
  *
  * - Volume up + down pressed together: main screen <-> second screen (MainScreen.toggle).
- * - Volume down held 5 seconds: the emergency exit. Always the plain second screen with its
+ * - Volume down held 10 seconds: the emergency exit. Always the plain second screen with its
  *   own touches, never the main screen, and kept so (also across reboots) until main screen
  *   mode is switched on again (MainScreen.escape).
  *
@@ -19,7 +19,7 @@ import de.robv.android.xposed.XposedHelpers;
  */
 final class SafetyEscape {
 
-    private static final long EMERGENCY_HOLD_MS = 5_000;
+    private static final long EMERGENCY_HOLD_MS = 10_000;
 
     private static volatile boolean upDown, downDown;
 
@@ -47,7 +47,7 @@ final class SafetyEscape {
                 });
     }
 
-    // Volume down alone, held: the emergency exit fires after 5 s unless let go (or volume up
+    // Volume down alone, held: the emergency exit fires after 10 s unless let go (or volume up
     // joins in, which is the switch instead).
     private static void watchHold(int code, boolean down, int repeat) {
         Handler h = SystemSettings.handler();
