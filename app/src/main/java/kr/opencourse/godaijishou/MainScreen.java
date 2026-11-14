@@ -59,6 +59,7 @@ final class MainScreen {
         int epoch = SystemSettings.modeEpoch;
         if (epoch < 0) return; // the app's settings not read yet this boot
         watchPresent();
+        watchBrightness();
         // Locked or asleep: unswapped. LG's lock screen takes the unlock on the second screen
         // only (its swivel lock), and swapped it never let go; so the swap is for the unlocked
         // phone, undone when the screen goes off and done again on USER_PRESENT.
@@ -72,12 +73,124 @@ final class MainScreen {
             return;
         }
         if (kept() == epoch) {
-            if (!DisplaySwap.isSwapped()) DisplaySwap.set(true);
+            if (!DisplaySwap.isSwapped()) {
+                DisplaySwap.set(true);
+                bringAppsLater();
+            }
+            syncBrightness();
             ownSwap = DisplaySwap.isSwapped();
             return;
         }
         if (trial || !SystemSettings.mainReady) return;
         startTrial(epoch);
+    }
+
+    // --- Brightness: swapped, the main display's brightness never reached the second
+    // screen's panel (LG drives that panel's backlight on its own, and only as display 4).
+    // While swapped the main display's brightness is put on the panel directly. ---
+
+    private static final long BRIGHTNESS_SETTLE_MS = 150; // the display's own update first
+    private static boolean brightnessWatched;
+
+    private static void watchBrightness() {
+        if (brightnessWatched) return;
+        Context c = SystemSettings.context();
+        Handler h = SystemSettings.handler();
+        if (c == null || h == null) return;
+        // The display's own brightness events: also the slider while it is dragged (a
+        // temporary brightness, written to the setting only when let go).
+        DisplayManager.DisplayListener listener = new DisplayManager.DisplayListener() {
+            @Override public void onDisplayAdded(int id) { }
+            @Override public void onDisplayRemoved(int id) { }
+            @Override public void onDisplayChanged(int id) {
+                if (id == Display.DEFAULT_DISPLAY) syncBrightness();
+            }
+        };
+        try {
+            de.robv.android.xposed.XposedHelpers.callMethod(c.getSystemService(DisplayManager.class),
+                    "registerDisplayListener", new Class<?>[] {DisplayManager.DisplayListener.class,
+                            Handler.class, long.class},
+                    listener, h, EVENT_FLAG_DISPLAY_BRIGHTNESS);
+            brightnessWatched = true;
+            return;
+        } catch (Throwable t) {
+            ModuleLog.w(t); // no brightness events here: the setting, when the slider is let go
+        }
+        try {
+            c.getContentResolver().registerContentObserver(
+                    Settings.System.getUriFor(Settings.System.SCREEN_BRIGHTNESS), false,
+                    new android.database.ContentObserver(h) {
+                        @Override
+                        public void onChange(boolean selfChange) {
+                            h.removeCallbacks(APPLY_BRIGHTNESS);
+                            h.postDelayed(APPLY_BRIGHTNESS, BRIGHTNESS_SETTLE_MS);
+                        }
+                    });
+            brightnessWatched = true;
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+        }
+    }
+
+    private static final long EVENT_FLAG_DISPLAY_BRIGHTNESS = 1L << 3; // DisplayManager, hidden
+
+    private static final Runnable APPLY_BRIGHTNESS = MainScreen::syncBrightness;
+
+    private static void syncBrightness() {
+        if (!DisplaySwap.isSwapped()) return;
+        try {
+            Context c = SystemSettings.context();
+            DisplayManager dm = c.getSystemService(DisplayManager.class);
+            float b = (float) de.robv.android.xposed.XposedHelpers.callMethod(dm, "getBrightness",
+                    Display.DEFAULT_DISPLAY);
+            if (Float.isNaN(b) || b < 0f) return;
+            // Brightness to backlight, as this panel's config maps it (nearly linear).
+            float backlight = Math.min(1f, BACKLIGHT_MIN + (1f - BACKLIGHT_MIN) * b);
+            long id = SystemActions.physicalId(c, Display.DEFAULT_DISPLAY);
+            if (id < 0) return;
+            Class<?> sc = Class.forName("android.view.SurfaceControl");
+            Object token = de.robv.android.xposed.XposedHelpers.callStaticMethod(sc, "getPhysicalDisplayToken", id);
+            if (token == null) return;
+            de.robv.android.xposed.XposedHelpers.callStaticMethod(sc, "setDisplayBrightness", token, backlight);
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+        }
+    }
+
+    private static final float BACKLIGHT_MIN = 0.035433073f; // the panel's lowest backlight
+
+    private static void bringAppsLater() {
+        Handler h = SystemSettings.handler();
+        if (h != null) h.postDelayed(MainScreen::bringAppsToMain, 500); // once the layout settled
+    }
+
+    /**
+     * Swapped, display 4 is the top panel and off: apps left there from the second screen
+     * (opened again they came back there, unseen) move to the main display. Homes stay.
+     */
+    private static void bringAppsToMain() {
+        try {
+            Object atm = de.robv.android.xposed.XposedHelpers.callStaticMethod(
+                    Class.forName("android.app.ActivityTaskManager"), "getService");
+            java.util.List<?> tasks = (java.util.List<?>) de.robv.android.xposed.XposedHelpers.callMethod(
+                    atm, "getAllRootTaskInfosOnDisplay", MainModule.SECOND_SCREEN_DISPLAY_ID);
+            if (tasks == null) return;
+            for (Object info : tasks) {
+                try {
+                    Object config = de.robv.android.xposed.XposedHelpers.getObjectField(info, "configuration");
+                    Object wc = de.robv.android.xposed.XposedHelpers.getObjectField(config, "windowConfiguration");
+                    int type = (int) de.robv.android.xposed.XposedHelpers.callMethod(wc, "getActivityType");
+                    if (type != 1 /* standard: not home, recents, assistant */) continue;
+                    int id = de.robv.android.xposed.XposedHelpers.getIntField(info, "taskId");
+                    de.robv.android.xposed.XposedHelpers.callMethod(atm, "moveRootTaskToDisplay", id,
+                            Display.DEFAULT_DISPLAY);
+                } catch (Throwable t) {
+                    ModuleLog.w(t);
+                }
+            }
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+        }
     }
 
     private static boolean presentWatched;
@@ -133,7 +246,9 @@ final class MainScreen {
         Handler h = SystemSettings.handler();
         if (h == null) return;
         DisplaySwap.set(true);
+        bringAppsLater();
         ownSwap = DisplaySwap.isSwapped();
+        syncBrightness();
         if (!DisplaySwap.isSwapped()) { // could not swap: stay as it is, don't try again
             TopMirror.escape();
             return;
@@ -168,6 +283,15 @@ final class MainScreen {
         } catch (Throwable t) {
             ModuleLog.w(t);
             return; // not stored: let the trial run out rather than swap at every boot unasked
+        }
+        // LG's home goes 4x4 once, the next time it shows (TopHomeHook); never again after.
+        try {
+            android.content.ContentResolver r = SystemSettings.context().getContentResolver();
+            if (Settings.Global.getInt(r, TopHomeHook.KEY_GRID_ONCE, 0) == 0) {
+                Settings.Global.putInt(r, TopHomeHook.KEY_GRID_ONCE, 1);
+            }
+        } catch (Throwable t) {
+            ModuleLog.w(t);
         }
         endTrial();
     }

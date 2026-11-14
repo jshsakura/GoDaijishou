@@ -39,7 +39,8 @@ final class LaunchRedirectHook {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) {
                         // Cheapest checks first: feature off or swivel closed -> untouched.
-                        boolean toTop = TopMirror.isShowing();
+                        // Main screen mode: display 4 is the top panel, off; nothing may open there.
+                        boolean toTop = TopMirror.isShowing() || DisplaySwap.isSwapped();
                         if (!toTop && !SystemSettings.sendToBottom()) return;
                         try {
                             if (toTop) redirectToTop(param);

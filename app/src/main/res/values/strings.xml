@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">GoDaijishou</string>
+    <string name="app_name">Wing Custom</string>
 
     <!-- Selector Activity -->
     <string name="launcher_daijishou">Daijishou</string>
@@ -33,7 +33,7 @@
     <string name="main_force_rotation_desc">Auto-rotate off locks landscape, on locks portrait.</string>
 
     <!-- Settings screen (freetv style) -->
-    <string name="app_title">GoDaijishou</string>
+    <string name="app_title">Wing Custom</string>
     <string name="status_active">Module running</string>
     <string name="status_inactive">Turn on in LSPosed, then reboot</string>
     <string name="mode_second">Second screen</string>
@@ -48,7 +48,7 @@
     <string name="main_confirm_keep">Keep</string>
     <string name="main_confirm_count">Back as it was in %d s</string>
     <string name="mode_original_title">Main screen</string>
-    <string name="mode_original_desc">With the swivel open the top panel turns off and the bottom screen shows the top screen as it is: apps, notifications, status bar and gestures work as on the folded phone. Needs LG Home and System UI in the LSPosed scope.</string>
+    <string name="mode_original_desc">The bottom screen becomes the real main screen. Once unlocked, the status bar, shade, home, brightness and every app run on it as on any phone. The first time, tap [Keep] within 20 seconds; volume up + down (a short press) goes back at any time. Needs System UI and LG Home in the LSPosed scope.</string>
     <string name="group_common">Both modes</string>
     <string name="group_screen">Screen</string>
     <string name="group_module">Module</string>
@@ -68,7 +68,7 @@
     <string name="usb_mode_charge">Charging only</string>
     <string name="notice_reboot_updated">The app was updated. Reboot to run the new version.</string>
     <string name="notice_reboot_title">Reboot required</string>
-    <string name="notice_reboot_desc">A feature you turned on is not loaded in this boot yet. In LSPosed, pick \"Select recommended\" in GoDaijishou\'s scope, then reboot.</string>
+    <string name="notice_reboot_desc">A feature you turned on is not loaded in this boot yet. In LSPosed, pick \"Select recommended\" in Wing Custom\'s scope, then reboot.</string>
     <string name="reboot_confirm_title">Reboot now?</string>
     <string name="reboot_confirm_msg">The device will restart now.</string>
     <string name="cancel">Cancel</string>
@@ -93,7 +93,7 @@
     <string name="notifications_empty">No notifications</string>
     <string name="main_perf_profile">Performance profile</string>
     <string name="main_perf_profile_desc">Eco: lower clocks, least heat. Normal: stock. Turbo: higher minimum clocks. Needs root.</string>
-    <string name="main_perf_profile_no_root">No root: allow GoDaijishou in Magisk</string>
+    <string name="main_perf_profile_no_root">No root: allow Wing Custom in Magisk</string>
     <string name="perf_eco">Eco</string>
     <string name="perf_normal">Normal</string>
     <string name="perf_turbo">Turbo</string>
@@ -106,8 +106,14 @@
     <string name="main_fingerprint_off_switch">Turn off the fingerprint sensor</string>
     <string name="main_fingerprint_off_desc">Passkeys and logins use your PIN. Applies after a reboot.</string>
     <string name="scope_dialog_title">LSPosed setup needed</string>
-    <string name="scope_dialog_message">This feature works once these are checked in the GoDaijishou module\'s scope in LSPosed, followed by a reboot.\n\n%1$s</string>
+    <string name="scope_dialog_message">This feature works once these are checked in the Wing Custom module\'s scope in LSPosed, followed by a reboot.\n\n%1$s</string>
     <string name="scope_dialog_open">Open LSPosed</string>
+    <string name="main_scope_dialog_message">Main screen mode can be turned on only once all of these are checked and the phone rebooted. In LSPosed pick \"Select recommended\", then reboot.
+
+%1$s</string>
+    <string name="scope_name_system">System Framework (android)</string>
+    <string name="scope_name_systemui">System UI</string>
+    <string name="scope_name_lghome">LG Home (com.lge.launcher3)</string>
     <string name="scope_system">• System Framework</string>
     <string name="scope_systemui">• System UI (com.android.systemui)</string>
     <string name="scope_systemui_keyboard">• System UI (com.android.systemui)\n• LG keyboard (com.lge.ime)</string>

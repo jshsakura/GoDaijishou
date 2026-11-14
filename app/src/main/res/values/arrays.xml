@@ -12,6 +12,8 @@
         <item>com.lge.launcher3</item>
         <!-- LG pop-up camera: swivel-mode camera notices (optional) -->
         <item>com.lge.popupcamera</item>
+        <!-- LG camera: the normal (not swivel) camera while the second screen is the main one (optional) -->
+        <item>com.lge.camera</item>
         <!-- RetroArch second screen black screen recovery (optional) -->
         <item>com.retroarch</item>
         <item>com.retroarch.aarch64</item>

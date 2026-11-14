@@ -1,102 +1,106 @@
 <div align="center">
-  <img src="https://github.com/jshsakura/GoDaijishou/blob/master/app/sampledata/gocat.png?raw=true" width="180" style="border-radius: 20px;"/>
+  <img src="app/sampledata/icon.svg" width="160"/>
 
-  # 🧙‍♂️ Go Daijishou
+  # Wing Custom
 
-  **루팅된 LG Wing의 세컨드 스크린 홈을 원하는 런처로 바꿔주는 Xposed 모듈**
+  **루팅된 LG Wing을 하단 화면 하나로도 온전한 폰처럼 쓰게 해 주는 Xposed 모듈**
 
   [![Latest Release](https://img.shields.io/github/v/release/jshsakura/GoDaijishou?label=%EC%B5%9C%EC%8B%A0%20%EB%A6%B4%EB%A6%AC%EC%8A%A4&color=success)](https://github.com/jshsakura/GoDaijishou/releases/latest)
   [![Downloads](https://img.shields.io/github/downloads/jshsakura/GoDaijishou/total?label=%EB%8B%A4%EC%9A%B4%EB%A1%9C%EB%93%9C)](https://github.com/jshsakura/GoDaijishou/releases)
 
   **[📦 최신 APK 다운로드](https://github.com/jshsakura/GoDaijishou/releases/latest)**
 
-  <img src="https://github.com/jshsakura/GoDaijishou/blob/master/app/sampledata/preview1.JPEG?raw=true"/>
-  <img src="https://github.com/jshsakura/GoDaijishou/blob/master/app/sampledata/preview2.JPEG?raw=true"/>
-  <img src="https://github.com/jshsakura/GoDaijishou/blob/master/app/sampledata/preview3.JPEG?raw=true"/>
+  <img src="app/sampledata/main_home.png" width="260"/>
+  <img src="app/sampledata/main_qs.png" width="260"/>
+  <img src="app/sampledata/app_main.png" width="260"/>
 </div>
+
+> 예전 이름은 **Go Daijishou**입니다. 패키지명(`kr.opencourse.godaijishou`)은 그대로라서, 기존 앱 위에 덮어 설치하면 설정과 LSPosed 범위가 그대로 유지됩니다.
 
 ---
 
-## 개요
+## 두 가지 모드
 
-LG Wing의 두 번째 런처인 `com.lge.secondlauncher`의 홈 화면 동작을 가로채, 세컨드 스크린을 **원하는 런처로 대체**합니다. 초기 버전은 다이지쇼(Daijishou)만 지원했지만, 이제는 설정 앱에서 여러 런처 중 골라 쓸 수 있습니다.
+앱 첫 화면의 탭에서 고르고 **적용**을 누릅니다.
 
-## 지원 런처
+### 📱 메인 화면 모드 (새 기능)
 
-| 런처 | 패키지 |
+하단 화면을 **진짜 메인 디스플레이(display 0)** 로 연결합니다. 화면을 복사(미러)하는 방식이 아니라, 안드로이드 디스플레이 매니저가 하단 패널을 메인 화면으로 쓰도록 바꿉니다. 그래서 상단 패널이 고장 났거나 떼어 낸 Wing도 하단만으로 보통 폰처럼 쓸 수 있습니다.
+
+- 하단 패널 고유의 해상도·vsync·터치로 상태바, 알림창, 빠른 설정, 홈, 앱이 그대로 돌아갑니다.
+- **LG 홈은 항상 일반 홈**으로 뜹니다(스위블 홈 대신).
+- **LG 카메라**가 스위블 레이아웃 대신 일반 폰 카메라로 실행됩니다(스위블 레이아웃은 이 화면 크기에서 크래시).
+- **빠른 설정**은 짧은 화면에 맞게 1줄로 정리되고, 나머지 타일은 옆으로 넘깁니다.
+- **밝기 슬라이더**가 하단 패널 밝기를 바로 조절합니다(드래그하는 동안에도).
+- **회전 강제**(자동회전 끔 = 가로, 켬 = 세로)가 메인 화면에도 적용됩니다.
+- 처음 [유지]하면 LG 홈 그리드를 **4×4로 한 번** 맞춥니다(그 뒤에 바꾼 그리드는 그대로 둡니다).
+
+#### 절대 갇히지 않게
+
+화면이 꺼지거나 터치가 안 되는 상태에 빠지지 않도록, 여러 겹의 안전장치가 있습니다.
+
+| 상황 | 동작 |
 | --- | --- |
-| Daijishou (다이지쇼) | `com.magneticchen.daijishou` |
-| ES-DE | `org.es_de.frontend` |
-| Pegasus (페가수스) | `org.pegasus_frontend.android` |
-| LG 기본 런처 | *(리다이렉트하지 않음)* |
+| 처음 적용할 때 | 바뀐 화면에 **"이 화면을 메인 화면으로 쓸까요? [유지]"** 카드가 뜹니다. **20초 안에 유지를 누르지 않으면 자동으로 원래대로** 돌아갑니다. 유지한 경우에만 이후 부팅에서도 자동으로 켜집니다. |
+| 언제든 | **볼륨 위 + 아래를 동시에 짧게** 누르면 즉시 원래(세컨드 스크린)로 돌아갑니다. 재부팅해도 꺼진 채로 유지되고, 앱에서 다시 적용해야 켜집니다. *(3초 이상 길게 누르면 안드로이드 접근성 단축키가 동작할 수 있으니 짧게)* |
+| 잠금 화면 | 화면이 꺼지면 원래 배치로 돌아가 **LG 하단 잠금 화면에서 평소처럼** 해제하고, 해제되면 다시 메인 화면이 됩니다. |
+| 복구 확인 | 원래대로 돌아갈 때 하단 터치가 살아났는지 확인하고, 아니면 한 번 바로잡은 뒤 그래도 안 되면 재부팅합니다(재부팅하면 항상 원래 배치). |
+| 필요한 훅이 없을 때 | 시스템 프레임워크·시스템 UI·LG 홈이 이번 부팅에 로드되지 않았으면 **켤 수 없고**, 앱이 무엇이 빠졌는지 ✓/✗로 보여 줍니다. 켜 둔 뒤에 빠지면 세컨드 스크린 모드로 동작합니다. |
 
-선택한 런처가 설치돼 있지 않으면 리다이렉트하지 않고 안내 메시지를 표시합니다.
+### 🖥️ 세컨드 스크린 모드 (기존 기능)
 
-## 주요 특징
+스위블을 연 상태의 하단 화면을 자기만의 화면으로 씁니다.
 
-- 🎯 **런처 선택 UI** — 설정 앱에서 세컨드 스크린 홈으로 쓸 런처를 골라 저장. 변경 사항은 `ContentObserver`로 **즉시 반영**됩니다.
-- 🪶 **초경량 후킹** — `onResume` 한 지점만 후킹하고, 대부분의 콜백은 디스플레이 체크 후 즉시 반환. 설정값은 캐시되어 **생명주기마다 크로스-프로세스 쿼리가 없음** → 상시 부하 ≈ 0.
-- 🔥 **발열 방지** — 런처끼리 튕겨내는 오실레이션 루프를 감지하면 쿨다운을 자동으로 늘리는 백오프로 CPU 폭주·발열을 차단합니다.
-- 🖥️ **검정화면 수정** *(v1.3)* — 게임(RetroArch 등) 실행 중 세컨드 스크린으로 복귀할 때 생기던 검정화면(소리만 나던) 문제를 해결. 세컨드 홈을 폴백용으로 유지하고, 복귀 시 레트로아크의 렌더링 서피스를 강제 재생성합니다. LSPosed 스코프에 RetroArch를 체크해야 동작합니다.
-- 🌙 **하단 화면 전용 모드** *(v1.5)* — 스위블이 열려 있는 동안 상단 패널 전원을 끄고, 상단에 뜨던 대화상자·알림은 하단 화면으로 보냅니다. 렌더링·발열이 줄어듭니다. *(예전 "상단 화면 끄기" 옵션은 이 모드로 합쳐졌습니다.)*
-- 🪞 **상단 화면 보기** — 알림창의 화면 버튼으로 상단 화면 전체를 하단에 비율 그대로 띄웁니다. 터치하면 상단 앱이 그대로 반응하고, 옆의 뒤로가기·닫기 버튼으로 다룹니다. 보는 동안에는 대화상자·알림이 원래대로 상단에 뜹니다. 상단이 회전하면 다시 맞춰지고, 스위블을 닫으면 자동으로 닫힙니다.
-- 🔊 **볼륨 바** *(v1.5)* — 지금 쓰는 화면 오른쪽 가장자리에 얇은 세로 볼륨 바. 시스템이 직접 그려서 추가 권한이 없고 입력을 가로채지 않습니다.
-- ⏻ **하단 전원 메뉴** *(v1.5)* — 스위블이 열려 있을 때 전원키를 길게 누르면 하단 화면에 전원 끄기·다시 시작·스크린샷·리커버리 메뉴가 뜹니다.
-- 🔄 **회전 강제** *(v1.5, 구 [GoRotation90](https://github.com/jshsakura/GoRotation90) 통합)* — 자동회전 토글을 회전 스위치로 사용합니다. 자동회전 OFF → 가로(90°) 고정, ON → 세로 고정. 설정 앱에서 켜고, LSPosed 스코프에 **시스템 프레임워크(android)** 를 체크해야 동작합니다. 꺼져 있으면 훅은 즉시 반환합니다.
-- 🔐 **루트·민감 권한 없음** *(v1.5)* — 앱은 루트 명령도, "다른 앱 위에 표시" 같은 권한도 쓰지 않습니다. 전원·스크린샷·화면 제어는 시스템 프레임워크 훅이 처리하고, 그 요청은 같은 서명의 앱만 보낼 수 있습니다. 모든 스위치는 첫 설정 후 재부팅 없이 바로 적용됩니다.
+- 🎯 **세컨드 홈 런처 교체** — Daijishou / ES-DE / Pegasus / LG 기본 중 선택, 즉시 반영
+- 🌙 **상단 화면 끄기** — 스위블을 연 동안 상단 패널 전원을 끄고, 상단으로 가던 대화상자·알림은 하단으로
+- 🔋 **배터리 바** — 와이파이·모바일 데이터·배터리·알림 개수, 모양·위치·전체화면 숨김 선택
+- 🔊 **볼륨 바**, ⏻ **하단 전원 메뉴**
+- 🖥️ **RetroArch 검정화면 수정** — 게임 복귀 시 렌더링 서피스 재생성
+- 📲 **새 앱 하단 화면 자동 허용**
 
-- 🔋 **배터리 바** *(v1.6.1)* — 하단 화면 위쪽에 와이파이·LTE/5G·배터리·알림 개수를 띄웁니다. 모양(플로팅 / 한 줄)과 위치(좌·중앙·우), 전체화면에서 숨기기를 고를 수 있고 바로 바뀝니다. 바를 당기거나 누르면 알림창이 열립니다. 디자인이 바뀐 업데이트도 재부팅 없이 바로 반영됩니다.
-- 🔔 **알림창** *(v1.6.1)* — 시계·지우기·성능 프로필·차단 목록·설정 버튼을 한 줄에 두고, 닫기는 오른쪽 구석의 동그란 X로 따로 뺐습니다. 차단 목록에는 사용자가 직접 끈 알림만 나옵니다.
-- ⚡ **성능 프로필** — 에코 / 일반 / 터보. 일반은 완전한 순정으로, 부팅·절전 전환 때도 클럭을 건드리지 않습니다.
-- 📲 **새 앱 하단 화면 자동 허용** *(v1.6.1)* — 새로 설치한 앱을 LG 하단 화면 실행 허용 목록에 자동으로 넣어, 처음 실행할 때 묻는 창이 뜨지 않습니다. 사용자가 이미 고른 앱은 건드리지 않습니다.
-- 🔁 **재부팅 안내** *(v1.6.1)* — 시스템 쪽 코드가 바뀐 업데이트일 때만 재부팅을 안내합니다.
+### 두 모드 공통
 
-> ⚠️ **알려진 한계**: RetroArch가 실행 중인 상태에서 프론트엔드로 다른 게임을 고르면 이전 게임이 다시 뜨거나 화면이 깨질 수 있습니다. RetroArch 1.16.0 이후 프론트엔드의 kill-before-launch가 깨진 [알려진 문제](https://github.com/TapiocaFox/Daijishou/issues/703)로, 모듈이 아닌 프론트엔드/RetroArch에서 해결돼야 하는 부분입니다. 게임을 바꿀 때는 RetroArch를 종료(또는 강제 종료)한 뒤 선택하세요.
+- 🔄 **회전 강제** — 자동회전 토글을 회전 스위치로(끔 = 가로, 켬 = 세로)
+- ☝️ **지문 센서 없음 처리** — 상단 화면 아래 지문 센서를 쓸 수 없을 때
+- 📷 **스위블 경고 숨기기** — 카메라를 켤 때 뜨는 LG 스위블 경고
+- 🪶 **슬림 제스처 바**, ⌨️ **키보드 아래 여백 줄이기**
+- ⚡ **성능 프로필** — 에코 / 일반(완전 순정) / 터보
+- 🔌 **USB 모드** — 파일 전송 / 충전 전용
 
 ## 요구 사항
 
-- **루팅된 LG Wing**
+- **루팅된 LG Wing** (LM-F100N, Android 13 LG 펌웨어에서 확인)
 - **LSPosed** (또는 호환 Xposed 프레임워크)
-- 대체할 런처 앱(Daijishou / ES-DE / Pegasus) 중 하나 설치
 
-## 설치 및 사용
+## LSPosed 범위
 
-1. 최신 [릴리즈](https://github.com/jshsakura/GoDaijishou/releases)에서 APK 설치
-2. **LSPosed**에서 모듈 활성화 → 적용 대상(Scope)에 `com.lge.secondlauncher` 선택
-   - RetroArch 검정화면·게임 전환 수정을 쓰려면 `com.retroarch`(또는 `.aarch64`/`.ra32`)도 함께 체크
-   - 회전 강제·하단 화면 전용·볼륨 바·전원 메뉴를 쓰려면 `시스템 프레임워크(android)`도 체크 *(기존 GoRotation90은 비활성화·삭제)*
-3. **재부팅** *(Xposed 모듈은 대상 프로세스 시작 시 로드되므로 필수)*
-4. `GoDaijishou 설정` 앱을 열어 원하는 런처 선택
-5. 세컨드 스크린 홈이 선택한 런처로 바뀝니다
+앱의 **LSPosed 열기 → 우측 상단 ⋮ → 권장 항목 선택**으로 한 번에 체크할 수 있습니다.
 
-## 동작 방식
+| 범위 | 용도 |
+| --- | --- |
+| 시스템 프레임워크 (`android`) | 메인 화면 모드, 회전, 상단 끄기, 볼륨 바, 전원 메뉴, 지문, 탈출 키 **(필수)** |
+| 시스템 UI (`com.android.systemui`) | 빠른 설정 1줄, 제스처 바, 키보드 여백 **(메인 화면 모드 필수)** |
+| LG 홈 (`com.lge.launcher3`) | 메인 화면에서 항상 일반 홈 **(메인 화면 모드 필수)** |
+| LG 카메라 (`com.lge.camera`) | 메인 화면 모드에서 카메라 실행 |
+| 세컨드 런처 (`com.lge.secondlauncher`) | 세컨드 홈 런처 교체 |
+| LG 키보드 (`com.lge.ime`) | 키보드 아래 여백 줄이기 |
+| LG 팝업 카메라 (`com.lge.popupcamera`) | 스위블 경고 숨기기 |
+| RetroArch (`com.retroarch` 등) | 검정화면 수정 |
 
-`com.lge.secondlauncher` 프로세스에 로드되어 `Activity.onResume`를 후킹합니다. 세컨드 스크린(디스플레이 4)에서 홈이 표시될 때, `ContentProvider`로 공유되는 설정값의 대상 런처를 그 디스플레이에 실행합니다. 시스템 파일을 수정하지 않고 **Xposed 후킹만으로** 동작합니다.
+## 설치
+
+1. [릴리즈](https://github.com/jshsakura/GoDaijishou/releases)에서 APK 설치 (기존 Go Daijishou 위에 덮어 설치 가능)
+2. LSPosed에서 모듈을 켜고 범위를 체크 (위 표)
+3. **재부팅**
+4. **Wing Custom** 앱에서 모드를 고르고 **적용**
+5. 메인 화면 모드라면 바뀐 화면의 **[유지]** 를 20초 안에 누르기
+
+## 알려진 한계
+
+- 메인 화면 모드의 잠금 화면은 LG 하단 잠금 화면입니다. LG가 스위블이 열린 동안 메인 잠금 화면의 해제를 막기 때문에, 잠금 중에는 원래 배치로 두고 해제 후 메인 화면으로 바꿉니다.
+- 하단 패널은 1080×1240으로 정사각형에 가까워, 세로로 긴 화면을 가정한 앱은 아래쪽이 좁게 보일 수 있습니다. LG 홈은 **설정 → 디스플레이 → 홈 화면 → 그리드**에서 4×4 등으로 맞추면 보기 좋습니다.
+- RetroArch가 실행 중일 때 프론트엔드에서 다른 게임을 고르면 이전 게임이 다시 뜰 수 있습니다([RetroArch 쪽 알려진 문제](https://github.com/TapiocaFox/Daijishou/issues/703)). 게임을 바꿀 때는 RetroArch를 먼저 종료하세요.
 
 ---
 
-## English
-
-**Go Daijishou** is an Xposed module for rooted LG Wing smartphones. It intercepts the home behavior of the second launcher (`com.lge.secondlauncher`) and redirects the second screen to a launcher of your choice — **Daijishou, ES-DE, Pegasus, or the stock LG launcher**.
-
-**Highlights**
-- Pick your second-screen launcher from the settings app (applied instantly via `ContentObserver`)
-- Ultra-light hooking: lifecycle-event hooks only, cached settings, near-zero idle overhead — no logging
-- Heat protection via exponential backoff against redirect oscillation
-- *(v1.3)* Fixed the black-screen-on-return issue when coming back to a running game on the second screen: keeps the fallback home and forces surface recreation on resume. Enable by adding RetroArch to the LSPosed scope.
-- *(v1.5)* Bottom-screen-only mode: powers the top panel off while the swivel is open and opens anything bound for it on the bottom screen.
-- *(v1.5)* Volume bar and power menu on the bottom screen. (The old "no top screen" switch is folded into bottom-screen-only mode.)
-- Top screen view: a panel button shows the whole top screen on the bottom one, scaled to fit; touches reach the top apps, with back and close buttons beside it. While shown, dialogs and notifications stay on the top screen.
-- *(v1.5)* No root commands and no sensitive permissions in the app: privileged work is done by the System Framework hook.
-- *(v1.5)* Rotation forcing (merged from GoRotation90): the auto-rotate toggle acts as a rotation switch — OFF locks landscape (90°), ON locks portrait. Enable it in the settings app and add *System Framework* to the LSPosed scope.
-- *(v1.6.1)* Battery bar on the bottom screen (floating pill or one thin line; left / center / right; optionally hidden in fullscreen), applied instantly; pulling it opens the notification panel. Design updates apply without a reboot.
-- *(v1.6.1)* Notification panel header: clock, clear, performance profile, turned-off list and settings in one row, close as a separate round X in the corner.
-- *(v1.6.1)* Newly installed apps are added to LG's second-screen app list automatically; existing choices are kept.
-- *(v1.6.1)* Performance profile "Normal" is fully stock; the reboot notice shows only when hook code changed.
-- Known limitation: launching another game over a *running* RetroArch may bring back the previous game — a [known RetroArch ≥1.17 issue](https://github.com/TapiocaFox/Daijishou/issues/703) that belongs to the frontend/RetroArch side; quit RetroArch before switching games.
-
-**Requirements**: rooted LG Wing, LSPosed (or a compatible Xposed framework), and the target launcher installed.
-
-**Install**: install the APK → enable the module in LSPosed with the scope `com.lge.secondlauncher` (optionally add `com.retroarch` / `.aarch64` / `.ra32` for the RetroArch fixes, and `android` (System Framework) for rotation, bottom-screen modes, volume bar and power menu) → reboot → open *GoDaijishou Settings* and pick a launcher.
-
-It uses the Xposed framework to achieve system-level behavior changes without modifying the original system files.
+<sub>Wing Custom (formerly Go Daijishou): an LSPosed module that makes the bottom panel of a rooted LG Wing its real main display, plus second-screen tweaks. Korean UI.</sub>

@@ -200,6 +200,7 @@
         <LinearLayout
             android:id="@+id/card_original"
             style="@style/Ft.Row"
+            android:layout_marginTop="12dp"
             android:clickable="false"
             android:focusable="false"
             android:visibility="gone">

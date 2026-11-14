@@ -16,18 +16,21 @@ import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 
 /**
- * SystemUI as the folded phone's while the second screen's panel is the main display
- * (main screen mode, DisplaySwap; scope: com.android.systemui).
+ * An LG app as the folded phone's while the second screen's panel is the main display (main
+ * screen mode, DisplaySwap). Installed in LG's camera (scope: com.lge.camera): with the
+ * swivel open it lays itself out for the swivel (RatioCalcFullVisionSwivel) and crashed on
+ * the swapped 1080x1240 main display. Not in SystemUI: a folded SystemUI over LG's swivel lock
+ * left the phone locked.
  *
- * With the swivel open LG's lock screen takes the unlock on the second screen only and keeps
- * the main one locked; swapped, that second screen is off and the lock screen in front of the
- * user never let go. SystemUI learns the swivel state from LG's PostureManager and
- * DisplayManagerHelper only: getSwivelState() (2 = open) and state callbacks (100/101
- * opening/open, 200/201 closing/closed). While swapped it is told "closed", and the swap
- * starting or ending is replayed to its callbacks as the swivel closing or opening.
- * Unswapped (second screen mode) nothing changes.
+ * LG's apps learn the swivel state from PostureManager and DisplayManagerHelper only:
+ * getSwivelState() (2 = open) and state callbacks (100/101 opening/open, 200/201
+ * closing/closed). While swapped they are told "closed", and the swap starting or ending is
+ * replayed to their callbacks as the swivel closing or opening. Unswapped (second screen
+ * mode) nothing changes.
  */
 final class SwivelFold {
+
+    static final String CAMERA = "com.lge.camera";
 
     /** Settings.Global, 1 while swapped (written by DisplaySwap in system_server). */
     static final String KEY_SWAPPED = "godaijishou_swapped";
@@ -48,6 +51,18 @@ final class SwivelFold {
     }
 
     static void install(ClassLoader cl) {
+        // The camera also builds swivel-only parts (its drum UI, sized from the second screen)
+        // just for being a swivel model: while folded it is not one, so none are built.
+        Class<?> model = XposedHelpers.findClassIfExists("com.lge.camera.constants.ModelProperties", cl);
+        if (model != null) {
+            XposedBridge.hookAllMethods(model, "isSwivelModel", new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    observe();
+                    if (folded) param.setResult(false);
+                }
+            });
+        }
         for (String name : new String[] {POSTURE, DISPLAY_HELPER}) {
             Class<?> c = XposedHelpers.findClassIfExists(name, cl);
             if (c == null) continue;

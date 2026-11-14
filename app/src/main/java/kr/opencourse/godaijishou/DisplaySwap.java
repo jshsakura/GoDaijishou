@@ -174,9 +174,9 @@ final class DisplaySwap {
         } catch (Throwable t) {
             ModuleLog.w(t);
         }
-        // SystemUI used to follow through SwivelFold (folded lock screen); dropped, the swivel
-        // lock got stuck. MainScreen unswaps before the lock screen instead.
-        // (SystemUI is not told: SwivelFold is not installed, see MainModule.)
+        // LG's camera follows (SwivelFold): the folded phone's camera while swapped. Written
+        // outside the display lock. (SystemUI does not follow: see MainModule.)
+        publish(DisplaySwap.swapped);
         if (!swapped) {
             verifyAttempts = 0;
             Handler h = SystemSettings.handler();

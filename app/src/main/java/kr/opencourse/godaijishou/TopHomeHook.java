@@ -64,6 +64,7 @@ final class TopHomeHook {
                 }, "GoDaijishou-report").start();
             }
         });
+        installGridOnce(cl);
         for (String name : new String[] {POSTURE, DISPLAY_HELPER}) {
             Class<?> c = XposedHelpers.findClassIfExists(name, cl);
             if (c == null) continue;
@@ -91,6 +92,64 @@ final class TopHomeHook {
         };
         XposedBridge.hookAllMethods(source, "registerPostureStateCallback", register);
         XposedBridge.hookAllMethods(source, "registerSwivelStateCallback", register);
+    }
+
+    // --- Home grid 4x4, once ---
+
+    /** Settings.Global, 1: switch LG's home grid to 4x4 once (set when main screen mode is kept). */
+    static final String KEY_GRID_ONCE = "godaijishou_grid_once";
+    private static final String GRID_MANAGER = "com.lge.launcher3.dynamicgrid.DynamicGridManager";
+    private static final String DONE_PREFS = "wingcustom_hook", DONE_KEY = "grid_4x4_done";
+    private static volatile boolean gridDone;
+
+    /**
+     * LG's default 5x5 grid is cramped on the second screen's panel as the main display. The
+     * first time main screen mode is kept, the next time the home shows it switches to 4x4
+     * through LG's own grid change (what its settings' grid picker runs, items moved along).
+     * Only ever once: a grid picked afterwards is the user's.
+     */
+    private static void installGridOnce(ClassLoader cl) {
+        Class<?> launcher = XposedHelpers.findClassIfExists("com.android.launcher3.Launcher", cl);
+        Class<?> manager = XposedHelpers.findClassIfExists(GRID_MANAGER, cl);
+        if (launcher == null || manager == null) return;
+        XposedBridge.hookAllMethods(launcher, "onResume", new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) {
+                if (gridDone) return;
+                try {
+                    android.app.Activity a = (android.app.Activity) param.thisObject;
+                    if (android.provider.Settings.Global.getInt(a.getContentResolver(), KEY_GRID_ONCE, 0) != 1) return;
+                    android.content.SharedPreferences p = a.getSharedPreferences(DONE_PREFS, Context.MODE_PRIVATE);
+                    gridDone = true;
+                    if (p.getBoolean(DONE_KEY, false)) return;
+                    p.edit().putBoolean(DONE_KEY, true).apply(); // first: never twice, even on a failure
+                    a.getWindow().getDecorView().post(() -> toFourByFour(manager, a));
+                } catch (Throwable t) {
+                    ModuleLog.w(t);
+                }
+            }
+        });
+    }
+
+    private static void toFourByFour(Class<?> managerClass, android.app.Activity a) {
+        try {
+            Object m = XposedHelpers.newInstance(managerClass, a);
+            XposedHelpers.callMethod(m, "init");
+            java.util.List<?> grids = (java.util.List<?>) XposedHelpers.getObjectField(m, "mGrids");
+            int current = XposedHelpers.getIntField(m, "mSelectedGridIndex");
+            if (grids == null) return;
+            for (int i = 0; i < grids.size(); i++) {
+                Object g = grids.get(i);
+                if (!(g instanceof int[])) continue;
+                int[] cr = (int[]) g; // {columns, rows}
+                if (cr.length >= 2 && cr[0] == 4 && cr[1] == 4) {
+                    if (i != current) XposedHelpers.callMethod(m, "runDynamicGrid", i);
+                    return;
+                }
+            }
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+        }
     }
 
     private static void folded(Class<?> callback) {

@@ -450,6 +450,11 @@ public class MainActivity extends AppCompatActivity {
             box.addView(card, lp);
         }
         findViewById(R.id.btn_mode_apply).setOnClickListener(v -> {
+            // Main screen mode only with every hook it needs loaded this boot.
+            if (viewMode == AppPreferences.SCREEN_MODE_ORIGINAL && !AppPreferences.mainModeReady(this)) {
+                explainMainScope();
+                return;
+            }
             prefs.edit().putInt(AppPreferences.KEY_SCREEN_MODE, viewMode)
                     .putInt(AppPreferences.KEY_MODE_EPOCH, prefs.getInt(AppPreferences.KEY_MODE_EPOCH, 0) + 1)
                     .commit();
@@ -629,6 +634,23 @@ public class MainActivity extends AppCompatActivity {
                     : AppPreferences.isHookActive(this, hookName));
             if (!loaded) explainScope(scopeText);
         });
+    }
+
+    // What main screen mode still needs, item by item (✓ loaded this boot / ✗ not yet).
+    private void explainMainScope() {
+        String list = mark(AppPreferences.isSystemHookActive(this)) + " " + getString(R.string.scope_name_system) + "\n"
+                + mark(AppPreferences.isHookActive(this, "systemui")) + " " + getString(R.string.scope_name_systemui) + "\n"
+                + mark(AppPreferences.isHookActive(this, TopHomeHook.HOOK_NAME)) + " " + getString(R.string.scope_name_lghome);
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.scope_dialog_title)
+                .setMessage(getString(R.string.main_scope_dialog_message, list))
+                .setPositiveButton(R.string.scope_dialog_open, (d, w) -> openLsposed())
+                .setNegativeButton(android.R.string.ok, null)
+                .show();
+    }
+
+    private static String mark(boolean ok) {
+        return ok ? "✓" : "✗";
     }
 
     private void explainScope(int scopeText) {

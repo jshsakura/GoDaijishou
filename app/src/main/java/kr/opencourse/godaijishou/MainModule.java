@@ -30,6 +30,9 @@ public class MainModule implements IXposedHookLoadPackage {
         ClassLoader cl = lpparam.classLoader;
         if (LauncherHook.TARGET_PACKAGE.equals(pkg)) {
             safely(LauncherHook::install);
+        } else if (SwivelFold.CAMERA.equals(pkg)) {
+            // Main screen mode: the camera as on the folded phone (its swivel layout crashed).
+            safely(() -> SwivelFold.install(cl));
         } else if (SwivelWarningHook.TARGET_PACKAGE.equals(pkg)) {
             safely(() -> SwivelWarningHook.install(cl));
         } else if (TopHomeHook.TARGET_PACKAGE.equals(pkg)) {
@@ -40,6 +43,7 @@ public class MainModule implements IXposedHookLoadPackage {
             safely(() -> NavBarHook.installSystemUi(cl));
             safely(() -> LockWallpaperHook.install(cl));
             safely(() -> BottomGestureHook.install(cl));
+            safely(() -> QsRowsHook.install(cl));
             // SwivelFold stays out: a folded SystemUI over the swivel lock left the phone locked.
         } else if ("android".equals(pkg)) {
             systemLoader = cl;

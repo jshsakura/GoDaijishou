@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">GoDaijishou</string>
+    <string name="app_name">Wing Custom</string>
 
     <!-- Selector Activity -->
     <string name="launcher_daijishou">Daijishou</string>
@@ -33,7 +33,7 @@
     <string name="main_force_rotation_desc">자동회전 끄면 가로, 켜면 세로로 고정합니다.</string>
 
     <!-- Settings screen (freetv style) -->
-    <string name="app_title">GoDaijishou</string>
+    <string name="app_title">Wing Custom</string>
     <string name="status_active">모듈 작동 중</string>
     <string name="status_inactive">LSPosed에서 켜고 재부팅</string>
     <string name="group_screen">화면</string>
@@ -49,7 +49,7 @@
     <string name="main_confirm_keep">유지</string>
     <string name="main_confirm_count">%d초 뒤 원래대로 돌아갑니다</string>
     <string name="mode_original_title">메인 화면</string>
-    <string name="mode_original_desc">스위블을 열면 상단을 끄고 하단에 상단 화면이 그대로 나옵니다. 앱·알림·상태바·제스처 모두 접었을 때 폰 그대로입니다. LSPosed 범위에 LG 홈과 시스템 UI가 필요합니다.</string>
+    <string name="mode_original_desc">하단 화면이 진짜 메인 화면이 됩니다. 잠금을 풀면 상태바·알림창·홈·밝기·모든 앱이 하단에서 그대로 동작합니다. 처음 적용하면 20초 안에 [유지]를 눌러야 하고, 볼륨 위+아래를 짧게 누르면 언제든 원래대로 돌아옵니다. LSPosed 범위에 시스템 UI와 LG 홈이 필요합니다.</string>
     <string name="group_common">공통</string>
     <string name="group_module">모듈</string>
     <string name="row_launcher_title">세컨드 스크린 홈</string>
@@ -68,7 +68,7 @@
     <string name="usb_mode_charge">충전 전용</string>
     <string name="notice_reboot_updated">앱이 업데이트됐어요. 재부팅해야 새 버전이 적용됩니다.</string>
     <string name="notice_reboot_title">재부팅이 필요해요</string>
-    <string name="notice_reboot_desc">켜 둔 기능이 이번 부팅에서 아직 적용되지 않았습니다. LSPosed에서 GoDaijishou 범위에 \"권장 항목 선택\"을 한 뒤 재부팅하세요.</string>
+    <string name="notice_reboot_desc">켜 둔 기능이 이번 부팅에서 아직 적용되지 않았습니다. LSPosed에서 Wing Custom 범위에 \"권장 항목 선택\"을 한 뒤 재부팅하세요.</string>
     <string name="reboot_confirm_title">지금 재부팅할까요?</string>
     <string name="reboot_confirm_msg">기기를 지금 다시 시작합니다.</string>
     <string name="cancel">취소</string>
@@ -93,7 +93,7 @@
     <string name="notifications_empty">알림이 없습니다</string>
     <string name="main_perf_profile">성능 프로필</string>
     <string name="main_perf_profile_desc">에코: 클럭을 낮춰 발열 최소. 일반: 순정. 터보: 최저 클럭을 올림. 루트 필요.</string>
-    <string name="main_perf_profile_no_root">루트 권한 없음: Magisk에서 GoDaijishou를 허용해 주세요</string>
+    <string name="main_perf_profile_no_root">루트 권한 없음: Magisk에서 Wing Custom을 허용해 주세요</string>
     <string name="perf_eco">에코</string>
     <string name="perf_normal">일반</string>
     <string name="perf_turbo">터보</string>
@@ -106,8 +106,14 @@
     <string name="main_fingerprint_off_switch">지문 센서 끄기</string>
     <string name="main_fingerprint_off_desc">로그인에 지문 대신 PIN (재부팅 후)</string>
     <string name="scope_dialog_title">LSPosed 설정이 필요해요</string>
-    <string name="scope_dialog_message">이 기능은 LSPosed에서 GoDaijishou 모듈의 범위에 다음을 체크하고 재부팅해야 작동합니다.\n\n%1$s</string>
+    <string name="scope_dialog_message">이 기능은 LSPosed에서 Wing Custom 모듈의 범위에 다음을 체크하고 재부팅해야 작동합니다.\n\n%1$s</string>
     <string name="scope_dialog_open">LSPosed 열기</string>
+    <string name="main_scope_dialog_message">메인 화면 모드는 아래 범위가 모두 체크되고 재부팅된 뒤에만 켤 수 있어요. LSPosed에서 \"권장 항목 선택\" 후 재부팅하세요.
+
+%1$s</string>
+    <string name="scope_name_system">시스템 프레임워크 (android)</string>
+    <string name="scope_name_systemui">시스템 UI</string>
+    <string name="scope_name_lghome">LG 홈 (com.lge.launcher3)</string>
     <string name="scope_system">• 시스템 프레임워크</string>
     <string name="scope_systemui">• 시스템 UI (com.android.systemui)</string>
     <string name="scope_systemui_keyboard">• 시스템 UI (com.android.systemui)\n• LG 키보드 (com.lge.ime)</string>
