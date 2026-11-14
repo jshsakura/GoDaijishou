@@ -73,7 +73,8 @@ final class MainScreen {
             }
             return;
         }
-        if (kept() == epoch) {
+        // Kept once on this phone: from then on it switches without asking again.
+        if (kept() >= 0) {
             if (!DisplaySwap.isSwapped()) {
                 DisplaySwap.set(true);
                 bringAppsLater();
@@ -255,12 +256,47 @@ final class MainScreen {
         }
     }
 
-    /** Volume up + down. */
+    /**
+     * Volume up + down: main screen <-> second screen. Swapped (or asking), back to the
+     * second screen and kept there. Otherwise, with main screen mode applied in the app and
+     * its hooks loaded, the main screen again: at once if it was kept before, else the
+     * "keep?" card. Pressing again always goes back, so a switch can never strand anyone.
+     */
+    static void toggle() {
+        if (DisplaySwap.isSwapped() || trial) {
+            escape();
+            return;
+        }
+        if (!SystemSettings.mainReady) return;
+        if (SystemSettings.screenMode == AppPreferences.SCREEN_MODE_ORIGINAL) {
+            TopMirror.clearEscape(); // picked but left with the keys: on again
+            apply();
+        } else {
+            tellApp(AppPreferences.SCREEN_MODE_ORIGINAL); // its settings come back here
+        }
+    }
+
+    /** Back to the second screen at once (keys, a trial nobody kept); the app follows. */
     static void escape() {
         endTrial();
         ownSwap = false;
-        TopMirror.escape();
+        TopMirror.escape(); // holds even if the app never hears of it
         DisplaySwap.restoreNow();
+        tellApp(AppPreferences.SCREEN_MODE_SECOND);
+    }
+
+    // The app keeps the mode (and shows it): it writes it and its provider tells us back.
+    private static void tellApp(int mode) {
+        try {
+            Context c = SystemSettings.context();
+            android.content.Intent i = new android.content.Intent(ModeSwitchReceiver.ACTION)
+                    .setClassName(BuildConfig.APPLICATION_ID, ModeSwitchReceiver.class.getName())
+                    .putExtra(ModeSwitchReceiver.EXTRA_MODE, mode)
+                    .addFlags(android.content.Intent.FLAG_RECEIVER_FOREGROUND);
+            c.sendBroadcastAsUser(i, android.os.Process.myUserHandle());
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+        }
     }
 
     // --- Trial ---

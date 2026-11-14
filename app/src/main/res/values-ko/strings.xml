@@ -43,13 +43,13 @@
     <string name="mode_second_sub">하단 화면을 따로 활용</string>
     <string name="mode_apply">적용하기</string>
     <string name="mode_apply_hint">%1$s 옵션을 보고 있어요. 적용하기 전까지는 %2$s 사용 중입니다.</string>
-    <string name="mode_escaped_hint">볼륨 위+아래로 메인 화면 모드를 껐어요. 다시 켜려면 적용하세요.</string>
+    <string name="mode_escaped_hint">비상탈출로 세컨드 스크린에 있어요. 볼륨 위+아래를 누르거나 적용하면 메인 화면으로 돌아갑니다.</string>
     <string name="mode_fallback_hint">LSPosed 범위에 시스템 UI와 LG 홈이 필요해요. 적용되기 전까지는 세컨드 스크린으로 동작합니다(재부팅 필요).</string>
     <string name="main_confirm_title">이 화면을 메인 화면으로 쓸까요?</string>
     <string name="main_confirm_keep">유지</string>
     <string name="main_confirm_count">%d초 뒤 원래대로 돌아갑니다</string>
     <string name="mode_original_title">메인 화면</string>
-    <string name="mode_original_desc">하단 화면이 진짜 메인 화면이 됩니다. 잠금을 풀면 상태바·알림창·홈·밝기·모든 앱이 하단에서 그대로 동작합니다. 처음 적용하면 20초 안에 [유지]를 눌러야 하고, 볼륨 위+아래를 짧게 누르면 언제든 원래대로 돌아옵니다. LSPosed 범위에 시스템 UI와 LG 홈이 필요합니다.</string>
+    <string name="mode_original_desc">하단 화면이 진짜 메인 화면이 됩니다. 잠금을 풀면 상태바·알림창·홈·밝기·모든 앱이 하단에서 그대로 동작합니다. 처음 적용하면 20초 안에 [유지]를 눌러야 하고, 볼륨 위+아래를 짧게 누르면 메인 ↔ 세컨드가 바뀌고, 볼륨 아래를 5초 누르면 비상탈출합니다. LSPosed 범위에 시스템 UI와 LG 홈이 필요합니다.</string>
     <string name="group_common">공통</string>
     <string name="group_module">모듈</string>
     <string name="row_launcher_title">세컨드 스크린 홈</string>

@@ -8,14 +8,18 @@ import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 
 /**
- * Way out that needs no picture and no touch (system_server): volume up and volume down
- * held together end the main screen mirror and any display swap at once, so the second
- * screen is the plain second screen again with its own touches.
+ * Screen mode keys, needing no picture and no touch (system_server):
  *
- * The mirror stays off (also across reboots) until main screen mode is picked again in the
- * app. The keys still do what they always do; this only watches them.
+ * - Volume up + down pressed together: main screen <-> second screen (MainScreen.toggle).
+ * - Volume down held 5 seconds: the emergency exit. Always the plain second screen with its
+ *   own touches, never the main screen, and kept so (also across reboots) until main screen
+ *   mode is switched on again (MainScreen.escape).
+ *
+ * The keys still do what they always do; this only watches them.
  */
 final class SafetyEscape {
+
+    private static final long EMERGENCY_HOLD_MS = 5_000;
 
     private static volatile boolean upDown, downDown;
 
@@ -37,16 +41,31 @@ final class SafetyEscape {
                         boolean bothBefore = upDown && downDown;
                         if (code == KeyEvent.KEYCODE_VOLUME_UP) upDown = down;
                         else downDown = down;
-                        if (!bothBefore && upDown && downDown) trigger();
+                        if (!bothBefore && upDown && downDown) post(MainScreen::toggle);
+                        watchHold(code, down, e.getRepeatCount());
                     }
                 });
     }
 
-    private static void trigger() {
+    // Volume down alone, held: the emergency exit fires after 5 s unless let go (or volume up
+    // joins in, which is the switch instead).
+    private static void watchHold(int code, boolean down, int repeat) {
         Handler h = SystemSettings.handler();
         if (h == null) return;
-        h.post(() -> {
-            MainScreen.escape();
-        });
+        if (code == KeyEvent.KEYCODE_VOLUME_DOWN && down && repeat == 0 && !upDown) {
+            h.removeCallbacks(EMERGENCY);
+            h.postDelayed(EMERGENCY, EMERGENCY_HOLD_MS);
+        } else if (!downDown || upDown) {
+            h.removeCallbacks(EMERGENCY);
+        }
+    }
+
+    private static final Runnable EMERGENCY = () -> {
+        if (downDown && !upDown) MainScreen.escape();
+    };
+
+    private static void post(Runnable r) {
+        Handler h = SystemSettings.handler();
+        if (h != null) h.post(r);
     }
 }

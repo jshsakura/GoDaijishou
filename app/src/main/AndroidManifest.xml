@@ -69,6 +69,17 @@
             </intent-filter>
         </receiver>
 
+        <!-- Volume up + down switched the screen mode (sent by system_server only) -->
+        <receiver
+            android:name=".ModeSwitchReceiver"
+            android:directBootAware="true"
+            android:exported="true"
+            android:permission="android.permission.DEVICE_POWER">
+            <intent-filter>
+                <action android:name="kr.opencourse.godaijishou.SET_SCREEN_MODE" />
+            </intent-filter>
+        </receiver>
+
         <provider
             android:name=".SettingsProvider"
             android:authorities="kr.opencourse.godaijishou.provider"

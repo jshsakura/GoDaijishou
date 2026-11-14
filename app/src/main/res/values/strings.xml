@@ -42,13 +42,13 @@
     <string name="mode_second_sub">The bottom screen on its own</string>
     <string name="mode_apply">Apply</string>
     <string name="mode_apply_hint">Showing %1$s options. %2$s is in use until you apply.</string>
-    <string name="mode_escaped_hint">Main screen mode was turned off with volume up + down. Apply to turn it on again.</string>
+    <string name="mode_escaped_hint">On the second screen after the emergency exit. Press volume up + down, or apply, for the main screen.</string>
     <string name="mode_fallback_hint">Needs System UI and LG Home in the LSPosed scope. Runs as second screen until then (reboot after checking them).</string>
     <string name="main_confirm_title">Use this screen as the main screen?</string>
     <string name="main_confirm_keep">Keep</string>
     <string name="main_confirm_count">Back as it was in %d s</string>
     <string name="mode_original_title">Main screen</string>
-    <string name="mode_original_desc">The bottom screen becomes the real main screen. Once unlocked, the status bar, shade, home, brightness and every app run on it as on any phone. The first time, tap [Keep] within 20 seconds; volume up + down (a short press) goes back at any time. Needs System UI and LG Home in the LSPosed scope.</string>
+    <string name="mode_original_desc">The bottom screen becomes the real main screen. Once unlocked, the status bar, shade, home, brightness and every app run on it as on any phone. The first time, tap [Keep] within 20 seconds; volume up + down (a short press) switches main and second screen; volume down held 5 s is the emergency exit. Needs System UI and LG Home in the LSPosed scope.</string>
     <string name="group_common">Both modes</string>
     <string name="group_screen">Screen</string>
     <string name="group_module">Module</string>

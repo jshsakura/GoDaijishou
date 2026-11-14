@@ -145,6 +145,9 @@ public class MainActivity extends AppCompatActivity {
         updateLauncherRows(); // reflect apps installed/removed while we were away
         UpdateCheck.run(this, this::showUpdate);
         if (perfButtons != null) stylePerfButtons(perfButtons); // may have changed in the panel
+        // The mode may have been switched with volume up + down meanwhile.
+        syncModeTabs();
+        prefs.registerOnSharedPreferenceChangeListener(modeListener);
     }
 
     // The list runs on under the gesture bar instead of stopping above it (the bar area was a
@@ -182,6 +185,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         stopDotPulse();
+        prefs.unregisterOnSharedPreferenceChangeListener(modeListener);
     }
 
     private void updateStatus() {
@@ -461,6 +465,7 @@ public class MainActivity extends AppCompatActivity {
             getContentResolver().notifyChange(SettingsProvider.CONTENT_URI, null);
             showMode(tabs);
         });
+        modeTabs = tabs;
         viewMode = screenMode();
         showMode(tabs);
     }
@@ -473,6 +478,20 @@ public class MainActivity extends AppCompatActivity {
         } catch (RuntimeException ex) {
             return false;
         }
+    }
+
+    private View[] modeTabs;
+
+    // Volume up + down writes the mode from another thread (ModeSwitchReceiver): follow it.
+    private final android.content.SharedPreferences.OnSharedPreferenceChangeListener modeListener =
+            (p, key) -> {
+                if (AppPreferences.KEY_SCREEN_MODE.equals(key)) runOnUiThread(this::syncModeTabs);
+            };
+
+    private void syncModeTabs() {
+        if (modeTabs == null) return;
+        viewMode = screenMode();
+        showMode(modeTabs);
     }
 
     // The mode whose options are on screen (not necessarily the one in use).

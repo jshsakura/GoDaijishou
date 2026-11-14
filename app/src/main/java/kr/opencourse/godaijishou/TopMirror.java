@@ -114,6 +114,11 @@ final class TopMirror {
         return escaped();
     }
 
+    /** Volume up + down again: main screen mode is back on (MainScreen.toggle). */
+    static void clearEscape() {
+        storeEscaped(NONE);
+    }
+
     // Escaped under the mode Apply now in force: picking the mode again ends it.
     private static boolean escaped() {
         Integer e = escapedCache;
