@@ -98,7 +98,7 @@
     <string name="perf_normal">일반</string>
     <string name="perf_turbo">터보</string>
     <string name="main_hide_swivel_warnings_switch">스위블 경고 끄기</string>
-    <string name="main_hide_swivel_warnings_desc">카메라의 LG 스위블 안내를 끕니다.</string>
+    <string name="main_hide_swivel_warnings_desc">세컨드 스크린에서 카메라를 켤 때 뜨는 LG 스위블 안내를 끕니다.</string>
     <string name="main_slim_nav_pill_switch">제스처 바 슬림하게</string>
     <string name="main_slim_nav_pill_desc">제스처 바를 2/3 크기로 그립니다.</string>
     <string name="main_hide_ime_nav_strip_switch">키보드 아래 여백 줄이기</string>

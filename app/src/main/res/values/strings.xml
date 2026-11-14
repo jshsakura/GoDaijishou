@@ -98,7 +98,7 @@
     <string name="perf_normal">Normal</string>
     <string name="perf_turbo">Turbo</string>
     <string name="main_hide_swivel_warnings_switch">Hide swivel warnings</string>
-    <string name="main_hide_swivel_warnings_desc">Skips LG\'s swivel notices each time the camera opens.</string>
+    <string name="main_hide_swivel_warnings_desc">Skips the LG swivel notices when the camera opens on the second screen.</string>
     <string name="main_slim_nav_pill_switch">Slim gesture pill</string>
     <string name="main_slim_nav_pill_desc">Draws the gesture pill at 2/3 size, thinner and shorter.</string>
     <string name="main_hide_ime_nav_strip_switch">Smaller gap under the keyboard</string>
