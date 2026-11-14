@@ -69,6 +69,7 @@ final class MainScreen {
             } else if (ownSwap && DisplaySwap.isSwapped()) {
                 DisplaySwap.set(false);
                 ownSwap = false;
+                sleepSecondScreenSoon();
             }
             return;
         }
@@ -191,6 +192,28 @@ final class MainScreen {
         } catch (Throwable t) {
             ModuleLog.w(t);
         }
+    }
+
+    /**
+     * Unswapped while asleep, the second screen's panel comes back as display 4 in a display
+     * group of its own, and a new group starts awake: its lock screen shone while the phone
+     * slept, so its touches were dropped. Once the layout settled, every group sleeps again
+     * (goToSleep sleeps them all); the power key wakes the phone as usual.
+     */
+    private static void sleepSecondScreenSoon() {
+        Handler h = SystemSettings.handler();
+        if (h == null) return;
+        h.postDelayed(() -> {
+            try {
+                Context c = SystemSettings.context();
+                android.os.PowerManager pm = c.getSystemService(android.os.PowerManager.class);
+                if (pm == null || pm.isInteractive()) return; // woken meanwhile: leave it
+                de.robv.android.xposed.XposedHelpers.callMethod(pm, "goToSleep",
+                        android.os.SystemClock.uptimeMillis());
+            } catch (Throwable t) {
+                ModuleLog.w(t);
+            }
+        }, 500);
     }
 
     private static boolean presentWatched;
