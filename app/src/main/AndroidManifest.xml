@@ -87,8 +87,10 @@
             android:exported="true" />
 
         <!-- Second screen power menu, launched by the system_server hook (system uid may start it) -->
+        <!-- directBootAware: also on the lock screen right after a reboot, before the first unlock -->
         <activity
             android:name=".PowerMenuActivity"
+            android:directBootAware="true"
             android:excludeFromRecents="true"
             android:exported="false"
             android:launchMode="singleTask"
