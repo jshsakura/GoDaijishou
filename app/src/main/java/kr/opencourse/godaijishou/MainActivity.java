@@ -42,7 +42,6 @@ public class MainActivity extends AppCompatActivity {
     private SharedPreferences prefs;
     private SwitchMaterial topBlackoutSwitch;
     private SwitchMaterial forceRotationSwitch;
-    private SwitchMaterial powerMenuSwitch;
     private SwitchMaterial volumeOverlaySwitch;
     private SwitchMaterial batteryStripSwitch;
     private SwitchMaterial labelHideFullscreenSwitch;
@@ -106,8 +105,6 @@ public class MainActivity extends AppCompatActivity {
         bindSystemHookSwitch(R.id.row_label_hide_fullscreen, labelHideFullscreenSwitch,
                 AppPreferences.KEY_LABEL_HIDE_FULLSCREEN);
         bindSystemHookSwitch(R.id.row_force_rotation, forceRotationSwitch, AppPreferences.KEY_FORCE_ROTATION);
-        powerMenuSwitch = findViewById(R.id.switch_power_menu);
-        bindSystemHookSwitch(R.id.row_power_menu, powerMenuSwitch, AppPreferences.KEY_POWER_MENU_SECOND_SCREEN);
 
         findViewById(R.id.row_lsposed).setOnClickListener(v -> openLsposed());
         findViewById(R.id.btn_notice_lsposed).setOnClickListener(v -> openLsposed());
@@ -381,8 +378,7 @@ public class MainActivity extends AppCompatActivity {
     // module rows stay under either.
     private static final int[] BOTTOM_SCREEN_ONLY = {
             R.id.group_launcher, R.id.launcher_list, R.id.group_screen, R.id.row_top_blackout,
-            R.id.row_volume_overlay, R.id.card_battery_strip,
-            R.id.row_power_menu};
+            R.id.row_volume_overlay, R.id.card_battery_strip};
     // Tab order: stock first.
     private static final int[] TAB_MODES = {AppPreferences.SCREEN_MODE_ORIGINAL, AppPreferences.SCREEN_MODE_SECOND};
     private static final int[] TAB_LABELS = {R.string.mode_original, R.string.mode_second};
@@ -684,7 +680,7 @@ public class MainActivity extends AppCompatActivity {
     // Show the notice when a system_server feature is on but the hook is not loaded
     // in this boot (scope not checked, or checked but not rebooted yet).
     private void updateRebootNotice() {
-        boolean needsSystemHook = forceRotationSwitch.isChecked() || powerMenuSwitch.isChecked()
+        boolean needsSystemHook = forceRotationSwitch.isChecked()
                 || topBlackoutSwitch.isChecked()
                 || volumeOverlaySwitch.isChecked() || batteryStripSwitch.isChecked();
         boolean needReboot = (needsSystemHook || prefs.getBoolean(AppPreferences.KEY_FINGERPRINT_OFF, false))
