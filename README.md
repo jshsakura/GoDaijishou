@@ -13,6 +13,12 @@
   <img src="app/sampledata/main_home.png" width="260"/>
   <img src="app/sampledata/main_qs.png" width="260"/>
   <img src="app/sampledata/app_main.png" width="260"/>
+  <br/>
+  <img src="app/sampledata/app_second.png" width="260"/>
+  <img src="app/sampledata/app_common.png" width="260"/>
+  <img src="app/sampledata/app_module.png" width="260"/>
+
+  <sub>메인 화면 모드의 홈 · 빠른 설정 · 앱 설정 / 세컨드 스크린 옵션 · 공통 옵션 · 모듈 설정</sub>
 </div>
 
 > 예전 이름은 **Go Daijishou**입니다. 패키지명(`kr.opencourse.godaijishou`)은 그대로라서, 기존 앱 위에 덮어 설치하면 설정과 LSPosed 범위가 그대로 유지됩니다.
