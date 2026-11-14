@@ -48,8 +48,13 @@ final class PowerMenuHook {
                 new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
-                        // Original mode: the top screen's own menu (it shows below anyway).
-                        if (!SystemSettings.powerMenuOnSecondScreen || SystemSettings.original()) return;
+                        // Swapped, display 0 is the bottom panel: the stock menu shows there.
+                        if (DisplaySwap.isSwapped()) return;
+                        // Otherwise the stock menu goes to the top panel. Ours on the bottom
+                        // when asked for, and always when the top is off or not used (main
+                        // screen mode while locked or asleep, when it sits unswapped).
+                        if (!SystemSettings.powerMenuOnSecondScreen && !SystemSettings.original()
+                                && !SystemSettings.topScreenOff) return;
                         try {
                             Context context = (Context) XposedHelpers.getObjectField(param.thisObject, "mContext");
                             if (!isSecondScreenOn(context)) return;
