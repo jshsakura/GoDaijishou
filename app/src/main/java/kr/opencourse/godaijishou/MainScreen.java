@@ -267,12 +267,38 @@ final class MainScreen {
             escape();
             return;
         }
-        if (!SystemSettings.mainReady) return;
+        if (!present()) {
+            // Asleep or locked the swap is always undone, so flip the picked mode instead; it
+            // shows on unlock. A buzz tells which: one tick second screen, two main screen.
+            boolean wantMain = SystemSettings.screenMode == AppPreferences.SCREEN_MODE_ORIGINAL
+                    && !TopMirror.isEscaped();
+            if (wantMain) {
+                escape();
+                buzz(android.os.VibrationEffect.EFFECT_CLICK);
+            } else if (SystemSettings.mainReady) {
+                switchOn();
+                buzz(android.os.VibrationEffect.EFFECT_DOUBLE_CLICK);
+            }
+            return;
+        }
+        if (SystemSettings.mainReady) switchOn();
+    }
+
+    private static void switchOn() {
         if (SystemSettings.screenMode == AppPreferences.SCREEN_MODE_ORIGINAL) {
             TopMirror.clearEscape(); // picked but left with the keys: on again
             apply();
         } else {
             tellApp(AppPreferences.SCREEN_MODE_ORIGINAL); // its settings come back here
+        }
+    }
+
+    private static void buzz(int effect) {
+        try {
+            android.os.Vibrator v = SystemSettings.context().getSystemService(android.os.Vibrator.class);
+            if (v != null) v.vibrate(android.os.VibrationEffect.createPredefined(effect));
+        } catch (Throwable t) {
+            ModuleLog.w(t);
         }
     }
 
