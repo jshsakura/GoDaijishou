@@ -12,12 +12,12 @@ import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedHelpers;
 
 /**
- * Power menu on the second screen. Runs inside system_server.
+ * Power menu on the bottom panel, in both screen modes. Runs inside system_server.
  *
  * GlobalActions.showDialog() is the single entry point for the system power menu
- * (power key long press, accessibility, etc.). When the feature is enabled and the
- * swivel is open, our PowerMenuActivity is launched on the second screen instead.
- * In every other case, or if launching fails, the stock menu is shown as usual.
+ * (power key long press, accessibility, etc.). Our PowerMenuActivity is launched on the
+ * display the bottom panel is now instead. If that display is off or launching fails, the
+ * stock menu is shown as usual.
  */
 final class PowerMenuHook {
 
@@ -48,15 +48,15 @@ final class PowerMenuHook {
                 new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
-                        // Follows the screen mode. Main screen (swapped): display 0 is the
-                        // bottom panel and the stock menu shows there. Second screen (also
-                        // main screen mode while locked or asleep): the stock menu would go to
-                        // the top panel, so ours on the bottom.
-                        if (DisplaySwap.isSwapped()) return;
+                        // Ours in both modes, on the bottom panel: display 0 while swapped
+                        // (main screen), display 4 otherwise (second screen, and main screen
+                        // mode while locked or asleep, when the stock menu would go to the top).
+                        int display = DisplaySwap.isSwapped() ? Display.DEFAULT_DISPLAY
+                                : MainModule.SECOND_SCREEN_DISPLAY_ID;
                         try {
                             Context context = (Context) XposedHelpers.getObjectField(param.thisObject, "mContext");
-                            if (!isSecondScreenOn(context)) return;
-                            if (launchMenu(context)) param.setResult(null);
+                            if (!isOn(context, display)) return;
+                            if (launchMenu(context, display)) param.setResult(null);
                         } catch (Throwable ignored) {
                             ModuleLog.w(ignored);
                             // Fall through to the stock menu.
@@ -65,13 +65,13 @@ final class PowerMenuHook {
                 });
     }
 
-    private static boolean isSecondScreenOn(Context context) {
+    private static boolean isOn(Context context, int displayId) {
         DisplayManager dm = context.getSystemService(DisplayManager.class);
-        Display display = dm != null ? dm.getDisplay(MainModule.SECOND_SCREEN_DISPLAY_ID) : null;
+        Display display = dm != null ? dm.getDisplay(displayId) : null;
         return display != null && display.getState() == Display.STATE_ON;
     }
 
-    private static boolean launchMenu(Context context) {
+    private static boolean launchMenu(Context context, int displayId) {
         try {
             Intent intent = new Intent()
                     .setClassName(BuildConfig.APPLICATION_ID, MENU_ACTIVITY)
@@ -79,7 +79,7 @@ final class PowerMenuHook {
                             | Intent.FLAG_ACTIVITY_CLEAR_TASK
                             | Intent.FLAG_ACTIVITY_NO_ANIMATION);
             Bundle options = ActivityOptions.makeBasic()
-                    .setLaunchDisplayId(MainModule.SECOND_SCREEN_DISPLAY_ID)
+                    .setLaunchDisplayId(displayId)
                     .toBundle();
             UserHandle current = (UserHandle) XposedHelpers.getStaticObjectField(UserHandle.class, "CURRENT");
             XposedHelpers.callMethod(context, "startActivityAsUser",

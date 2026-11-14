@@ -44,12 +44,12 @@ resumed_on() {
     sh dumpsys activity activities | awk -v d="Display #$1 " '
         index($0, d) == 1 { on = 1; next }
         /^Display #/ { on = 0 }
-        on && /ResumedActivity:/ { print $4; exit }'
+        on && /topResumedActivity=/ { sub(/.*u0 /, ""); sub(/[}].*/, ""); print; exit }'
 }
 
 focus_on() {
     sh dumpsys window displays | awk -v d="Display: mDisplayId=$1 " '
-        index($0, d) == 1 { on = 1; next }
+        index($0, d) > 0 { on = 1; next }
         /Display: mDisplayId=/ { on = 0 }
         on && /mCurrentFocus=/ { sub(/.*mCurrentFocus=/, ""); print; exit }'
 }
@@ -126,7 +126,7 @@ check_round() {
     if [ "$b" = 4 ]; then
         case "$f" in *PowerMenuActivity*) ok power ;; *) bad "power: focus '$f' on display 4" ;; esac
     else
-        case "$f" in *ActionsDialog*|*GlobalActions*|*PowerMenu*) ok power ;; *) bad "power: focus '$f' on display 0" ;; esac
+        case "$f" in *PowerMenuActivity*) ok power ;; *) bad "power: focus '$f' on display 0" ;; esac
     fi
     sh input keyevent KEYCODE_BACK
     pause 1
