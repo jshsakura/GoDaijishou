@@ -153,6 +153,10 @@ final class TopHomeHook {
     }
 
     private static void folded(Class<?> callback) {
+        // Quickstep's gesture service hears the real state: on "open" it puts its home and
+        // recents gesture watcher on the second screen, on anything else it drops it. Folded,
+        // the second screen lost its gestures at the first swivel event (every mode switch).
+        if (callback.getName().startsWith("com.android.quickstep.")) return;
         for (Class<?> c = callback; c != null && c != Object.class; c = c.getSuperclass()) {
             if (!hookedCallbacks.add(c)) return; // this class (and its parents) done already
             try {
