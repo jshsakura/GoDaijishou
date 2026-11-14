@@ -52,7 +52,10 @@ final class MainScreen {
         boolean picked = SystemSettings.screenMode == AppPreferences.SCREEN_MODE_ORIGINAL;
         if (!picked || TopMirror.isEscaped()) {
             endTrial();
-            if (ownSwap && DisplaySwap.isSwapped()) DisplaySwap.set(false);
+            if (ownSwap && DisplaySwap.isSwapped()) {
+                DisplaySwap.set(false);
+                bringAppsToSecond();
+            }
             ownSwap = false;
             return;
         }
@@ -162,30 +165,37 @@ final class MainScreen {
     private static final float BACKLIGHT_MIN = 0.035433073f; // the panel's lowest backlight
 
     private static void bringAppsLater() {
+        bringAppsLater(MainModule.SECOND_SCREEN_DISPLAY_ID, Display.DEFAULT_DISPLAY);
+    }
+
+    // The apps follow the bottom panel, both ways: one set of apps, whichever mode.
+    private static void bringAppsLater(int from, int to) {
         Handler h = SystemSettings.handler();
-        if (h != null) h.postDelayed(MainScreen::bringAppsToMain, 500); // once the layout settled
+        if (h != null) h.postDelayed(() -> bringApps(from, to), 500); // once the layout settled
     }
 
     /**
-     * Swapped, display 4 is the top panel and off: apps left there from the second screen
-     * (opened again they came back there, unseen) move to the main display. Homes stay.
+     * Moves the apps (not homes, recents, assistant) from the display the bottom panel left to
+     * the one it is now; left behind they sat on the top panel, unseen even when opened again.
+     * Bottom first, so the app on top stays on top.
      */
-    private static void bringAppsToMain() {
+    private static void bringApps(int from, int to) {
         try {
             Object atm = de.robv.android.xposed.XposedHelpers.callStaticMethod(
                     Class.forName("android.app.ActivityTaskManager"), "getService");
             java.util.List<?> tasks = (java.util.List<?>) de.robv.android.xposed.XposedHelpers.callMethod(
-                    atm, "getAllRootTaskInfosOnDisplay", MainModule.SECOND_SCREEN_DISPLAY_ID);
+                    atm, "getAllRootTaskInfosOnDisplay", from);
             if (tasks == null) return;
-            for (Object info : tasks) {
+            java.util.List<Object> order = new java.util.ArrayList<>(tasks);
+            java.util.Collections.reverse(order);
+            for (Object info : order) {
                 try {
                     Object config = de.robv.android.xposed.XposedHelpers.getObjectField(info, "configuration");
                     Object wc = de.robv.android.xposed.XposedHelpers.getObjectField(config, "windowConfiguration");
                     int type = (int) de.robv.android.xposed.XposedHelpers.callMethod(wc, "getActivityType");
                     if (type != 1 /* standard: not home, recents, assistant */) continue;
                     int id = de.robv.android.xposed.XposedHelpers.getIntField(info, "taskId");
-                    de.robv.android.xposed.XposedHelpers.callMethod(atm, "moveRootTaskToDisplay", id,
-                            Display.DEFAULT_DISPLAY);
+                    de.robv.android.xposed.XposedHelpers.callMethod(atm, "moveRootTaskToDisplay", id, to);
                 } catch (Throwable t) {
                     ModuleLog.w(t);
                 }
@@ -304,11 +314,19 @@ final class MainScreen {
 
     /** Back to the second screen at once (keys, a trial nobody kept); the app follows. */
     static void escape() {
+        boolean wasSwapped = DisplaySwap.isSwapped();
         endTrial();
         ownSwap = false;
         TopMirror.escape(); // holds even if the app never hears of it
         DisplaySwap.restoreNow();
+        if (wasSwapped && !DisplaySwap.isSwapped()) bringAppsToSecond();
         tellApp(AppPreferences.SCREEN_MODE_SECOND);
+    }
+
+    // Back on the second screen in use (not asleep or locked: those come back to the main
+    // screen on unlock, apps and all).
+    private static void bringAppsToSecond() {
+        if (present()) bringAppsLater(Display.DEFAULT_DISPLAY, MainModule.SECOND_SCREEN_DISPLAY_ID);
     }
 
     // The app keeps the mode (and shows it): it writes it and its provider tells us back.
