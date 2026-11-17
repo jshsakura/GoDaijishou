@@ -1,0 +1,61 @@
+# Pull request -> the APK signed like a release (same keys and rotation), kept as a workflow
+# artifact only: installable over a released copy for testing, never published.
+name: PR build
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: corretto
+          java-version: "17"
+          cache: gradle
+
+      - name: Restore signing keys
+        env:
+          DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+        run: |
+          test -n "$DEBUG_KEYSTORE_BASE64" || { echo "DEBUG_KEYSTORE_BASE64 secret is missing"; exit 1; }
+          test -n "$RELEASE_KEYSTORE_BASE64" || { echo "RELEASE_KEYSTORE_BASE64 secret is missing"; exit 1; }
+          test -n "$RELEASE_KEYSTORE_PASSWORD" || { echo "RELEASE_KEYSTORE_PASSWORD secret is missing"; exit 1; }
+          mkdir -p keystore
+          echo "$DEBUG_KEYSTORE_BASE64" | base64 -d > keystore/debug.keystore
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > keystore/release.jks
+          printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=wingcustom\nstoreFile=keystore/release.jks\n' \
+            "$RELEASE_KEYSTORE_PASSWORD" "$RELEASE_KEYSTORE_PASSWORD" > keystore.properties
+
+      - name: Build
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleRelease
+
+      - name: Sign with the key rotation
+        env:
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+        run: |
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$APKSIGNER" sign \
+            --ks keystore/debug.keystore --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android \
+            --next-signer \
+            --ks keystore/release.jks --ks-key-alias wingcustom \
+            --ks-pass env:RELEASE_KEYSTORE_PASSWORD --key-pass env:RELEASE_KEYSTORE_PASSWORD \
+            --lineage signing/rotation.lineage --rotation-min-sdk-version 28 \
+            --out WingCustom-pr.apk app/build/outputs/apk/release/app-release.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WingCustom-pr
+          path: WingCustom-pr.apk
+          retention-days: 7
