@@ -783,23 +783,24 @@ final class TopHomeHook {
             });
         }
         // Portrait folder rows are as tall as a home cell, not fitted to the height: sideways,
-        // the last row was cut off (a folder page does not scroll). The rows share what is
-        // left under the bars, title and footer, as LG's own landscape folder does.
-        XposedBridge.hookAllMethods(lgProfile, "updateIconSize", new XC_MethodHook() {
+        // the last row was cut off (a folder page does not scroll). When a folder page is made,
+        // its rows share the height the folder itself allows (Folder.getContentAreaHeight: the
+        // workspace less its padding, dock included, and the footer).
+        Class<?> folderPaged = XposedHelpers.findClassIfExists("com.android.launcher3.folder.FolderPagedView", cl);
+        if (folderPaged != null) XposedBridge.hookAllMethods(folderPaged, "createAndAddNewPage", new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam param) {
-                Object p = param.thisObject;
-                if (!(param.args[0] instanceof Context) || !mainScreenMode((Context) param.args[0])
+            protected void beforeHookedMethod(MethodHookParam param) {
+                Context c = ((android.view.View) param.thisObject).getContext();
+                if (!mainScreenMode(c)) return;
+                Object p = XposedHelpers.callMethod(c, "getDeviceProfile");
+                if (XposedHelpers.getBooleanField(p, "isLandscape")
                         || XposedHelpers.getIntField(p, "widthPx") <= XposedHelpers.getIntField(p, "heightPx")) return;
-                android.content.res.Resources r = ((Context) param.args[0]).getResources();
-                int title = r.getIdentifier("folder_title_height", "dimen", PKG);
+                android.content.res.Resources r = c.getResources();
                 int footer = r.getIdentifier("folder_footer_height", "dimen", PKG);
                 int rows = XposedHelpers.getIntField(XposedHelpers.getObjectField(p, "inv"), "numFolderRows");
-                if (rows <= 0) return;
-                int space = XposedHelpers.getIntField(p, "availableHeightPx")
-                        - XposedHelpers.getIntField(p, "navibarSizePx")
-                        - XposedHelpers.getIntField(p, "statusbarSizePx")
-                        - (title == 0 ? 0 : r.getDimensionPixelSize(title))
+                android.graphics.Rect pad = (android.graphics.Rect) XposedHelpers.callMethod(p, "getWorkspacePadding", false);
+                if (rows <= 0 || pad == null) return;
+                int space = XposedHelpers.getIntField(p, "availableHeightPx") - pad.top - pad.bottom
                         - (footer == 0 ? 0 : r.getDimensionPixelSize(footer));
                 int row = space / rows;
                 if (row > 0 && row < XposedHelpers.getIntField(p, "folderCellHeightPx")) {
