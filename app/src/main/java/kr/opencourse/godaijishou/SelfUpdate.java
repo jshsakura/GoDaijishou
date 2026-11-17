@@ -40,11 +40,13 @@ final class SelfUpdate {
 
         void onInstalling();
 
-        /** A step failed: R.string message id. */
-        void onFailed(int message);
+        /** A step failed (or was cancelled): R.string message id, the installer's reason or null. */
+        void onFailed(int message, String detail);
     }
 
     private static volatile boolean running;
+    // The screen waiting on the installer's answer (SelfUpdateReceiver), null when none.
+    private static volatile Listener waiting;
 
     private SelfUpdate() {
     }
@@ -63,27 +65,46 @@ final class SelfUpdate {
     static void start(Context context, String url, String sha256, Listener listener) {
         if (running) return;
         running = true;
+        waiting = listener;
         Context app = context.getApplicationContext();
         new Thread(() -> {
             try {
                 File apk = new File(app.getCacheDir(), "update.apk");
                 if (!download(url, apk, listener)) {
-                    listener.onFailed(R.string.update_err_download);
+                    failed(R.string.update_err_download, null);
                     return;
                 }
                 if (!verified(app, apk, sha256)) {
                     apk.delete();
-                    listener.onFailed(R.string.update_err_verify);
+                    failed(R.string.update_err_verify, null);
                     return;
                 }
                 listener.onInstalling();
-                if (!install(app, apk)) listener.onFailed(R.string.update_err_install);
+                if (!install(app, apk)) failed(R.string.update_err_install, null);
             } catch (Throwable t) {
-                listener.onFailed(R.string.update_err_install);
+                failed(R.string.update_err_install, null);
             } finally {
                 running = false;
             }
         }, "GoDaijishou-self-update").start();
+    }
+
+    /**
+     * The update ended without installing (a step here, or the installer's answer). Tells the
+     * waiting screen so its pill leaves "Installing…"; false when no screen is waiting.
+     */
+    static boolean failed(int message, String detail) {
+        Listener l = waiting;
+        waiting = null;
+        if (l == null) return false;
+        l.onFailed(message, detail);
+        return true;
+    }
+
+    /** The message, with the installer's reason when it gave one. */
+    static String describe(Context c, int message, String detail) {
+        String text = c.getString(message);
+        return detail == null || detail.trim().isEmpty() ? text : text + "\n(" + detail.trim() + ")";
     }
 
     private static boolean download(String url, File to, Listener listener) {
