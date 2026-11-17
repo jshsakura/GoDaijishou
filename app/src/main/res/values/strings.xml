@@ -125,4 +125,5 @@
     <string name="update_err_download">Update failed: the download did not finish</string>
     <string name="update_err_verify">Update stopped: the file is not this app\'s signed release</string>
     <string name="update_err_install">Update failed: the installer refused it</string>
+    <string name="update_cancelled">Update cancelled: the current version stays</string>
 </resources>

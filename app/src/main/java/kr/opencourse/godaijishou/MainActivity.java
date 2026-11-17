@@ -282,12 +282,13 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onFailed(int message) {
+            public void onFailed(int message, String detail) {
                 runOnUiThread(() -> {
                     updating = false;
                     if (isFinishing()) return;
                     pill.setText(getString(R.string.update_available, version));
-                    Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show();
+                    Toast.makeText(MainActivity.this, SelfUpdate.describe(MainActivity.this, message, detail),
+                            Toast.LENGTH_LONG).show();
                 });
             }
         });

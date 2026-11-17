@@ -84,3 +84,31 @@ jobs:
           else
             gh release create "$TAG" "WingCustom-${TAG}.apk" --title "$TAG" --generate-notes
           fi
+
+      # The APK's SHA-256 and, when the VIRUSTOTAL_API_KEY secret is set, a VirusTotal scan of
+      # it, added under the release notes. Google Play Protect asks to scan an app it has not
+      # seen (this one comes from GitHub, and updates itself): the scan is the answer anyone
+      # can check. A scan that fails never fails the release.
+      - name: Scan report
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VT_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
+        run: |
+          apk="WingCustom-${TAG}.apk"
+          sha=$(sha256sum "$apk" | cut -d' ' -f1)
+          body=$(gh release view "$TAG" --json body -q .body)
+          vt="https://www.virustotal.com/gui/file/$sha"
+          extra=""
+          case "$body" in *"$sha"*) ;; *) extra=$'\n\n---\n'"SHA-256: \`$sha\`";; esac
+          case "$body" in *"$vt"*) ;; *)
+            if [ -z "$VT_KEY" ]; then
+              echo "VIRUSTOTAL_API_KEY not set: SHA-256 only"
+            elif curl -sf --max-time 300 -H "x-apikey: $VT_KEY" -F "file=@$apk" \
+                https://www.virustotal.com/api/v3/files >/dev/null; then
+              extra="$extra"$'\n'"VirusTotal: $vt"
+            else
+              echo "VirusTotal upload failed"
+            fi;;
+          esac
+          [ -n "$extra" ] && gh release edit "$TAG" --notes "$body$extra" || echo "nothing to add"
