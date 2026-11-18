@@ -55,6 +55,7 @@ final class DisplaySwap {
     private static final long RESYNC_WINDOW_MS = 3_000;
 
     static void install(ClassLoader cl) {
+        installTopNeverMirrors(cl);
         XposedBridge.hookAllConstructors(
                 XposedHelpers.findClass("com.android.server.display.LogicalDisplayMapper", cl),
                 new XC_MethodHook() {
@@ -360,6 +361,8 @@ final class DisplaySwap {
             // At once, then again as the window manager catches up with the change.
             rh.post(RESYNC_WINDOWS);
             for (int ms = 150; ms <= 750; ms += 150) rh.postDelayed(RESYNC_WINDOWS, ms);
+            rh.removeCallbacks(BLANK_TOP);
+            rh.postDelayed(BLANK_TOP, 800);
             if (DisplaySwap.swapped == swapped) { // the panel really changed
                 rh.removeCallbacks(RESTART_HOME);
                 rh.postDelayed(RESTART_HOME, RESTART_HOME_MS);
@@ -475,6 +478,69 @@ final class DisplaySwap {
             }
         }
     };
+
+    /**
+     * Swapped, the top panel sits behind display 4, which is disabled and has no content, so
+     * the display manager let it mirror display 0: both panels then showed layer stack 0.
+     * Input works out a layer stack's touch transform from its first display, the top panel
+     * (never rotated), so on the sideways bottom panel every touch landed turned by 90 degrees
+     * (the lock screen's 0 key typed 4). Swapped, the top panel shows nothing instead.
+     *
+     * Caught where every layer stack is set (LG's display manager has its own configure
+     * code), and checked once more after each swap in case no configure reached the top
+     * panel. One compare per call (rare: display configuration only), a write only if wrong.
+     */
+    private static volatile Object topDevice;
+
+    private static void installTopNeverMirrors(ClassLoader cl) {
+        XposedHelpers.findAndHookMethod("com.android.server.display.DisplayDevice", cl,
+                "setLayerStackLocked", android.view.SurfaceControl.Transaction.class, int.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) {
+                        if (!isTop(param.thisObject)) return;
+                        topDevice = param.thisObject;
+                        if (swapped && (int) param.args[1] == android.view.Display.DEFAULT_DISPLAY) {
+                            param.args[1] = BLANK_LAYER_STACK;
+                        }
+                    }
+                });
+    }
+
+    private static boolean isTop(Object device) {
+        Object top = topAddress;
+        if (top == null) return false;
+        if (device == topDevice) return true;
+        try {
+            Object info = XposedHelpers.callMethod(device, "getDisplayDeviceInfoLocked");
+            return top.equals(XposedHelpers.getObjectField(info, "address"));
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+            return false;
+        }
+    }
+
+    // After a swap: the top panel still on layer stack 0 (no configure reached it) is blanked.
+    private static final Runnable BLANK_TOP = () -> {
+        Object m = mapper, lock = syncRoot;
+        if (!swapped || m == null || lock == null) return;
+        try {
+            synchronized (lock) {
+                // Swapped, display 4 is the top panel.
+                Object logical = XposedHelpers.callMethod(m, "getDisplayLocked", MainModule.SECOND_SCREEN_DISPLAY_ID, true);
+                Object d = logical == null ? topDevice : XposedHelpers.callMethod(logical, "getPrimaryDisplayDeviceLocked");
+                if (d == null) return;
+                if (XposedHelpers.getIntField(d, "mCurrentLayerStack") != android.view.Display.DEFAULT_DISPLAY) return;
+                android.view.SurfaceControl.Transaction t = new android.view.SurfaceControl.Transaction();
+                XposedHelpers.callMethod(d, "setLayerStackLocked", t, BLANK_LAYER_STACK);
+                t.apply();
+            }
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+        }
+    };
+
+    private static final int BLANK_LAYER_STACK = -1; // LogicalDisplay.BLANK_LAYER_STACK
 
     // The panels behind display 0 (top) and display 4 (second screen), before any swap.
     private static boolean readAddresses(Object m) {
