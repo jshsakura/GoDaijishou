@@ -48,6 +48,7 @@ final class TopHomeHook {
         installGridOnce(cl);
         installSecondScreenGestures(cl);
         safely(() -> installProfileRefresh(cl));
+        safely(() -> QuickstepWatchdog.install(cl));
         safely(() -> installLabelsBelow(cl));
         safely(() -> installFullIcons(cl));
         safely(() -> installFreshLayout(cl));
@@ -93,10 +94,10 @@ final class TopHomeHook {
 
     /**
      * Quickstep (home and recents gestures, recents screen) lives in this process and keeps the
-     * device profile it computed for the main display. Main screen mode changes the main display
-     * at every lock (back to the top panel) and unlock (the second screen's panel), and LG's own
-     * refresh did not follow: after a lock/unlock the recents cards and the swipe-up animation
-     * kept the shape of the other panel (landscape cards on the portrait screen). A fresh
+     * device profile it computed for the main display. Switching main screen mode on or off moves
+     * the main display to the other panel, and LG's own refresh did not follow: the recents
+     * cards and the swipe-up animation kept the shape of the other panel (landscape cards on the
+     * portrait screen). A fresh
      * process is right, so on any change of the main display's size or density the profile is
      * computed again (LG's own onConfigChanged: initGrid reads the current default display),
      * and an open recents screen takes the new profile. Works whatever the home app is.
