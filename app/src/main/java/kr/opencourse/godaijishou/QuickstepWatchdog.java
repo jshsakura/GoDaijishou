@@ -65,8 +65,8 @@ final class QuickstepWatchdog {
     }
 
     private static void check(Context service, MotionEvent ev) throws Exception {
-        if (android.os.Build.VERSION.SDK_INT < 29) return;
-        if (ev.getDisplayId() != Display.DEFAULT_DISPLAY || ev.getPointerCount() != 1
+        if ((int) XposedHelpers.callMethod(ev, "getDisplayId") != Display.DEFAULT_DISPLAY
+                || ev.getPointerCount() != 1
                 || ev.getToolType(0) != MotionEvent.TOOL_TYPE_FINGER) return;
         if (!onBottomStrip(service, ev)) return;
         Object state = XposedHelpers.getObjectField(service, "mDeviceState");
