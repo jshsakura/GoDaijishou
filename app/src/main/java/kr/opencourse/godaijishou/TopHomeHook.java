@@ -589,31 +589,21 @@ final class TopHomeHook {
         });
     }
 
-    // A folder page's rows, as many as fit sideways in main screen mode (see installFullIcons).
-    private static void fitFolderRows(android.view.View paged) {
-        Context c = paged.getContext();
-        if (!mainScreenMode(c)) return;
-        Object p = XposedHelpers.callMethod(c, "getDeviceProfile");
-        if (XposedHelpers.getBooleanField(p, "isLandscape")
-                || XposedHelpers.getIntField(p, "widthPx") <= XposedHelpers.getIntField(p, "heightPx")) return;
-        android.graphics.Rect pad = (android.graphics.Rect) XposedHelpers.callMethod(p, "getWorkspacePadding", false);
-        int cell = XposedHelpers.getIntField(p, "folderCellHeightPx");
-        if (pad == null || cell <= 0) return;
-        android.content.res.Resources r = c.getResources();
-        int space = XposedHelpers.getIntField(p, "availableHeightPx") - pad.top - pad.bottom
-                - homeDimen(r, "folder_title_height") - homeDimen(r, "folder_footer_height");
-        int fit = Math.max(1, space / cell);
-        // The page grid (Android 12+): its row count and items per page.
-        Object grid = XposedHelpers.getObjectField(paged, "mOrganizer");
-        int rows = XposedHelpers.getIntField(grid, "mMaxCountY");
-        if (fit >= rows) return;
-        XposedHelpers.setIntField(grid, "mMaxCountY", fit);
-        XposedHelpers.setIntField(grid, "mMaxItemsPerPage", XposedHelpers.getIntField(grid, "mMaxCountX") * fit);
-    }
+    // Main screen mode's panel holds two full folder rows either way it is turned (a third,
+    // home-sized, was cut off at the bottom, sideways and upright alike).
+    private static final int MAIN_FOLDER_ROWS = 2;
 
-    private static int homeDimen(android.content.res.Resources r, String name) {
-        int id = r.getIdentifier(name, "dimen", PKG);
-        return id == 0 ? 0 : r.getDimensionPixelSize(id);
+    // A folder page in main screen mode: two rows, the rest on the next page (see installFullIcons).
+    private static void fitFolderRows(android.view.View paged) {
+        if (!mainScreenMode(paged.getContext())) return;
+        // The page grid: a FolderGridOrganizer (Android 11+), or the view's own fields before it.
+        Object grid = XposedHelpers.findFieldIfExists(paged.getClass(), "mOrganizer") != null
+                ? XposedHelpers.getObjectField(paged, "mOrganizer") : paged;
+        if (grid == null) return;
+        if (XposedHelpers.getIntField(grid, "mMaxCountY") <= MAIN_FOLDER_ROWS) return;
+        XposedHelpers.setIntField(grid, "mMaxCountY", MAIN_FOLDER_ROWS);
+        XposedHelpers.setIntField(grid, "mMaxItemsPerPage",
+                XposedHelpers.getIntField(grid, "mMaxCountX") * MAIN_FOLDER_ROWS);
     }
 
     // {width, height, density} of the main display as it is turned now.
@@ -688,21 +678,25 @@ final class TopHomeHook {
                 }
             });
         }
-        // Sideways, a folder of home-sized rows is taller than the panel (a folder page does not
-        // scroll): its last rows and the footer went off the screen. Shrinking the rows cut the
-        // names under the icons instead. The rows keep their size and a page holds as many as
-        // fit under the title and above the footer; the rest go to the next page.
+        // A folder of home-sized rows is taller than main screen mode's panel (a folder page
+        // does not scroll): its last row went off the screen, and shrinking the rows cut the
+        // names under the icons. The rows keep their size and a page holds two of them; the
+        // rest go to the next page. Set as the page grid is made and again when it is attached.
         Class<?> folderPaged = XposedHelpers.findClassIfExists("com.android.launcher3.folder.FolderPagedView", cl);
-        if (folderPaged != null) XposedBridge.hookAllMethods(folderPaged, "setFolder", new XC_MethodHook() {
-            @Override
-            protected void beforeHookedMethod(MethodHookParam param) {
-                try {
-                    fitFolderRows((android.view.View) param.thisObject);
-                } catch (Throwable t) {
-                    ModuleLog.w(t); // LG's folder differs: its own layout stays
+        if (folderPaged != null) {
+            XC_MethodHook fit = new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    try {
+                        fitFolderRows((android.view.View) param.thisObject);
+                    } catch (Throwable t) {
+                        ModuleLog.w(t); // LG's folder differs: its own layout stays
+                    }
                 }
-            }
-        });
+            };
+            XposedBridge.hookAllConstructors(folderPaged, fit);
+            XposedBridge.hookAllMethods(folderPaged, "setFolder", fit);
+        }
         XposedBridge.hookAllMethods(lgProfile, "updateAvailableDimensions", new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
