@@ -133,7 +133,14 @@ final class TopHomeHook {
                 if (((android.view.MotionEvent) param.args[0]).getActionMasked()
                         != android.view.MotionEvent.ACTION_DOWN) return;
                 Context app = ((Context) param.thisObject).getApplicationContext();
-                if (app != null) refreshProfile(cl, app);
+                if (app == null) return;
+                // The panel moved and this process never heard of it (another home in front, no
+                // display event): quickstep's swipe area still has the other panel's shape, and
+                // home and recents swipes went nowhere until a reboot. The fix was the restart
+                // on LG's home's next onResume, which a dead home swipe never reaches. Restart
+                // here; this one swipe is lost, SystemUI's fallback covers the next.
+                if (restartIfPanelMoved(app, "gesture")) return;
+                refreshProfile(cl, app);
             }
         });
         XposedBridge.hookAllMethods(service, "onCreate", new XC_MethodHook() {
@@ -150,12 +157,7 @@ final class TopHomeHook {
                 // cover, not when the home is next shown: that was the first home swipe after
                 // every switch, killed halfway (no home, a stutter).
                 Runnable refresh = () -> {
-                    int[] now = panel(app);
-                    if (startPanel != null && now != null && !java.util.Arrays.equals(now, startPanel)) {
-                        android.os.Process.killProcess(android.os.Process.myPid());
-                        return;
-                    }
-                    refreshProfile(cl, app);
+                    if (!restartIfPanelMoved(app, "display event")) refreshProfile(cl, app);
                 };
                 profileFor = panel(app); // the process computed its profile at start
                 startPanel = profileFor;
@@ -182,6 +184,14 @@ final class TopHomeHook {
 
     // The main display's panel when this process started.
     private static int[] startPanel;
+
+    private static boolean restartIfPanelMoved(Context app, String seenBy) {
+        int[] now = panel(app);
+        if (startPanel == null || now == null || java.util.Arrays.equals(now, startPanel)) return false;
+        ModuleLog.i("quickstep: panel changed (" + seenBy + "), restarting");
+        android.os.Process.killProcess(android.os.Process.myPid());
+        return true;
+    }
 
     // The main display's panel, whichever way it is turned: {short side, long side, dpi}.
     // A rotation alone is not a new panel (LG's home handles rotation itself).
