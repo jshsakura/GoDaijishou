@@ -491,6 +491,8 @@ final class DisplaySwap {
      * panel. One compare per call (rare: display configuration only), a write only if wrong.
      */
     private static volatile Object topDevice;
+    private static boolean topBlankSent; // under the display lock
+    private static final int BLANK_LAYER_STACK = -1; // LogicalDisplay.BLANK_LAYER_STACK
 
     private static void installTopNeverMirrors(ClassLoader cl) {
         XposedHelpers.findAndHookMethod("com.android.server.display.DisplayDevice", cl,
@@ -500,8 +502,17 @@ final class DisplaySwap {
                     protected void beforeHookedMethod(MethodHookParam param) {
                         if (!isTop(param.thisObject)) return;
                         topDevice = param.thisObject;
-                        if (swapped && (int) param.args[1] == android.view.Display.DEFAULT_DISPLAY) {
-                            param.args[1] = BLANK_LAYER_STACK;
+                        int stack = (int) param.args[1];
+                        if (!swapped || (stack != android.view.Display.DEFAULT_DISPLAY && stack != BLANK_LAYER_STACK)) {
+                            topBlankSent = false;
+                            return;
+                        }
+                        param.args[1] = BLANK_LAYER_STACK;
+                        // Sent only when it differs from the device's last value, which starts at -1
+                        // while the compositor starts the panel on 0: made to differ once.
+                        if (!topBlankSent) {
+                            topBlankSent = true;
+                            XposedHelpers.setIntField(param.thisObject, "mCurrentLayerStack", android.view.Display.DEFAULT_DISPLAY);
                         }
                     }
                 });
@@ -530,7 +541,10 @@ final class DisplaySwap {
                 Object logical = XposedHelpers.callMethod(m, "getDisplayLocked", MainModule.SECOND_SCREEN_DISPLAY_ID, true);
                 Object d = logical == null ? topDevice : XposedHelpers.callMethod(logical, "getPrimaryDisplayDeviceLocked");
                 if (d == null) return;
-                if (XposedHelpers.getIntField(d, "mCurrentLayerStack") != android.view.Display.DEFAULT_DISPLAY) return;
+                // Sent whatever the device last recorded (it may say -1 while the compositor
+                // still has 0).
+                topBlankSent = true;
+                XposedHelpers.setIntField(d, "mCurrentLayerStack", android.view.Display.DEFAULT_DISPLAY);
                 android.view.SurfaceControl.Transaction t = new android.view.SurfaceControl.Transaction();
                 XposedHelpers.callMethod(d, "setLayerStackLocked", t, BLANK_LAYER_STACK);
                 t.apply();
@@ -540,7 +554,6 @@ final class DisplaySwap {
         }
     };
 
-    private static final int BLANK_LAYER_STACK = -1; // LogicalDisplay.BLANK_LAYER_STACK
 
     // The panels behind display 0 (top) and display 4 (second screen), before any swap.
     private static boolean readAddresses(Object m) {
