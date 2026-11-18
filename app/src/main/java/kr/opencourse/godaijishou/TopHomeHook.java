@@ -47,7 +47,6 @@ final class TopHomeHook {
         safely(() -> installReport(cl));
         installGridOnce(cl);
         installSecondScreenGestures(cl);
-        safely(() -> installProfileRefresh(cl));
         safely(() -> installLabelsBelow(cl));
         safely(() -> installFullIcons(cl));
         safely(() -> installFreshLayout(cl));
@@ -81,131 +80,11 @@ final class TopHomeHook {
         XposedBridge.hookAllMethods(source, "registerSwivelStateCallback", register);
     }
 
-    // --- Recents laid out for the main display it is on ---
-
-    private static final String IDP = "com.android.launcher3.InvariantDeviceProfile";
-    private static final String RECENTS = "com.android.quickstep.RecentsActivity";
-    // The main display {width, height, dpi} the profile was last computed for.
-    private static int[] profileFor;
-    private static java.lang.reflect.Method onConfigChanged;
-    private static final java.util.Set<android.app.Activity> recents =
-            java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
-
-    /**
-     * Quickstep (home and recents gestures, recents screen) lives in this process and keeps the
-     * device profile it computed for the main display. Main screen mode changes the main display
-     * at every lock (back to the top panel) and unlock (the second screen's panel), and LG's own
-     * refresh did not follow: after a lock/unlock the recents cards and the swipe-up animation
-     * kept the shape of the other panel (landscape cards on the portrait screen). A fresh
-     * process is right, so on any change of the main display's size or density the profile is
-     * computed again (LG's own onConfigChanged: initGrid reads the current default display),
-     * and an open recents screen takes the new profile. Works whatever the home app is.
-     */
-    private static void installProfileRefresh(ClassLoader cl) {
-        Class<?> idp = XposedHelpers.findClass(IDP, cl);
-        // Private in InvariantDeviceProfile; the instance is LG's subclass, where a lookup by
-        // name does not reach it. Keep the method itself.
-        onConfigChanged = XposedHelpers.findMethodExact(idp, "onConfigChanged", Context.class);
-        Class<?> recentsActivity = XposedHelpers.findClassIfExists(RECENTS, cl);
-        if (recentsActivity != null) {
-            XposedBridge.hookAllMethods(recentsActivity, "onCreate", new XC_MethodHook() {
-                @Override
-                protected void afterHookedMethod(MethodHookParam param) {
-                    recents.add((android.app.Activity) param.thisObject);
-                }
-            });
-            XposedBridge.hookAllMethods(recentsActivity, "onDestroy", new XC_MethodHook() {
-                @Override
-                protected void afterHookedMethod(MethodHookParam param) {
-                    recents.remove(param.thisObject);
-                }
-            });
-        }
-        Class<?> service = XposedHelpers.findClass(TOUCH_SERVICE, cl);
-        // Display events reach this process only while one of its screens is up (they did not
-        // come in while Nova or Daijishou was the home): checked again where it matters, at the
-        // start of each gesture, before quickstep reads the profile (its input runs on the main
-        // thread). Costs a size lookup per touch-down; recomputes once after a panel change.
-        XposedBridge.hookAllMethods(service, "onInputEvent", new XC_MethodHook() {
-            @Override
-            protected void beforeHookedMethod(MethodHookParam param) {
-                if (param.args.length == 0 || !(param.args[0] instanceof android.view.MotionEvent)) return;
-                if (((android.view.MotionEvent) param.args[0]).getActionMasked()
-                        != android.view.MotionEvent.ACTION_DOWN) return;
-                Context app = ((Context) param.thisObject).getApplicationContext();
-                if (app != null) refreshProfile(cl, app);
-            }
-        });
-        XposedBridge.hookAllMethods(service, "onCreate", new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) {
-                Context app = ((Context) param.thisObject).getApplicationContext();
-                if (app == null) return;
-                android.hardware.display.DisplayManager dm =
-                        app.getSystemService(android.hardware.display.DisplayManager.class);
-                if (dm == null) return;
-                android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
-                // The panel moved (main screen mode switch): the home needs a fresh start for
-                // the other panel anyway (installFreshLayout). Done now, under the switch's
-                // cover, not when the home is next shown: that was the first home swipe after
-                // every switch, killed halfway (no home, a stutter).
-                Runnable refresh = () -> {
-                    int[] now = panel(app);
-                    if (startPanel != null && now != null && !java.util.Arrays.equals(now, startPanel)) {
-                        android.os.Process.killProcess(android.os.Process.myPid());
-                        return;
-                    }
-                    refreshProfile(cl, app);
-                };
-                profileFor = panel(app); // the process computed its profile at start
-                startPanel = profileFor;
-                dm.registerDisplayListener(new android.hardware.display.DisplayManager.DisplayListener() {
-                    @Override
-                    public void onDisplayAdded(int displayId) {
-                    }
-
-                    @Override
-                    public void onDisplayRemoved(int displayId) {
-                    }
-
-                    @Override
-                    public void onDisplayChanged(int displayId) {
-                        if (displayId != android.view.Display.DEFAULT_DISPLAY) return;
-                        // A swap changes size and density in several steps: act once it settled.
-                        main.removeCallbacks(refresh);
-                        main.postDelayed(refresh, 300);
-                    }
-                }, main);
-            }
-        });
-    }
-
-    // The main display's panel when this process started.
-    private static int[] startPanel;
-
     // The main display's panel, whichever way it is turned: {short side, long side, dpi}.
     // A rotation alone is not a new panel (LG's home handles rotation itself).
     private static int[] panel(Context c) {
         int[] m = mainDisplay(c);
         return m == null ? null : new int[] {Math.min(m[0], m[1]), Math.max(m[0], m[1]), m[2]};
-    }
-
-    private static void refreshProfile(ClassLoader cl, Context app) {
-        int[] now = panel(app);
-        if (now == null || java.util.Arrays.equals(now, profileFor)) return;
-        try {
-            Object holder = XposedHelpers.getStaticObjectField(XposedHelpers.findClass(IDP, cl), "INSTANCE");
-            Object profile = XposedHelpers.callMethod(holder, "getNoCreate");
-            if (profile == null) return; // not built yet: it will be built for this display
-            onConfigChanged.invoke(profile, app);
-            profileFor = now;
-            for (android.app.Activity a : recents.toArray(new android.app.Activity[0])) {
-                if (a == null || a.isDestroyed()) continue;
-                XposedHelpers.callMethod(a, "onHandleConfigChanged");
-            }
-        } catch (Throwable t) {
-            ModuleLog.w(t);
-        }
     }
 
     // --- Second screen gestures after a switch ---
@@ -633,10 +512,10 @@ final class TopHomeHook {
      *    cut off, the edit bar squeezed letter by letter;
      *  - forced rotation turns the panel between portrait and landscape: coming back to
      *    landscape the whole home was drawn shrunk.
-     * A freshly started home lays out right in either case. So when the home is shown (or
-     * turned while shown) on a main display unlike the one it started on, it restarts once
-     * and lays itself out for the display it is on. Nothing happens while it stays hidden
-     * (lock screen), so a lock and unlock that ends where it began costs nothing.
+     * A freshly started home lays out right in either case. A panel switch restarts the whole
+     * process at once (DisplaySwap.restartHome), so it starts on the new panel; what is left
+     * here is rotation: when the home is shown (or turned while shown) on a main display unlike
+     * the one it started on, it restarts once and lays itself out for the display it is on.
      */
     private static void installFreshLayout(ClassLoader cl) {
         Class<?> launcher = XposedHelpers.findClassIfExists("com.android.launcher3.Launcher", cl);
@@ -708,6 +587,33 @@ final class TopHomeHook {
                 if (panelMoved[0]) param.setResult(null);
             }
         });
+    }
+
+    // A folder page's rows, as many as fit sideways in main screen mode (see installFullIcons).
+    private static void fitFolderRows(android.view.View paged) {
+        Context c = paged.getContext();
+        if (!mainScreenMode(c)) return;
+        Object p = XposedHelpers.callMethod(c, "getDeviceProfile");
+        if (XposedHelpers.getBooleanField(p, "isLandscape")
+                || XposedHelpers.getIntField(p, "widthPx") <= XposedHelpers.getIntField(p, "heightPx")) return;
+        android.graphics.Rect pad = (android.graphics.Rect) XposedHelpers.callMethod(p, "getWorkspacePadding", false);
+        int cell = XposedHelpers.getIntField(p, "folderCellHeightPx");
+        if (pad == null || cell <= 0) return;
+        android.content.res.Resources r = c.getResources();
+        int space = XposedHelpers.getIntField(p, "availableHeightPx") - pad.top - pad.bottom
+                - homeDimen(r, "folder_title_height") - homeDimen(r, "folder_footer_height");
+        int fit = Math.max(1, space / cell);
+        // The page grid (Android 12+): its row count and items per page.
+        Object grid = XposedHelpers.getObjectField(paged, "mOrganizer");
+        int rows = XposedHelpers.getIntField(grid, "mMaxCountY");
+        if (fit >= rows) return;
+        XposedHelpers.setIntField(grid, "mMaxCountY", fit);
+        XposedHelpers.setIntField(grid, "mMaxItemsPerPage", XposedHelpers.getIntField(grid, "mMaxCountX") * fit);
+    }
+
+    private static int homeDimen(android.content.res.Resources r, String name) {
+        int id = r.getIdentifier(name, "dimen", PKG);
+        return id == 0 ? 0 : r.getDimensionPixelSize(id);
     }
 
     // {width, height, density} of the main display as it is turned now.
@@ -782,29 +688,18 @@ final class TopHomeHook {
                 }
             });
         }
-        // Portrait folder rows are as tall as a home cell, not fitted to the height: sideways,
-        // the last row was cut off (a folder page does not scroll). When a folder page is made,
-        // its rows share the height the folder itself allows (Folder.getContentAreaHeight: the
-        // workspace less its padding, dock included, and the footer).
+        // Sideways, a folder of home-sized rows is taller than the panel (a folder page does not
+        // scroll): its last rows and the footer went off the screen. Shrinking the rows cut the
+        // names under the icons instead. The rows keep their size and a page holds as many as
+        // fit under the title and above the footer; the rest go to the next page.
         Class<?> folderPaged = XposedHelpers.findClassIfExists("com.android.launcher3.folder.FolderPagedView", cl);
-        if (folderPaged != null) XposedBridge.hookAllMethods(folderPaged, "createAndAddNewPage", new XC_MethodHook() {
+        if (folderPaged != null) XposedBridge.hookAllMethods(folderPaged, "setFolder", new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
-                Context c = ((android.view.View) param.thisObject).getContext();
-                if (!mainScreenMode(c)) return;
-                Object p = XposedHelpers.callMethod(c, "getDeviceProfile");
-                if (XposedHelpers.getBooleanField(p, "isLandscape")
-                        || XposedHelpers.getIntField(p, "widthPx") <= XposedHelpers.getIntField(p, "heightPx")) return;
-                android.content.res.Resources r = c.getResources();
-                int footer = r.getIdentifier("folder_footer_height", "dimen", PKG);
-                int rows = XposedHelpers.getIntField(XposedHelpers.getObjectField(p, "inv"), "numFolderRows");
-                android.graphics.Rect pad = (android.graphics.Rect) XposedHelpers.callMethod(p, "getWorkspacePadding", false);
-                if (rows <= 0 || pad == null) return;
-                int space = XposedHelpers.getIntField(p, "availableHeightPx") - pad.top - pad.bottom
-                        - (footer == 0 ? 0 : r.getDimensionPixelSize(footer));
-                int row = space / rows;
-                if (row > 0 && row < XposedHelpers.getIntField(p, "folderCellHeightPx")) {
-                    XposedHelpers.setIntField(p, "folderCellHeightPx", row);
+                try {
+                    fitFolderRows((android.view.View) param.thisObject);
+                } catch (Throwable t) {
+                    ModuleLog.w(t); // LG's folder differs: its own layout stays
                 }
             }
         });

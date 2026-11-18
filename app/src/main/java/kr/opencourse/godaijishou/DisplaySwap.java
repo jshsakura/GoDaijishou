@@ -295,6 +295,30 @@ final class DisplaySwap {
         set(false);
     };
 
+    // After the last window resync, so the new process starts on the settled panel.
+    private static final long RESTART_HOME_MS = 900;
+
+    /**
+     * LG's home process holds the gesture engine (quickstep): home and recents swipes on
+     * display 0, with a swipe area computed for the panel it started on. It never learned of a
+     * panel change reliably (no display event with another home in front), and a stale area
+     * left the swipes dead until a reboot. The switch is made here, so the restart is too:
+     * once per real panel change, whatever the home app is, and nothing in between.
+     */
+    private static final Runnable RESTART_HOME = () -> {
+        try {
+            android.app.ActivityManager am = SystemSettings.context()
+                    .getSystemService(android.app.ActivityManager.class);
+            for (android.app.ActivityManager.RunningAppProcessInfo p : am.getRunningAppProcesses()) {
+                if (!TopHomeHook.TARGET_PACKAGE.equals(p.processName)) continue;
+                ModuleLog.i("swap: restarting LG home for the new panel");
+                android.os.Process.killProcess(p.pid);
+            }
+        } catch (Throwable t) {
+            ModuleLog.w(t);
+        }
+    };
+
     /** Swaps (the second screen's panel as display 0) or restores. */
     static void set(boolean swapped) {
         Object m = mapper, lock = syncRoot;
@@ -336,6 +360,10 @@ final class DisplaySwap {
             // At once, then again as the window manager catches up with the change.
             rh.post(RESYNC_WINDOWS);
             for (int ms = 150; ms <= 750; ms += 150) rh.postDelayed(RESYNC_WINDOWS, ms);
+            if (DisplaySwap.swapped == swapped) { // the panel really changed
+                rh.removeCallbacks(RESTART_HOME);
+                rh.postDelayed(RESTART_HOME, RESTART_HOME_MS);
+            }
         }
         if (!swapped) {
             verifyAttempts = 0;
