@@ -601,7 +601,7 @@ final class TopHomeHook {
         if (pad == null || cell <= 0) return;
         android.content.res.Resources r = c.getResources();
         int space = XposedHelpers.getIntField(p, "availableHeightPx") - pad.top - pad.bottom
-                - dimen(r, "folder_title_height") - dimen(r, "folder_footer_height");
+                - homeDimen(r, "folder_title_height") - homeDimen(r, "folder_footer_height");
         int fit = Math.max(1, space / cell);
         // The page grid (Android 12+): its row count and items per page.
         Object grid = XposedHelpers.getObjectField(paged, "mOrganizer");
@@ -611,7 +611,7 @@ final class TopHomeHook {
         XposedHelpers.setIntField(grid, "mMaxItemsPerPage", XposedHelpers.getIntField(grid, "mMaxCountX") * fit);
     }
 
-    private static int dimen(android.content.res.Resources r, String name) {
+    private static int homeDimen(android.content.res.Resources r, String name) {
         int id = r.getIdentifier(name, "dimen", PKG);
         return id == 0 ? 0 : r.getDimensionPixelSize(id);
     }
