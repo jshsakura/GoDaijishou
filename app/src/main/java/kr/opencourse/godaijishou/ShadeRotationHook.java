@@ -7,6 +7,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.Display;
 import android.view.View;
+import android.view.ViewGroup;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
@@ -26,6 +27,7 @@ import de.robv.android.xposed.XposedHelpers;
 final class ShadeRotationHook {
 
     private static final String CONTROLLER = "com.android.systemui.statusbar.phone.NotificationShadeWindowControllerImpl";
+    private static final String CONTAINER = "com.android.systemui.statusbar.phone.NotificationsQuickSettingsContainer";
 
     private static volatile View shade;
     private static int lastRotation = -1;
@@ -45,6 +47,51 @@ final class ShadeRotationHook {
                 shade = (View) v;
                 ModuleLog.i("shade: attached");
                 listen(shade.getContext());
+            }
+        });
+        installWidthFit(cl);
+    }
+
+    /**
+     * LG sets the quick settings' and notifications' widths only in the shade container's
+     * onConfigurationChanged (notification_panel_width: 644 dp when the screen is at least
+     * 650 dp wide and turned, otherwise match_parent). Turned on the top screen in second screen
+     * mode, the panels got a fixed 644 dp; back in main screen mode on the 1240 px panel, that
+     * width stayed and the shade ran off both sides (clock, tiles and notifications cut). A
+     * panel never needs more than the container's width: one wider is a width left from another
+     * screen and gets LG's own narrow-screen value again. Field checks per measure only.
+     *
+     * The container does not override onMeasure: the hook sits on the ConstraintLayout one it
+     * inherits and returns at once for every other layout.
+     */
+    private static void installWidthFit(ClassLoader cl) {
+        Class<?> container = XposedHelpers.findClassIfExists(CONTAINER, cl);
+        if (container == null) return;
+        java.lang.reflect.Method measure = null;
+        for (Class<?> c = container; c != null && c != View.class && measure == null; c = c.getSuperclass()) {
+            try {
+                measure = c.getDeclaredMethod("onMeasure", int.class, int.class);
+            } catch (NoSuchMethodException ignored) {
+            }
+        }
+        if (measure == null) return;
+        XposedBridge.hookMethod(measure, new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) {
+                if (param.thisObject.getClass() != container) return;
+                try {
+                    int room = View.MeasureSpec.getSize((Integer) param.args[0]);
+                    if (room <= 0) return;
+                    ViewGroup g = (ViewGroup) param.thisObject;
+                    for (int i = g.getChildCount() - 1; i >= 0; i--) {
+                        ViewGroup.LayoutParams lp = g.getChildAt(i).getLayoutParams();
+                        if (lp == null || lp.width <= room) continue;
+                        ModuleLog.i("shade: panel width " + lp.width + " fitted to " + room);
+                        lp.width = ViewGroup.LayoutParams.MATCH_PARENT;
+                    }
+                } catch (Throwable t) {
+                    ModuleLog.w(t);
+                }
             }
         });
     }
